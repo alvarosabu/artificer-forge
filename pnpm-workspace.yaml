@@ -1,0 +1,31 @@
+packages:
+  - apps/*
+  - packages/*
+
+catalog:
+  '@nuxt/ui': ^4.4.0
+  '@types/three': ^0.182.0
+
+catalogMode: prefer
+
+catalogs:
+  build:
+    tsdown: 0.20.1
+  eslint:
+    eslint: ^9.36.0
+  nuxt:
+    '@nuxt/eslint': ^1.9.0
+    nuxt: ^4.1.2
+  three:
+    '@tresjs/cientos': ^5.2.5
+    '@tresjs/core': ^5.3.3
+    '@tresjs/eslint-config': ^1.1.0
+    '@tresjs/leches': ^1.1.4
+    '@tresjs/nuxt': ^5.0.0
+    '@types/three': ^0.182.0
+    three: ^0.182.0
+  typescript:
+    typescript: ^5.9.3
+  vue:
+    vue: ^3.5.13
+    vue-router: ^4.5.1

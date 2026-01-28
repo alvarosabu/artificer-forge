@@ -1,0 +1,32 @@
+{
+  "name": "playground",
+  "private": true,
+  "type": "module",
+  "description": "Playground for model loading and rendering",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "lint": "eslint ",
+    "lint:fix": "eslint  --fix",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@nuxt/eslint": "catalog:nuxt",
+    "@nuxt/ui": "catalog:",
+    "@tresjs/cientos": "catalog:three",
+    "@tresjs/leches": "catalog:three",
+    "@tresjs/nuxt": "catalog:three",
+    "eslint": "catalog:eslint",
+    "nuxt": "catalog:nuxt",
+    "three": "catalog:three",
+    "vue": "catalog:vue",
+    "vue-router": "catalog:vue"
+  },
+  "devDependencies": {
+    "@tresjs/eslint-config": "catalog:three",
+    "@types/three": "catalog:three",
+    "typescript": "catalog:typescript"
+  }
+}

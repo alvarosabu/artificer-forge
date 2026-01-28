@@ -1,0 +1,22 @@
+{
+  "name": "game-lab",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "packageManager": "pnpm@10.28.0",
+  "dependencies": {
+    "@tresjs/cientos": "catalog:three",
+    "@tresjs/core": "catalog:three",
+    "three": "catalog:three"
+  },
+  "devDependencies": {
+    "@types/three": "catalog:three",
+    "typescript": "catalog:typescript"
+  }
+}
