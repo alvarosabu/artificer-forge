@@ -10,9 +10,10 @@ const animations = computed(() => animState.value?.animations || [])
 const { actions } = useAnimations(animations, rig)
 
 watch(actions, (newActions) => {
+  console.log(newActions)
   const firstActionName = Object.keys(newActions)[0]
   if (firstActionName) {
-    newActions[firstActionName]?.play()
+    newActions['Iddle']?.play()
   }
 }, { immediate: true })
 </script>

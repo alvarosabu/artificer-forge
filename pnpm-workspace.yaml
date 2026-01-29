@@ -11,6 +11,8 @@ catalogMode: prefer
 catalogs:
   build:
     tsdown: 0.20.1
+    unplugin-vue: ^7.1.1
+    vue-tsc: ^2.2.10
   eslint:
     eslint: ^9.36.0
   nuxt:

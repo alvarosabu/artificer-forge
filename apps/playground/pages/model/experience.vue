@@ -1,15 +1,10 @@
 <script setup lang="ts">
-useHead({
-  title: 'Model - TresJS Playground',
-})
+import { Floor } from '@gamelab/components'
 </script>
 
 <template>
-  <TresCanvas
-    clear-color="#020420"
-    window-size
-  >
-    <TresPerspectiveCamera :position="[3, 3, 5]" />
+    <TresFog :args="['#020420', 10, 15]" />
+   <TresPerspectiveCamera :position="[5, 5, 5]" :near="0.1" :far="100" />
     <OrbitControls />
     <TresAmbientLight :intensity="0.8" />
     <TresDirectionalLight
@@ -21,6 +16,5 @@ useHead({
       <RangerModel />
     </Suspense>
     <TresAxesHelper />
-    <TresGridHelper :args="[10, 10, 0x444444, '#00dc82']" />
-  </TresCanvas>
+    <Floor />
 </template>

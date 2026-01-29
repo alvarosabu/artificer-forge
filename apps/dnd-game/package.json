@@ -1,0 +1,31 @@
+{
+  "name": "dnd-game",
+  "private": true,
+  "type": "module",
+  "description": "TresJS Nuxt application",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "lint": "eslint ",
+    "lint:fix": "eslint  --fix",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@nuxt/eslint": "^1.9.0",
+    "@tresjs/nuxt": "5.0.0",
+    "eslint": "^9.36.0",
+    "nuxt": "^4.1.2",
+    "three": "^0.180.0",
+    "vue": "latest",
+    "vue-router": "latest",
+    "@tresjs/cientos": "latest"
+  },
+  "devDependencies": {
+    "@types/three": "latest",
+    "typescript": "latest",
+    "@tresjs/eslint-config": "^1.1.0",
+    "eslint": "^9.16.0"
+  }
+}
