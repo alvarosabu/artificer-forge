@@ -1,21 +1,20 @@
 <script setup lang="ts">
-import { useAnimations, useGLTF } from '@tresjs/cientos'
+import { useGLTF } from '@tresjs/cientos'
+import { useCharacterAnimations, AnimationName } from '~/composables/useCharacterAnimations'
 
-const { state, nodes } = useGLTF('/models/Ranger.glb')
-const { state: animState } = useGLTF('/models/animations/Rig_Medium/Rig_Medium_MovementBasic.glb')
+const { nodes } = useGLTF('/models/Ranger.glb')
 
 const rig = computed(() => nodes.value?.Rig_Medium)
-const animations = computed(() => animState.value?.animations || [])
 
-const { actions } = useAnimations(animations, rig)
+const { actions, currentAnimName, play, stop } = useCharacterAnimations(rig)
 
-watch(actions, (newActions) => {
-  console.log(newActions)
-  const firstActionName = Object.keys(newActions)[0]
-  if (firstActionName) {
-    newActions['Iddle']?.play()
-  }
-}, { immediate: true })
+defineExpose({
+  play,
+  stop,
+  currentAnimName,
+  actions,
+  AnimationName,
+})
 </script>
 
 <template>
