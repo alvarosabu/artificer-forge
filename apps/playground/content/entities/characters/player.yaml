@@ -1,0 +1,25 @@
+templateId: player
+type: character
+name: Player Character
+
+stats:
+  hp: 50
+  maxHp: 50
+  ac: 15
+  strength: 14
+  dexterity: 12
+  constitution: 14
+  intelligence: 10
+  wisdom: 10
+  charisma: 10
+
+faction: player
+hostile: false
+controllable: true
+
+model: /models/player.glb
+animations:
+  idle: Idle
+  walk: Walk
+  run: Run
+  attack: Attack

@@ -1,0 +1,24 @@
+templateId: chest_common
+type: interactable
+subtype: container
+name: Wooden Chest
+
+locked: false
+lockDifficulty: 0
+
+hp: 20
+destructible: true
+
+model: /models/chest.glb
+animations:
+  closed: Closed
+  open: Open
+
+lootTable:
+  - id: gold
+    quantity: [5, 20]
+    chance: 0.9
+  - id: healing_potion
+    chance: 0.3
+  - id: longsword
+    chance: 0.1

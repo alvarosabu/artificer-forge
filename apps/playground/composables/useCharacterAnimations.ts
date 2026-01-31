@@ -1,5 +1,6 @@
 import { useAnimations, useGLTF } from '@tresjs/cientos'
 import type { AnimationAction, Object3D } from 'three'
+import { useGameStore } from '~/stores/game'
 
 export const AnimationName = {
   // MovementBasic
@@ -170,6 +171,7 @@ export function useCharacterAnimations(
   rig: MaybeRef<Object3D | undefined>,
   rigSize: RigSize = 'Medium',
 ) {
+  const gameStore = useGameStore()
   const animBase = `/models/animations/Rig_${rigSize}/Rig_${rigSize}_`
 
   const animStates = ANIM_PACKS.map(pack => useGLTF(`${animBase}${pack}.glb`).state)
@@ -187,10 +189,13 @@ export function useCharacterAnimations(
 
   const { actions } = useAnimations(safeAnimations, rig)
 
-
-
   const currentAction = shallowRef<AnimationAction | null>(null)
   const currentAnimName = ref<AnimationNameType>(AnimationName.IDLE_A)
+
+
+  watch(currentAnimName, (newAction) => {
+    gameStore.currentAnimation = newAction
+  }, { immediate: true })
 
   function play(name: AnimationNameType, fadeTime = 0.3) {
     const newAction = actions[name]

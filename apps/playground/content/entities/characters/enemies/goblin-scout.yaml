@@ -1,0 +1,38 @@
+templateId: goblin_scout
+type: character
+name: Goblin Scout
+
+stats:
+  hp: 12
+  maxHp: 12
+  ac: 13
+  strength: 8
+  dexterity: 14
+  constitution: 10
+  intelligence: 8
+  wisdom: 8
+  charisma: 6
+
+faction: goblin
+hostile: true
+controllable: false
+
+ai:
+  behavior: aggressive
+  alertRange: 10
+  attackRange: 5
+  fleeThreshold: 0.2
+
+model: /models/goblin.glb
+animations:
+  idle: Idle
+  walk: Walk
+  run: Run
+  attack: Slash
+
+drops:
+  - id: gold
+    quantity: [1, 5]
+    chance: 0.8
+  - id: dagger_rusty
+    chance: 0.2

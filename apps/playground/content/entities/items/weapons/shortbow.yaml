@@ -1,0 +1,23 @@
+templateId: shortbow
+type: item
+subtype: weapon
+name: Shortbow
+
+damage:
+  dice: 1d6
+  type: piercing
+
+properties:
+  - ammunition
+  - two-handed
+  - range
+
+range:
+  normal: 80
+  long: 320
+
+weight: 2
+value: 25
+
+requirements:
+  dexterity: 10

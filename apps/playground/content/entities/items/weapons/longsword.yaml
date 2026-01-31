@@ -1,0 +1,17 @@
+templateId: longsword
+type: item
+subtype: weapon
+name: Longsword
+
+damage:
+  dice: 1d8
+  type: slashing
+
+properties:
+  - versatile
+
+weight: 3
+value: 15
+
+requirements:
+  strength: 10

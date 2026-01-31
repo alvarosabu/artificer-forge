@@ -1,5 +1,8 @@
 export default defineAppConfig({
   ui: {
+    font: {
+      sans: 'Crimson Pro',
+    },
     colors: {
       primary: 'bookcloth',
       neutral: 'neutral',

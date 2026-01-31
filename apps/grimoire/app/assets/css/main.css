@@ -1,3 +1,7 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+
 @theme static {
   --font-sans: 'Crimson Pro', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
 

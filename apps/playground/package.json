@@ -13,13 +13,16 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@nuxt/content": "catalog:nuxt",
     "@nuxt/eslint": "catalog:nuxt",
     "@nuxt/ui": "catalog:",
+    "@pinia/nuxt": "catalog:",
     "@tresjs/cientos": "catalog:three",
     "@tresjs/leches": "catalog:three",
     "@tresjs/nuxt": "catalog:three",
     "eslint": "catalog:eslint",
     "nuxt": "catalog:nuxt",
+    "pinia": "catalog:",
     "three": "catalog:three",
     "vue": "catalog:vue",
     "vue-router": "catalog:vue"
