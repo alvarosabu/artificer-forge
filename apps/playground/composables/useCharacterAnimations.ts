@@ -1,6 +1,5 @@
 import { useAnimations, useGLTF } from '@tresjs/cientos'
 import type { AnimationAction, Object3D } from 'three'
-import type { ComputedRef, ShallowRef } from 'vue'
 
 export const AnimationName = {
   // MovementBasic
@@ -168,7 +167,7 @@ const ANIM_PACKS = [
 ] as const
 
 export function useCharacterAnimations(
-  rig: ShallowRef<Object3D | undefined> | ComputedRef<Object3D | undefined>,
+  rig: MaybeRef<Object3D | undefined>,
   rigSize: RigSize = 'Medium',
 ) {
   const animBase = `/models/animations/Rig_${rigSize}/Rig_${rigSize}_`
@@ -182,7 +181,7 @@ export function useCharacterAnimations(
 
   // Only provide animations to useAnimations when rig is ready
   const safeAnimations = computed(() => {
-    if (!rig.value) return []
+    if (!unref(rig)) return []
     return rawAnimations.value
   })
 

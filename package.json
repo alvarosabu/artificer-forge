@@ -1,5 +1,5 @@
 {
-  "name": "game-lab",
+  "name": "artificer-forge",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -18,5 +18,13 @@
   "devDependencies": {
     "@types/three": "catalog:three",
     "typescript": "catalog:typescript"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ],
+    "overrides": {
+      "ipx": "3.0.2"
+    }
   }
 }

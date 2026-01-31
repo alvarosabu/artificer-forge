@@ -13,7 +13,7 @@ import { Floor } from '@gamelab/components'
       cast-shadow
     />
     <Suspense>
-      <RangerModel />
+      <Character />
     </Suspense>
     <TresAxesHelper />
     <Floor />

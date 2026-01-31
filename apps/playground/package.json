@@ -1,5 +1,5 @@
 {
-  "name": "playground",
+  "name": "@artificer-forge/playground",
   "private": true,
   "type": "module",
   "description": "Playground for model loading and rendering",
