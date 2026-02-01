@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { Floor } from '@artificer-forge/components'
+import type { TresPointerEvent } from '@tresjs/core'
+import type { Vector3 } from 'three'
 
 const gameStore = useGameStore()
 const { close: closePalette } = useCommandPalette()
@@ -56,6 +58,11 @@ onUnmounted(() => {
 const characterEntities = computed(() => {
   return [...gameStore.entities.values()].filter(e => e.type === 'character')
 })
+
+function handleFloorClick(event: TresPointerEvent) {
+  console.log('Floor clicked at', event.point)
+  selectedCharacterRef.value?.moveTo(event.point)
+}
 </script>
 
 <template>
@@ -73,10 +80,9 @@ const characterEntities = computed(() => {
       v-for="entity in characterEntities"
       :ref="(el: any) => setCharacterRef(entity.id, el)"
       :key="entity.id"
-      :position="[entity.position.x, entity.position.y, entity.position.z]"
-      :model="entity.model"
+      :entity-id="entity.id"
     />
   </Suspense>
   <TresAxesHelper />
-  <Floor />
+  <Floor @click="handleFloorClick" />
 </template>

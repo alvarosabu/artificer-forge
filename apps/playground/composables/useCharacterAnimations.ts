@@ -197,15 +197,28 @@ export function useCharacterAnimations(
     gameStore.currentAnimation = newAction
   }, { immediate: true })
 
-  function play(name: AnimationNameType, fadeTime = 0.3) {
+  function play(name: AnimationNameType, fadeTime = 0.3, timeScale = 1) {
     const newAction = actions[name]
     if (!newAction) return
 
-    if (currentAction.value && currentAction.value !== newAction) {
+    // Already playing this animation - just update timeScale if needed
+    if (currentAction.value === newAction) {
+      newAction.setEffectiveTimeScale(timeScale)
+      return
+    }
+
+    // Prepare and start new action at full weight immediately
+    newAction.enabled = true
+    newAction.setEffectiveTimeScale(timeScale)
+    newAction.setEffectiveWeight(1)
+    newAction.time = 0
+    newAction.play()
+
+    // Fade out old action if exists
+    if (currentAction.value) {
       currentAction.value.fadeOut(fadeTime)
     }
 
-    newAction.reset().fadeIn(fadeTime).play()
     currentAction.value = newAction
     currentAnimName.value = name
   }

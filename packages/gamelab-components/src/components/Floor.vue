@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { DoubleSide, PlaneGeometry } from 'three'
+import { DoubleSide, PlaneGeometry, Vector3 } from 'three'
 import { NodeMaterial, Node } from 'three/webgpu'
 import {
   clamp,
@@ -13,12 +13,21 @@ import {
   step,
   positionWorld,
 } from 'three/tsl'
+import { TresPointerEvent } from '@tresjs/core'
 
 interface GridLine {
   color: ReturnType<typeof uniform>
   scale: ReturnType<typeof uniform>
   thickness: ReturnType<typeof uniform>
   cross: ReturnType<typeof uniform>
+}
+
+const emit = defineEmits<{
+  click: [event: TresPointerEvent]
+}>()
+
+function handleClick(event: TresPointerEvent) {
+  emit('click', event)
 }
 
 function createGridLine(
@@ -115,5 +124,6 @@ const geometry = new PlaneGeometry(200, 200)
     :material="material"
     :rotation-x="-Math.PI / 2"
     receive-shadow
+    @click="handleClick"
   />
 </template>
