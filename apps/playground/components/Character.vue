@@ -33,10 +33,28 @@ function syncToStore() {
   })
 }
 
-const { moveTo, update } = useCharacterController(characterRef, { play }, {
+const { moveTo, update, target } = useCharacterController(characterRef, { play }, {
   speed: 3,
   onFinishMovement: syncToStore,
 })
+
+// Sync moveTarget to store when target changes
+watch(target, (newTarget) => {
+  gameStore.updateEntity(props.entityId, {
+    moveTarget: newTarget ? { x: newTarget.x, y: newTarget.y, z: newTarget.z } : null,
+  })
+}, { immediate: true })
+
+// Initialize position from store once when characterRef is available
+watch(characterRef, (group) => {
+  if (group && entity.value) {
+    const { position, rotation } = entity.value
+    group.position.set(position.x, position.y, position.z)
+    if (rotation) {
+      group.rotation.set(rotation.x, rotation.y, rotation.z)
+    }
+  }
+}, { immediate: true })
 
 const { onBeforeRender } = useLoop()
 onBeforeRender(({ delta }) => update(delta))
@@ -55,8 +73,6 @@ defineExpose({
   <TresGroup
     v-if="entity"
     ref="characterRef"
-    :position="[entity.position.x, entity.position.y, entity.position.z]"
-    :rotation="[entity.rotation?.x ?? 0, entity.rotation?.y ?? 0, entity.rotation?.z ?? 0]"
   >
     <primitive
       v-if="rig"

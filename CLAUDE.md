@@ -57,6 +57,8 @@ pnpm -F @artificer-forge/playground lint:fix
 | `content/entities/**/*.yaml` | Entity templates (characters, items, interactables) |
 | `composables/useEntityTemplates.ts` | Template query helpers |
 | `composables/useCharacterAnimations.ts` | Animation control |
+| `composables/useCharacterController.ts` | Movement facade (pointer/keyboard modes) |
+| `composables/usePointerController.ts` | Click-to-move implementation |
 | `components/Character.vue` | Model rendering (dumb) |
 
 ## Nuxt Content v3 Notes

@@ -15,6 +15,13 @@ const selectedCharacterRef = computed(() => {
   return characterRefs.value.get(gameStore.selectedEntityId) ?? null
 })
 
+// Target indicator position from selected entity's moveTarget
+const targetIndicatorPosition = computed<[number, number, number] | null>(() => {
+  const target = gameStore.selectedEntity?.moveTarget
+  if (!target) return null
+  return [target.x, 0.01, target.z]
+})
+
 // Register/unregister character refs
 function setCharacterRef(entityId: string, ref: { play: (name: string) => void } | null) {
   if (ref) {
@@ -85,4 +92,11 @@ function handleFloorClick(event: TresPointerEvent) {
   </Suspense>
   <TresAxesHelper />
   <Floor @click="handleFloorClick" />
+  <TargetIndicator
+    v-if="targetIndicatorPosition"
+    :position="targetIndicatorPosition"
+    :radius="0.4"
+    :height="0.8"
+    :pulse-speed="3"
+  />
 </template>

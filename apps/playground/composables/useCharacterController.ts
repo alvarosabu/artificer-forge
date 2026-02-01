@@ -1,48 +1,37 @@
-import type { Group, Vector3 } from 'three'
-import { AnimationName, type AnimationNameType } from './useCharacterAnimations'
+import type { Group } from 'three'
+import type { AnimationNameType } from './useCharacterAnimations'
+import { usePointerController, type PointerControllerOptions } from './usePointerController'
+
+export type ControllerMode = 'pointer' | 'keyboard'
 
 export interface CharacterControllerOptions {
+  /** Controller mode: 'pointer' for click-to-move, 'keyboard' for WASD (default: 'pointer') */
+  mode?: ControllerMode
   speed: number
   /** Base speed the walk animation was authored for (default: 2) */
   baseAnimSpeed?: number
   onFinishMovement?: () => void
 }
 
+export type AnimationControls = {
+  play: (name: AnimationNameType, fadeTime?: number, timeScale?: number) => void
+}
+
+/**
+ * Facade for character movement controllers.
+ * Delegates to specific implementations based on mode.
+ */
 export function useCharacterController(
   character: Ref<Group | undefined>,
-  animationControls: { play: (name: AnimationNameType, fadeTime?: number, timeScale?: number) => void },
+  animationControls: AnimationControls,
   options: CharacterControllerOptions = { speed: 3 }
 ) {
-  const { speed, baseAnimSpeed = 2 } = options
-  const animTimeScale = speed / baseAnimSpeed
+  const { mode = 'pointer', ...controllerOptions } = options
 
-  const target = shallowRef<Vector3 | null>(null)
-  const isMoving = computed(() => target.value !== null)
-
-  function moveTo(point: Vector3) {
-    target.value = point.clone()
-    animationControls.play(AnimationName.WALKING_A, 0.3, animTimeScale)
+  if (mode === 'keyboard') {
+    // TODO: implement useKeyboardController
+    console.warn('[useCharacterController] keyboard mode not yet implemented, falling back to pointer')
   }
 
-  function update(delta: number) {
-    if (!character.value || !target.value) return
-
-    const direction = target.value.clone().sub(character.value.position)
-    const distance = direction.length()
-
-    if (distance < 0.1) {
-      target.value = null
-      animationControls.play(AnimationName.IDLE_A)
-      options.onFinishMovement?.()
-      return
-    }
-
-    // Rotate to face movement direction
-    character.value.rotation.y = Math.atan2(direction.x, direction.z)
-
-    direction.normalize()
-    character.value.position.add(direction.multiplyScalar(speed * delta))
-  }
-
-  return { moveTo, update, isMoving, target }
+  return usePointerController(character, animationControls, controllerOptions as PointerControllerOptions)
 }

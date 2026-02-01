@@ -25,7 +25,9 @@ playground/
 │   └── game.ts             # Central Pinia store
 ├── composables/
 │   ├── useEntityTemplates.ts
-│   └── useCharacterAnimations.ts
+│   ├── useCharacterAnimations.ts
+│   ├── useCharacterController.ts  # Facade for movement controllers
+│   └── usePointerController.ts    # Click-to-move implementation
 ├── components/
 │   └── Character.vue       # Dumb model renderer
 └── pages/
@@ -104,6 +106,7 @@ interface EntityState {
 |------|-----|
 | Add entity type | Add YAML in `content/entities/`, update schema in `content.config.ts` |
 | Add animation | Add to template YAML `animations` map, use via `useCharacterAnimations` |
+| Add character movement | Use `useCharacterController` with `mode: 'pointer'` or `'keyboard'` |
 | Spawn entity | `gameStore.spawnFromTemplate(templateId, position)` |
 | Track game state | `gameStore.setFlag('quest_done', true)` |
 

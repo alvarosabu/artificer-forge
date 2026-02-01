@@ -12,6 +12,7 @@ export interface EntityState {
   name: string
   position: Position
   rotation?: Position
+  moveTarget?: Position | null
 
   // Rendering
   model?: string
