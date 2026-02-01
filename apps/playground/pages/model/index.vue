@@ -7,7 +7,10 @@ useHead({
 </script>
 
 <template>
-  <Game>
-    <ModelExperience />
-  </Game>
+  <div>
+    <Game>
+      <ModelExperience />
+    </Game>
+    <GameCommandPalette />
+  </div>
 </template>

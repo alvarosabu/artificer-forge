@@ -59,6 +59,9 @@ export const useGameStore = defineStore('game', () => {
     inventory: [] as Item[],
   })
 
+  // === SELECTION ===
+  const selectedEntityId = ref<string | null>(null)
+
   // === ANIMATIONS (for character controller) ===
   const animations = ref<string[]>([])
   const currentAnimation = ref<string | null>(null)
@@ -151,6 +154,12 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  // --- Selection Actions ---
+
+  function selectEntity(entityId: string | null) {
+    selectedEntityId.value = entityId
+  }
+
   function addToInventory(item: Item) {
     const existing = party.inventory.find(i => i.templateId === item.templateId)
     if (existing) {
@@ -222,12 +231,17 @@ export const useGameStore = defineStore('game', () => {
     [...entities.value.values()].filter(e => e.hostile && e.hp && e.hp > 0),
   )
 
+  const selectedEntity = computed(() =>
+    selectedEntityId.value ? entities.value.get(selectedEntityId.value) : null,
+  )
+
   return {
     // State
     currentScene,
     worldFlags,
     entities,
     party,
+    selectedEntityId,
     animations,
     currentAnimation,
 
@@ -245,6 +259,9 @@ export const useGameStore = defineStore('game', () => {
     addToInventory,
     removeFromInventory,
 
+    // Selection actions
+    selectEntity,
+
     // Flag actions
     setFlag,
     getFlag,
@@ -258,5 +275,6 @@ export const useGameStore = defineStore('game', () => {
     partyEntities,
     partyCenter,
     hostileEntities,
+    selectedEntity,
   }
 })
