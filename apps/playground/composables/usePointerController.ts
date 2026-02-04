@@ -1,11 +1,11 @@
 import type { Group, Vector3 } from 'three'
+import { createEventHook } from '@vueuse/core'
 import { AnimationName, type AnimationNameType } from './useCharacterAnimations'
 
 export interface PointerControllerOptions {
   speed: number
   /** Base speed the walk animation was authored for (default: 2) */
   baseAnimSpeed?: number
-  onFinishMovement?: () => void
 }
 
 export function usePointerController(
@@ -19,6 +19,8 @@ export function usePointerController(
   const target = shallowRef<Vector3 | null>(null)
   const isMoving = computed(() => target.value !== null)
 
+  const arriveHook = createEventHook<Vector3>()
+
   function moveTo(point: Vector3) {
     target.value = point.clone()
     animationControls.play(AnimationName.WALKING_A, 0.3, animTimeScale)
@@ -31,9 +33,10 @@ export function usePointerController(
     const distance = direction.length()
 
     if (distance < 0.1) {
+      const arrivedAt = target.value.clone()
       target.value = null
       animationControls.play(AnimationName.IDLE_A)
-      options.onFinishMovement?.()
+      arriveHook.trigger(arrivedAt)
       return
     }
 
@@ -44,5 +47,11 @@ export function usePointerController(
     character.value.position.add(direction.multiplyScalar(speed * delta))
   }
 
-  return { moveTo, update, isMoving, target }
+  return {
+    moveTo,
+    update,
+    isMoving,
+    target,
+    onArrive: arriveHook.on,
+  }
 }

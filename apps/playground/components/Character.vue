@@ -33,10 +33,12 @@ function syncToStore() {
   })
 }
 
-const { moveTo, update, target } = useCharacterController(characterRef, { play }, {
+const { moveTo, update, target, onArrive } = useCharacterController(characterRef, { play }, {
   speed: 3,
-  onFinishMovement: syncToStore,
 })
+
+// Sync to store when movement ends
+onArrive(syncToStore)
 
 // Sync moveTarget to store when target changes
 watch(target, (newTarget) => {
@@ -66,6 +68,7 @@ defineExpose({
   actions,
   AnimationName,
   moveTo,
+  onArrive,
 })
 </script>
 

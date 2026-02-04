@@ -1,18 +1,22 @@
 <script setup lang="ts">
 import { Floor } from '@artificer-forge/components'
 import type { TresPointerEvent } from '@tresjs/core'
-import type { Vector3 } from 'three'
+import { Vector3 } from 'three'
 
 const gameStore = useGameStore()
 const { close: closePalette } = useCommandPalette()
 
-// Registry of character refs by entity ID
-const characterRefs = ref<Map<string, { play: (name: string) => void }>>(new Map())
+const {
+  setCharacterRef,
+  setInteractableRef,
+  getCharacterRef,
+  getInteractableRef,
+} = useSceneRefs()
 
 // Get the selected character's ref
 const selectedCharacterRef = computed(() => {
   if (!gameStore.selectedEntityId) return null
-  return characterRefs.value.get(gameStore.selectedEntityId) ?? null
+  return getCharacterRef(gameStore.selectedEntityId)
 })
 
 // Target indicator position from selected entity's moveTarget
@@ -21,16 +25,6 @@ const targetIndicatorPosition = computed<[number, number, number] | null>(() => 
   if (!target) return null
   return [target.x, 0.01, target.z]
 })
-
-// Register/unregister character refs
-function setCharacterRef(entityId: string, ref: { play: (name: string) => void } | null) {
-  if (ref) {
-    characterRefs.value.set(entityId, ref)
-  }
-  else {
-    characterRefs.value.delete(entityId)
-  }
-}
 
 // Register animation commands
 const { register: registerAnimations, unregister: unregisterAnimations } = useAnimationCommands(
@@ -74,8 +68,63 @@ const interactableEntities = computed(() => {
 })
 
 function handleFloorClick(event: TresPointerEvent) {
-  console.log('Floor clicked at', event.point)
+  closeActiveInteractable()
   selectedCharacterRef.value?.moveTo(event.point)
+}
+
+// Distance from interactable where player should stop
+const INTERACTION_DISTANCE = 1.5
+
+// Track currently open interactable
+const activeInteractableId = ref<string | null>(null)
+
+function closeActiveInteractable() {
+  if (!activeInteractableId.value) return
+  const ref = getInteractableRef(activeInteractableId.value)
+  const entity = gameStore.getEntity(activeInteractableId.value)
+  if (ref && entity?.opened) {
+    ref.toggle()
+  }
+  activeInteractableId.value = null
+}
+
+function handleInteractableClick(entityId: string) {
+  const interactable = gameStore.getEntity(entityId)
+  const player = gameStore.selectedEntity
+  if (!interactable || !player || !selectedCharacterRef.value) return
+
+  // Close previous interactable if different
+  if (activeInteractableId.value && activeInteractableId.value !== entityId) {
+    closeActiveInteractable()
+  }
+
+  const interactablePos = new Vector3(
+    interactable.position.x,
+    interactable.position.y,
+    interactable.position.z,
+  )
+  const playerPos = new Vector3(
+    player.position.x,
+    player.position.y,
+    player.position.z,
+  )
+
+  // Calculate direction from interactable to player
+  const direction = playerPos.clone().sub(interactablePos).normalize()
+
+  // Target position: offset from interactable towards player
+  const targetPos = interactablePos.clone().add(direction.multiplyScalar(INTERACTION_DISTANCE))
+  targetPos.y = 0 // Keep on ground
+
+  // Register one-time listener for arrival
+  const interactableRef = getInteractableRef(entityId)
+  const { off } = selectedCharacterRef.value.onArrive(() => {
+    interactableRef?.toggle()
+    activeInteractableId.value = entityId
+    off()
+  })
+
+  selectedCharacterRef.value.moveTo(targetPos)
 }
 </script>
 
@@ -97,8 +146,10 @@ function handleFloorClick(event: TresPointerEvent) {
   />
   <Interactable
     v-for="entity in interactableEntities"
+    :ref="(el: any) => setInteractableRef(entity.id, el)"
     :key="entity.id"
     :entity-id="entity.id"
+    @interact="handleInteractableClick"
   />
   <TresAxesHelper />
   <Floor @click="handleFloorClick" />

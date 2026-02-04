@@ -1,0 +1,52 @@
+import type { Vector3 } from 'three'
+import type { EventHookOn } from '@vueuse/core'
+
+export interface CharacterRef {
+  play: (name: string) => void
+  moveTo: (point: Vector3) => void
+  onArrive: EventHookOn<Vector3>
+}
+
+export interface InteractableRef {
+  toggle: () => void
+}
+
+export function useSceneRefs() {
+  const characterRefs = ref<Map<string, CharacterRef>>(new Map())
+  const interactableRefs = ref<Map<string, InteractableRef>>(new Map())
+
+  function setCharacterRef(entityId: string, ref: CharacterRef | null) {
+    if (ref) {
+      characterRefs.value.set(entityId, ref)
+    }
+    else {
+      characterRefs.value.delete(entityId)
+    }
+  }
+
+  function setInteractableRef(entityId: string, ref: InteractableRef | null) {
+    if (ref) {
+      interactableRefs.value.set(entityId, ref)
+    }
+    else {
+      interactableRefs.value.delete(entityId)
+    }
+  }
+
+  function getCharacterRef(entityId: string) {
+    return characterRefs.value.get(entityId) ?? null
+  }
+
+  function getInteractableRef(entityId: string) {
+    return interactableRefs.value.get(entityId) ?? null
+  }
+
+  return {
+    characterRefs,
+    interactableRefs,
+    setCharacterRef,
+    setInteractableRef,
+    getCharacterRef,
+    getInteractableRef,
+  }
+}

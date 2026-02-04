@@ -10,7 +10,6 @@ export interface CharacterControllerOptions {
   speed: number
   /** Base speed the walk animation was authored for (default: 2) */
   baseAnimSpeed?: number
-  onFinishMovement?: () => void
 }
 
 export type AnimationControls = {

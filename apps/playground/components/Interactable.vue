@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useGLTF } from '@tresjs/cientos'
+import { useGLTF, Html } from '@tresjs/cientos'
 import { useGraph, type TresObject3D } from '@tresjs/core'
 import { MathUtils } from 'three'
 
@@ -16,6 +16,10 @@ interface AnimationsConfig {
 
 const props = defineProps<{
   entityId: string
+}>()
+
+const emit = defineEmits<{
+  interact: [entityId: string]
 }>()
 
 const gameStore = useGameStore()
@@ -100,13 +104,43 @@ function toggle() {
     opened: currentState.value === 'open',
   })
 }
+
+function handleClick() {
+  emit('interact', props.entityId)
+}
+
+const isHovering = ref(false)
+
+defineExpose({
+  toggle,
+})
 </script>
 
 <template>
-  <primitive
-    v-if="scene && entity"
-    :object="scene"
-    :position="[entity.position.x, entity.position.y, entity.position.z]"
-    @click="toggle"
-  />
+  <TresGroup v-if="entity"  :position="[entity.position.x, entity.position.y, entity.position.z]">
+    <primitive
+      v-if="scene"
+      :object="scene"
+      @click="handleClick"
+      @pointerenter="isHovering = true"
+      @pointerleave="isHovering = false"
+    >
+    <Html
+        center
+        :distance-factor="8"
+        :position="[0, 1.5, 0]"
+      >
+        <div class="flex flex-col items-center gap-1">
+          <UBadge
+            :label="entity.name"
+            v-if="isHovering"
+            size="xl"
+            color="neutral"
+            :variant="isHovering ? 'solid' : 'soft'"
+          />
+        </div>
+      </Html>
+    </primitive>
+  </TresGroup>
+  
 </template>
