@@ -51,6 +51,9 @@ onMounted(async () => {
   // Auto-select first spawned character
   gameStore.selectEntity(entityId)
 
+  // Spawn a chest
+  await gameStore.spawnFromTemplate('chest_common', { x: 2, y: 0, z: 2 })
+
   // Register commands after mount
   registerAnimations()
   registerEntities()
@@ -64,6 +67,11 @@ onUnmounted(() => {
 // Get character entities to render
 const characterEntities = computed(() => {
   return [...gameStore.entities.values()].filter(e => e.type === 'character')
+})
+
+// Get interactable entities to render
+const interactableEntities = computed(() => {
+  return [...gameStore.entities.values()].filter(e => e.type === 'interactable')
 })
 
 function handleFloorClick(event: TresPointerEvent) {
@@ -82,14 +90,17 @@ function handleFloorClick(event: TresPointerEvent) {
     :intensity="1.5"
     cast-shadow
   />
-  <Suspense>
-    <Character
-      v-for="entity in characterEntities"
-      :ref="(el: any) => setCharacterRef(entity.id, el)"
-      :key="entity.id"
-      :entity-id="entity.id"
-    />
-  </Suspense>
+  <Character
+    v-for="entity in characterEntities"
+    :ref="(el: any) => setCharacterRef(entity.id, el)"
+    :key="entity.id"
+    :entity-id="entity.id"
+  />
+  <Interactable
+    v-for="entity in interactableEntities"
+    :key="entity.id"
+    :entity-id="entity.id"
+  />
   <TresAxesHelper />
   <Floor @click="handleFloorClick" />
   <TargetIndicator

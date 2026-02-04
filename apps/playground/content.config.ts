@@ -19,7 +19,23 @@ export default defineContentConfig({
           behavior: z.string(),
         }).passthrough().optional(),
         model: z.string().optional(),
-        animations: z.record(z.string()).optional(),
+        // Interactable animations: code-driven transforms
+        animations: z.object({
+          default: z.string(),
+          states: z.record(z.object({
+            target: z.string(),
+            rotation: z.object({
+              x: z.number(),
+              y: z.number(),
+              z: z.number(),
+            }).optional(),
+            position: z.object({
+              x: z.number(),
+              y: z.number(),
+              z: z.number(),
+            }).optional(),
+          })),
+        }).optional(),
         // Item fields
         damage: z.object({
           dice: z.string(),

@@ -9,10 +9,16 @@ lockDifficulty: 0
 hp: 20
 destructible: true
 
-model: /models/chest.glb
+model: /models/Chest.glb
 animations:
-  closed: Closed
-  open: Open
+  default: closed
+  states:
+    closed:
+      target: chest_lid
+      rotation: { x: 0, y: 0, z: 0 }  # values are Math.PI multipliers
+    open:
+      target: chest_lid
+      rotation: { x: -0.6, y: 0, z: 0 }  # -0.6π ≈ -108°
 
 lootTable:
   - id: gold
