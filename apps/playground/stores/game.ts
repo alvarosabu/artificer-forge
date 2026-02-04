@@ -16,7 +16,7 @@ export interface EntityState {
 
   // Rendering
   model?: string
-  animations?: Record<string, string>
+  animations?: Record<string, unknown>
 
   // Character-specific
   faction?: string
@@ -126,6 +126,44 @@ export const useGameStore = defineStore('game', () => {
 
     spawnEntity(instanceId, entityState)
     return instanceId
+  }
+
+  // --- Scene Actions ---
+
+  async function loadScene(sceneId: string, spawnPointId: string = 'default') {
+    const scene = await queryCollection('scenes')
+      .where('sceneId', '=', sceneId)
+      .first()
+
+    if (!scene) {
+      throw new Error(`Scene not found: ${sceneId}`)
+    }
+
+    // Clear only NON-party entities
+    for (const [id] of entities.value) {
+      if (!party.members.includes(id)) {
+        entities.value.delete(id)
+      }
+    }
+
+    currentScene.value = sceneId
+
+    // Spawn scene entities
+    for (const entry of scene.entities) {
+      await spawnFromTemplate(
+        entry.templateId,
+        entry.position,
+        {
+          rotation: entry.rotation,
+          ...entry.overrides,
+        },
+      )
+    }
+
+    const spawnPoint = scene.spawnPoints[spawnPointId]
+      ?? scene.spawnPoints.default
+
+    return { scene, spawnPoint }
   }
 
   // --- Party Actions ---
@@ -252,6 +290,9 @@ export const useGameStore = defineStore('game', () => {
     removeEntity,
     getEntity,
     spawnFromTemplate,
+
+    // Scene actions
+    loadScene,
 
     // Party actions
     addToParty,

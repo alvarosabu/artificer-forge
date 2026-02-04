@@ -2,6 +2,42 @@ import { defineContentConfig, defineCollection, z } from '@nuxt/content'
 
 export default defineContentConfig({
   collections: {
+    scenes: defineCollection({
+      type: 'data',
+      source: 'scenes/*.yaml',
+      schema: z.object({
+        sceneId: z.string(),
+        name: z.string(),
+        spawnPoints: z.record(z.object({
+          x: z.number(),
+          y: z.number(),
+          z: z.number(),
+        })),
+        exits: z.array(z.object({
+          id: z.string(),
+          target: z.string(),
+          position: z.object({
+            x: z.number(),
+            y: z.number(),
+            z: z.number(),
+          }),
+        })).optional(),
+        entities: z.array(z.object({
+          templateId: z.string(),
+          position: z.object({
+            x: z.number(),
+            y: z.number(),
+            z: z.number(),
+          }),
+          rotation: z.object({
+            x: z.number(),
+            y: z.number(),
+            z: z.number(),
+          }).optional(),
+          overrides: z.record(z.any()).optional(),
+        })),
+      }),
+    }),
     entities: defineCollection({
       type: 'data',
       source: 'entities/**/*.yaml',

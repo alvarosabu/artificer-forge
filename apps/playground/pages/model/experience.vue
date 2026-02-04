@@ -44,15 +44,14 @@ const { register: registerEntities, unregister: unregisterEntities } = useEntity
 )
 
 onMounted(async () => {
-  // Spawn ranger at origin and add to party
+  // Spawn ranger and add to party
   const entityId = await gameStore.spawnFromTemplate('ranger', { x: 0, y: 0, z: 0 })
   gameStore.addToParty(entityId)
-
-  // Auto-select first spawned character
   gameStore.selectEntity(entityId)
 
-  // Spawn a chest
-  await gameStore.spawnFromTemplate('chest_common', { x: 2, y: 0, z: 2 })
+  // Load scene and position party at spawn point
+  const { spawnPoint } = await gameStore.loadScene('test_scene')
+  gameStore.updateEntity(entityId, { position: spawnPoint })
 
   // Register commands after mount
   registerAnimations()

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useGLTF } from '@tresjs/cientos'
-import { useGraph } from '@tresjs/core'
+import { useGraph, type TresObject3D } from '@tresjs/core'
 import { MathUtils } from 'three'
 
 interface AnimationState {
@@ -23,11 +23,13 @@ const entity = computed(() => gameStore.getEntity(props.entityId))
 const modelPath = computed(() => entity.value?.model!)
 const animations = computed(() => entity.value?.animations as AnimationsConfig | undefined)
 
-const { state } = useGLTF(modelPath.value)
+const { state } = useGLTF(modelPath.value, {
+  draco: true,
+})
 const scene = computed(() => state.value?.scene)
 
 // Get named nodes from the model
-const graph = useGraph(scene as any)
+const graph = useGraph(scene as unknown as Ref<TresObject3D>)
 
 // Find target mesh by name from animations config
 const targetMesh = computed(() => {
