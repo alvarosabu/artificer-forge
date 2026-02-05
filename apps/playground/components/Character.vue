@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { useGLTF } from '@tresjs/cientos'
+import type { TresPointerEvent } from '@tresjs/core'
 import type { Group } from 'three'
 import { useCharacterAnimations, AnimationName } from '~/composables/useCharacterAnimations'
 import { useCharacterController } from '~/composables/useCharacterController'
+
+const { open: openContextMenu } = useContextMenu()
 
 const props = withDefaults(defineProps<{
   entityId: string
@@ -61,6 +64,15 @@ watch(characterRef, (group) => {
 const { onBeforeRender } = useLoop()
 onBeforeRender(({ delta }) => update(delta))
 
+function handleContextMenu(event: TresPointerEvent) {
+  event.nativeEvent.preventDefault()
+  openContextMenu(
+    props.entityId,
+    event.nativeEvent.clientX,
+    event.nativeEvent.clientY,
+  )
+}
+
 defineExpose({
   play,
   stop,
@@ -82,6 +94,7 @@ defineExpose({
       :object="rig"
       cast-shadow
       receive-shadow
+      @contextmenu="handleContextMenu"
     />
   </TresGroup>
 </template>
