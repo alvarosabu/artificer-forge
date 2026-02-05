@@ -37,6 +37,7 @@ export interface EntityState {
   // Interactable-specific
   locked?: boolean
   opened?: boolean
+  destructible?: boolean
 }
 
 export interface Item {
