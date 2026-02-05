@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { useGLTF, Html } from '@tresjs/cientos'
-import { useGraph, type TresObject3D } from '@tresjs/core'
+import { useGraph, type TresObject3D, type TresPointerEvent } from '@tresjs/core'
 import { MathUtils } from 'three'
+
+const { open: openContextMenu } = useContextMenu()
 
 interface AnimationState {
   target: string
@@ -109,6 +111,15 @@ function handleClick() {
   emit('interact', props.entityId)
 }
 
+function handleContextMenu(event: TresPointerEvent) {
+  event.nativeEvent.preventDefault()
+  openContextMenu(
+    props.entityId,
+    event.nativeEvent.clientX,
+    event.nativeEvent.clientY,
+  )
+}
+
 const isHovering = ref(false)
 
 defineExpose({
@@ -122,6 +133,7 @@ defineExpose({
       v-if="scene"
       :object="scene"
       @click="handleClick"
+      @contextmenu="handleContextMenu"
       @pointerenter="isHovering = true"
       @pointerleave="isHovering = false"
     >
