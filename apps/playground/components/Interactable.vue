@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { useGLTF, Html } from '@tresjs/cientos'
+import { useGLTF, Html, useBVH } from '@tresjs/cientos'
 import { useGraph, type TresObject3D, type TresPointerEvent } from '@tresjs/core'
 import { MathUtils } from 'three'
 
 const { open: openContextMenu } = useContextMenu()
+const { addToSelection, removeFromSelection } = useOutlinePass()
 
 interface AnimationState {
   target: string
@@ -29,11 +30,16 @@ const entity = computed(() => gameStore.getEntity(props.entityId))
 const modelPath = computed(() => entity.value?.model!)
 const animations = computed(() => entity.value?.animations as AnimationsConfig | undefined)
 
-const { state } = useGLTF(modelPath.value, {
+const { state: model } = useGLTF(modelPath.value, {
   draco: true,
 })
-const scene = computed(() => state.value?.scene)
+const scene = computed(() => model.value?.scene)
+/* const { applyBVHWhenReady } = useBVH({
+  enabled: true,
+})
 
+// Apply BVH when model loads
+applyBVHWhenReady(() => model.value?.scene) */
 // Get named nodes from the model
 const graph = useGraph(scene as unknown as Ref<TresObject3D>)
 
@@ -122,6 +128,20 @@ function handleContextMenu(event: TresPointerEvent) {
 
 const isHovering = ref(false)
 
+function handlePointerEnter() {
+  isHovering.value = true
+  if (scene.value) {
+    addToSelection(scene.value)
+  }
+}
+
+function handlePointerLeave() {
+  isHovering.value = false
+  if (scene.value) {
+    removeFromSelection(scene.value)
+  }
+}
+
 defineExpose({
   toggle,
 })
@@ -134,8 +154,8 @@ defineExpose({
       :object="scene"
       @click="handleClick"
       @contextmenu="handleContextMenu"
-      @pointerenter="isHovering = true"
-      @pointerleave="isHovering = false"
+      @pointerenter="handlePointerEnter"
+      @pointerleave="handlePointerLeave"
     >
     <Html
         center

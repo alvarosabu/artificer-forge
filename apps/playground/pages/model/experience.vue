@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Floor } from '@artificer-forge/components'
 import type { TresPointerEvent } from '@tresjs/core'
-import { Vector3 } from 'three'
+import { BoxGeometry, Mesh, MeshNormalMaterial, Vector3 } from 'three'
 
 const gameStore = useGameStore()
 const { close: closePalette } = useCommandPalette()
@@ -159,6 +159,7 @@ function handleInteractableClick(entityId: string) {
 
   selectedCharacterRef.value.moveTo(targetPos)
 }
+
 </script>
 
 <template>

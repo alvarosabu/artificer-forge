@@ -6,6 +6,7 @@ import { useCharacterAnimations, AnimationName } from '~/composables/useCharacte
 import { useCharacterController } from '~/composables/useCharacterController'
 
 const { open: openContextMenu } = useContextMenu()
+const { addToSelection, removeFromSelection } = useOutlinePass()
 
 const props = withDefaults(defineProps<{
   entityId: string
@@ -73,6 +74,18 @@ function handleContextMenu(event: TresPointerEvent) {
   )
 }
 
+function handlePointerEnter() {
+  if (rig.value) {
+    addToSelection(rig.value)
+  }
+}
+
+function handlePointerLeave() {
+  if (rig.value) {
+    removeFromSelection(rig.value)
+  }
+}
+
 defineExpose({
   play,
   stop,
@@ -95,6 +108,8 @@ defineExpose({
       cast-shadow
       receive-shadow
       @contextmenu="handleContextMenu"
+      @pointerenter="handlePointerEnter"
+      @pointerleave="handlePointerLeave"
     />
   </TresGroup>
 </template>

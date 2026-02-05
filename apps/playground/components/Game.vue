@@ -2,9 +2,8 @@
 import type { TresRendererSetupContext } from '@tresjs/core'
 import { WebGPURenderer } from 'three/webgpu'
 
-const gameStore = useGameStore()
-
 const { state, close, emitAction } = useContextMenuProvider()
+useOutlinePassProvider()
 
 function handlePointerMissed() {
   close()
@@ -22,6 +21,7 @@ const createWebGPURenderer = (ctx: TresRendererSetupContext) => {
   })
   return renderer
 }
+
 </script>
 
 <template>
@@ -32,6 +32,10 @@ const createWebGPURenderer = (ctx: TresRendererSetupContext) => {
     @pointer-missed="handlePointerMissed"
   >
     <slot />
+    <OutlinePostProcessing
+      :edge-thickness="2"
+      :edge-glow="0"
+    />
   </TresCanvas>
   <EntityContextMenu
     :state="state"
