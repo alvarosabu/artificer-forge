@@ -118,10 +118,12 @@ export const useGameStore = defineStore('game', () => {
       faction: template.faction,
       hostile: template.hostile,
       controllable: template.controllable,
-      hp: template.stats?.hp,
+      hp: template.stats?.hp ?? template.hp,
       maxHp: template.stats?.maxHp,
       stats: template.stats,
       ai: template.ai,
+      locked: template.locked,
+      destructible: template.destructible,
       ...overrides,
     }
 

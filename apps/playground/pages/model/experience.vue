@@ -13,6 +13,39 @@ const {
   getInteractableRef,
 } = useSceneRefs()
 
+// Context menu action handler
+const { onAction } = useContextMenu()
+
+onAction((action, entityId) => {
+  const entity = gameStore.getEntity(entityId)
+  if (!entity) return
+
+  switch (action) {
+    case 'examine':
+      console.log('Examine:', entityId)
+      break
+    case 'use':
+    case 'close':
+      handleInteractableClick(entityId)
+      break
+    case 'lockpick':
+      console.log('Lockpick:', entityId)
+      break
+    case 'attack':
+      console.log('Attack:', entityId)
+      break
+    case 'talk':
+      console.log('Talk:', entityId)
+      break
+    case 'follow':
+      console.log('Follow:', entityId)
+      break
+    case 'pickup':
+      console.log('Pickup:', entityId)
+      break
+  }
+})
+
 // Get the selected character's ref
 const selectedCharacterRef = computed(() => {
   if (!gameStore.selectedEntityId) return null
