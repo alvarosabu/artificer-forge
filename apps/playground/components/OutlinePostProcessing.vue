@@ -4,34 +4,32 @@ import { Color, PostProcessing, WebGPURenderer } from 'three/webgpu'
 import { pass, float, uniform } from 'three/tsl'
 import { outline } from 'three/addons/tsl/display/OutlineNode.js'
 
-const props = withDefaults(defineProps<{
-  edgeGlow?: number
-  edgeThickness?: number
-  edgeStrength?: number
+export interface OutlinePreset {
   visibleEdgeColor?: string
   hiddenEdgeColor?: string
+  edgeStrength?: number
+  edgeThickness?: number
+  edgeGlow?: number
+}
+
+const props = withDefaults(defineProps<{
+  presets?: Record<string, OutlinePreset>
 }>(), {
-  edgeGlow: 0,
-  edgeThickness: 1,
-  edgeStrength: 3,
-  visibleEdgeColor: '#ffffff',
-  hiddenEdgeColor: '#4e3636',
+  presets: () => ({
+    default: {},
+  }),
 })
 
 const { renderer, scene, camera } = useTresContext()
-const { selectedObjects: outlineSelection } = useOutlinePass()
+const { getGroup } = useOutlinePass()
 
-// Store references for cleanup
 const postProcessing = shallowRef<PostProcessing | null>(null)
-let outlinePass: ReturnType<typeof outline> | null = null
-const selectedObjectsArray: Object3D[] = []
 
-// Initialize post-processing when scene and camera are ready
 watch(
   [scene, camera.activeCamera],
   ([s, c]) => {
     if (!s || !c) return
-    if (postProcessing.value) return // Already initialized
+    if (postProcessing.value) return
 
     const webgpuRenderer = renderer.instance as unknown as WebGPURenderer
     const sceneObj = s as unknown as Scene
@@ -40,40 +38,48 @@ watch(
     const pp = new PostProcessing(webgpuRenderer)
     const scenePass = pass(sceneObj, cameraObj)
 
-    const edgeStrength = uniform(props.edgeStrength)
-    const visibleEdgeColor = uniform(new Color(props.visibleEdgeColor))
-    const hiddenEdgeColor = uniform(new Color(props.hiddenEdgeColor))
+    // Build one outline pass per preset and accumulate outline color
+    let composedOutline: any = null
 
-    outlinePass = outline(sceneObj, cameraObj, {
-      selectedObjects: selectedObjectsArray,
-      edgeGlow: float(props.edgeGlow),
-      edgeThickness: float(props.edgeThickness),
-    })
+    for (const [name, preset] of Object.entries(props.presets)) {
+      const selectedObjectsArray: Object3D[] = []
 
-    const { visibleEdge, hiddenEdge } = outlinePass
-    const outlineColor = visibleEdge.mul(visibleEdgeColor).add(hiddenEdge.mul(hiddenEdgeColor)).mul(edgeStrength)
+      const edgeStrength = uniform(preset.edgeStrength ?? 3)
+      const visibleEdgeColor = uniform(new Color(preset.visibleEdgeColor ?? '#ffffff'))
+      const hiddenEdgeColor = uniform(new Color(preset.hiddenEdgeColor ?? '#4e3636'))
 
-    pp.outputNode = outlineColor.add(scenePass)
+      const outlinePass = outline(sceneObj, cameraObj, {
+        selectedObjects: selectedObjectsArray,
+        edgeGlow: float(preset.edgeGlow ?? 0),
+        edgeThickness: float(preset.edgeThickness ?? 1),
+      })
+
+      const { visibleEdge, hiddenEdge } = outlinePass
+      const outlineColor = visibleEdge.mul(visibleEdgeColor).add(hiddenEdge.mul(hiddenEdgeColor)).mul(edgeStrength)
+
+      composedOutline = composedOutline ? composedOutline.add(outlineColor) : outlineColor
+
+      // Watch group changes and sync to the pass's selectedObjects array
+      const groupRef = getGroup(name)
+      watch(
+        groupRef,
+        (newSelection) => {
+          selectedObjectsArray.length = 0
+          selectedObjectsArray.push(...newSelection)
+          outlinePass.selectedObjects = selectedObjectsArray
+        },
+        { immediate: true },
+      )
+    }
+
+    pp.outputNode = composedOutline ? composedOutline.add(scenePass) : scenePass
     postProcessing.value = pp
     renderer.replaceRenderFunction((notifySuccess) => {
       pp.render()
       notifySuccess()
     })
   },
-  { immediate: true }
-)
-
-// Update selected objects when selection changes
-watch(
-  outlineSelection,
-  (newSelection) => {
-    selectedObjectsArray.length = 0
-    selectedObjectsArray.push(...newSelection)
-    if (outlinePass) {
-      outlinePass.selectedObjects = selectedObjectsArray
-    }
-  },
-  { immediate: true }
+  { immediate: true },
 )
 
 onUnmounted(() => {

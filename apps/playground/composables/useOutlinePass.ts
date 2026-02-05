@@ -4,9 +4,9 @@ import type { InjectionKey, ShallowRef } from 'vue'
 type Object3DLike = any
 
 export interface OutlinePassApi {
-  selectedObjects: ShallowRef<Object3DLike[]>
-  addToSelection: (object: Object3DLike) => void
-  removeFromSelection: (object: Object3DLike) => void
+  getGroup: (name: string) => ShallowRef<Object3DLike[]>
+  addToSelection: (object: Object3DLike, group?: string) => void
+  removeFromSelection: (object: Object3DLike, group?: string) => void
 }
 
 export const OutlinePassKey: InjectionKey<OutlinePassApi> = Symbol('outline-pass')
@@ -16,29 +16,36 @@ export const OutlinePassKey: InjectionKey<OutlinePassApi> = Symbol('outline-pass
  * Used by Game.vue to share selection across components.
  */
 export function useOutlinePassProvider() {
-  const selectedObjects = shallowRef<Object3DLike[]>([])
+  const groups = new Map<string, ShallowRef<Object3DLike[]>>()
 
-  watch(selectedObjects, (newSelectedObjects) => {
-    console.log('selectedObjects', newSelectedObjects)
-  })
+  function getGroup(name: string): ShallowRef<Object3DLike[]> {
+    let group = groups.get(name)
+    if (!group) {
+      group = shallowRef<Object3DLike[]>([])
+      groups.set(name, group)
+    }
+    return group
+  }
 
-  function addToSelection(object: Object3DLike) {
-    if (!selectedObjects.value.includes(object)) {
-      selectedObjects.value = [...selectedObjects.value, object]
+  function addToSelection(object: Object3DLike, group: string = 'default') {
+    const arr = getGroup(group)
+    if (!arr.value.includes(object)) {
+      arr.value = [...arr.value, object]
     }
   }
 
-  function removeFromSelection(object: Object3DLike) {
-    const idx = selectedObjects.value.indexOf(object)
+  function removeFromSelection(object: Object3DLike, group: string = 'default') {
+    const arr = getGroup(group)
+    const idx = arr.value.indexOf(object)
     if (idx > -1) {
-      const newArr = [...selectedObjects.value]
+      const newArr = [...arr.value]
       newArr.splice(idx, 1)
-      selectedObjects.value = newArr
+      arr.value = newArr
     }
   }
 
   const api: OutlinePassApi = {
-    selectedObjects,
+    getGroup,
     addToSelection,
     removeFromSelection,
   }

@@ -131,14 +131,14 @@ const isHovering = ref(false)
 function handlePointerEnter() {
   isHovering.value = true
   if (scene.value) {
-    addToSelection(scene.value)
+    addToSelection(scene.value, 'interactive')
   }
 }
 
 function handlePointerLeave() {
   isHovering.value = false
   if (scene.value) {
-    removeFromSelection(scene.value)
+    removeFromSelection(scene.value, 'interactive')
   }
 }
 

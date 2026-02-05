@@ -33,8 +33,10 @@ const createWebGPURenderer = (ctx: TresRendererSetupContext) => {
   >
     <slot />
     <OutlinePostProcessing
-      :edge-thickness="2"
-      :edge-glow="0"
+      :presets="{
+        character: { visibleEdgeColor: '#ffffff', edgeThickness: 2 },
+        interactive: { visibleEdgeColor: '#ffcc00', edgeThickness: 2 },
+      }"
     />
   </TresCanvas>
   <EntityContextMenu

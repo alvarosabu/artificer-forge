@@ -76,13 +76,13 @@ function handleContextMenu(event: TresPointerEvent) {
 
 function handlePointerEnter() {
   if (rig.value) {
-    addToSelection(rig.value)
+    addToSelection(rig.value, 'character')
   }
 }
 
 function handlePointerLeave() {
   if (rig.value) {
-    removeFromSelection(rig.value)
+    removeFromSelection(rig.value, 'character')
   }
 }
 
