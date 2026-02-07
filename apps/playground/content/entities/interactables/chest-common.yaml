@@ -9,7 +9,7 @@ lockDifficulty: 0
 hp: 20
 destructible: true
 
-model: /models/Chest.glb
+model: /models/interactables/Chest.glb
 animations:
   default: closed
   states:

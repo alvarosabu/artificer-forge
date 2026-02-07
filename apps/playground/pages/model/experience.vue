@@ -72,13 +72,14 @@ const { register: registerEntities, unregister: unregisterEntities } = useEntity
 
 onMounted(async () => {
   // Spawn ranger and add to party
-  const entityId = await gameStore.spawnFromTemplate('ranger', { x: 0, y: 0, z: 0 })
-  gameStore.addToParty(entityId)
-  gameStore.selectEntity(entityId)
+  const playerId = await gameStore.spawnFromTemplate('ranger', { x: 0, y: 0, z: 0 })
+  gameStore.addToParty(playerId)
+  gameStore.selectEntity(playerId)
+  gameStore.equipWeapon(playerId, 'shortsword', 'mainHand')
 
   // Load scene and position party at spawn point
   const { spawnPoint } = await gameStore.loadScene('test_scene')
-  gameStore.updateEntity(entityId, { position: spawnPoint })
+  gameStore.updateEntity(playerId, { position: spawnPoint })
 
   // Register commands after mount
   registerAnimations()
@@ -98,6 +99,11 @@ const characterEntities = computed(() => {
 // Get interactable entities to render
 const interactableEntities = computed(() => {
   return [...gameStore.entities.values()].filter(e => e.type === 'interactable')
+})
+
+// Get item entities to render
+const itemEntities = computed(() => {
+  return [...gameStore.entities.values()].filter(e => e.type === 'item')
 })
 
 function handleFloorClick(event: TresPointerEvent) {

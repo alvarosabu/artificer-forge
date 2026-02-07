@@ -21,7 +21,7 @@ ai:
   behavior: companion
   followDistance: 3
 
-model: /models/ranger.glb
+model: /models/characters/Ranger.glb
 animations:
   idle: Idle
   walk: Walk

@@ -23,6 +23,9 @@ const rig = computed(() => nodes.value?.Rig_Medium)
 
 const { actions, currentAnimName, play, stop } = useCharacterAnimations(rig)
 
+const equipment = computed(() => entity.value?.equipment)
+useEquipment(rig, equipment)
+
 // Three.js Group ref - controller operates directly on this
 const characterRef = ref<Group>()
 

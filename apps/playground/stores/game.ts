@@ -5,6 +5,11 @@ export interface Position {
   z: number
 }
 
+export interface Equipment {
+  mainHand?: string
+  offHand?: string
+}
+
 export interface EntityState {
   id: string
   templateId: string
@@ -30,14 +35,13 @@ export interface EntityState {
     [key: string]: unknown
   }
 
-  // Item-specific
-  owner?: string
-  quantity?: number
-
   // Interactable-specific
   locked?: boolean
   opened?: boolean
   destructible?: boolean
+
+  // Equipment-specific
+  equipment?: Equipment
 }
 
 export interface Item {
@@ -124,6 +128,7 @@ export const useGameStore = defineStore('game', () => {
       ai: template.ai,
       locked: template.locked,
       destructible: template.destructible,
+      equipment: template.equipment,
       ...overrides,
     }
 
@@ -251,6 +256,22 @@ export const useGameStore = defineStore('game', () => {
     currentAnimation.value = animation
   }
 
+  // --- Equipment Actions ---
+
+  function equipWeapon(entityId: string, weaponTemplateId: string, slot: 'mainHand' | 'offHand') {
+    const entity = entities.value.get(entityId)
+    if (entity) {
+      entity.equipment = { ...entity.equipment, [slot]: weaponTemplateId }
+    }
+  }
+
+  function unequipWeapon(entityId: string, slot: 'mainHand' | 'offHand') {
+    const entity = entities.value.get(entityId)
+    if (entity) {
+      entity.equipment = { ...entity.equipment, [slot]: undefined }
+    }
+  }
+
   // --- Getters ---
 
   const partyEntities = computed(() =>
@@ -315,6 +336,10 @@ export const useGameStore = defineStore('game', () => {
     // Animation actions
     addAnimation,
     setCurrentAnimation,
+
+    // Equipment actions
+    equipWeapon,
+    unequipWeapon,
 
     // Getters
     partyEntities,

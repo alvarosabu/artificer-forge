@@ -1,0 +1,12 @@
+templateId: shortsword
+type: item
+subtype: weapon
+name: Shortsword
+model: /models/items/weapons/Sword_1Handed.glb
+damage:
+  dice: "1d8"
+  type: slashing
+properties:
+  - versatile
+weight: 3
+value: 15

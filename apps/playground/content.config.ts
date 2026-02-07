@@ -103,6 +103,10 @@ export default defineContentConfig({
           quantity: z.union([z.number(), z.array(z.number())]).optional(),
           chance: z.number(),
         })).optional(),
+        equipment: z.object({
+          mainHand: z.string().optional(),
+          offHand: z.string().optional(),
+        }).optional(),
       }),
     }),
   },
