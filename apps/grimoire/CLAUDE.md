@@ -24,7 +24,8 @@ content/
 │   └── 3.rendering.md            # Smart/dumb component pattern
 └── 4.characters/
     ├── 1.model-loading.md        # useGLTF, primitive
-    └── 2.animations.md           # Animation system
+    ├── 2.animations.md           # Animation system
+    └── 4.equipment.md            # Bone attachment with useEquipment
 ```
 
 ## Page Format
