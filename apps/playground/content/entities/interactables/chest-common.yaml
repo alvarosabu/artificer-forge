@@ -7,6 +7,7 @@ locked: false
 lockDifficulty: 0
 
 hp: 20
+maxHp: 20
 destructible: true
 
 model: /models/interactables/Chest.glb

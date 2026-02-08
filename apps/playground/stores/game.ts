@@ -123,7 +123,7 @@ export const useGameStore = defineStore('game', () => {
       hostile: template.hostile,
       controllable: template.controllable,
       hp: template.stats?.hp ?? template.hp,
-      maxHp: template.stats?.maxHp,
+      maxHp: template.stats?.maxHp ?? template.maxHp,
       stats: template.stats,
       ai: template.ai,
       locked: template.locked,

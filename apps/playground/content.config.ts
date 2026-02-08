@@ -97,6 +97,7 @@ export default defineContentConfig({
         locked: z.boolean().optional(),
         lockDifficulty: z.number().optional(),
         hp: z.number().optional(),
+        maxHp: z.number().optional(),
         destructible: z.boolean().optional(),
         lootTable: z.array(z.object({
           id: z.string(),

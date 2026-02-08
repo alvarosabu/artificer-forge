@@ -159,17 +159,21 @@ defineExpose({
     >
     <Html
         center
-        :distance-factor="8"
-        :position="[0, 1.5, 0]"
+        :position="[0, 2, 0]"
       >
-        <div class="flex flex-col items-center gap-1">
-          <UBadge
-            :label="entity.name"
-            v-if="isHovering"
-            size="xl"
-            color="neutral"
-            :variant="isHovering ? 'solid' : 'soft'"
+        <div class="flex flex-col items-center gap-1 w-[150px] text-center font-serif"  v-if="isHovering">
+          <span class="text-lg text-white text-shadow-lg font-bold">{{ entity.name }}</span>
+          <UProgress 
+            size="lg"
+            :ui="{
+              base: 'bg-black',
+              
+            }"
+            class="border border-3 border-black rounded-full" 
+            color="error" 
+            :model-value="entity.hp" :max="entity.maxHp" 
           />
+          <span class="-mt-[8px] text-xs text-white text-shadow-lg/30 font-bold bg-black rounded-full px-1 py-0.5">{{ entity.hp }} / {{ entity.maxHp }}</span>
         </div>
       </Html>
     </primitive>

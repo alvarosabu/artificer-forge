@@ -3,5 +3,6 @@
 
 @theme {
   --font-sans: "Inter", sans-serif;
+  --font-serif: "Crimson Pro", serif;
   --font-mono: "Fira Code", monospace;
 }
