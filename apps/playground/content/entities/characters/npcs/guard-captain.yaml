@@ -1,0 +1,25 @@
+templateId: guard_captain
+type: character
+subtype: npc
+name: Captain Aldric
+
+stats:
+  hp: 45
+  maxHp: 45
+  ac: 18
+  strength: 16
+  dexterity: 12
+  constitution: 14
+  intelligence: 10
+  wisdom: 12
+  charisma: 14
+
+faction: neutral
+hostile: false
+controllable: false
+
+ai:
+  behavior: idle
+  idleAnimation: Idle_B
+
+model: /models/characters/Knight.glb

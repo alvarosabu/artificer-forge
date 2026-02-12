@@ -14,6 +14,7 @@ export interface EntityState {
   id: string
   templateId: string
   type: 'character' | 'item' | 'interactable'
+  subtype?: string
   name: string
   position: Position
   rotation?: Position
@@ -115,6 +116,7 @@ export const useGameStore = defineStore('game', () => {
       id: instanceId,
       templateId: template.templateId,
       type: template.type,
+      subtype: template.subtype,
       name: template.name,
       position,
       model: template.model,
@@ -294,6 +296,10 @@ export const useGameStore = defineStore('game', () => {
     [...entities.value.values()].filter(e => e.hostile && e.hp && e.hp > 0),
   )
 
+  const npcEntities = computed(() =>
+    [...entities.value.values()].filter(e => e.type === 'character' && e.subtype === 'npc'),
+  )
+
   const selectedEntity = computed(() =>
     selectedEntityId.value ? entities.value.get(selectedEntityId.value) : null,
   )
@@ -345,6 +351,7 @@ export const useGameStore = defineStore('game', () => {
     partyEntities,
     partyCenter,
     hostileEntities,
+    npcEntities,
     selectedEntity,
   }
 })

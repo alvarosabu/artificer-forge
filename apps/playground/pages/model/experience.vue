@@ -91,9 +91,14 @@ onUnmounted(() => {
   unregisterEntities()
 })
 
-// Get character entities to render
+// Get character entities to render (exclude NPCs)
 const characterEntities = computed(() => {
-  return [...gameStore.entities.values()].filter(e => e.type === 'character')
+  return [...gameStore.entities.values()].filter(e => e.type === 'character' && e.subtype !== 'npc')
+})
+
+// Get NPC entities to render
+const npcEntities = computed(() => {
+  return gameStore.npcEntities
 })
 
 // Get interactable entities to render
@@ -181,6 +186,11 @@ function handleInteractableClick(entityId: string) {
   <Character
     v-for="entity in characterEntities"
     :ref="(el: any) => setCharacterRef(entity.id, el)"
+    :key="entity.id"
+    :entity-id="entity.id"
+  />
+  <Npc
+    v-for="entity in npcEntities"
     :key="entity.id"
     :entity-id="entity.id"
   />

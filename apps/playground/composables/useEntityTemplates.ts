@@ -43,6 +43,14 @@ export function useEntityTemplates() {
       .all()
   }
 
+  // Get NPCs
+  async function getNPCs() {
+    return queryCollection('entities')
+      .where('type', '=', 'character')
+      .where('subtype', '=', 'npc')
+      .all()
+  }
+
   // Get interactables
   async function getInteractables() {
     return queryCollection('entities').where('type', '=', 'interactable').all()
@@ -58,6 +66,7 @@ export function useEntityTemplates() {
     getCharacters,
     getEnemies,
     getCompanions,
+    getNPCs,
     getItems,
     getWeapons,
     getInteractables,
