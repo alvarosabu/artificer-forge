@@ -5,6 +5,8 @@ import { WebGPURenderer } from 'three/webgpu'
 const { state, close, emitAction } = useContextMenuProvider()
 useOutlinePassProvider()
 
+const { playerEntity, slots, activateSlot } = useActionBar()
+
 function handlePointerMissed() {
   close()
 }
@@ -22,6 +24,18 @@ const createWebGPURenderer = (ctx: TresRendererSetupContext) => {
   return renderer
 }
 
+defineShortcuts({
+  '1': () => activateSlot(0),
+  '2': () => activateSlot(1),
+  '3': () => activateSlot(2),
+  '4': () => activateSlot(3),
+  '5': () => activateSlot(4),
+  '6': () => activateSlot(5),
+  '7': () => activateSlot(6),
+  '8': () => activateSlot(7),
+  '9': () => activateSlot(8),
+  '0': () => activateSlot(9),
+})
 </script>
 
 <template>
@@ -43,5 +57,13 @@ const createWebGPURenderer = (ctx: TresRendererSetupContext) => {
     :state="state"
     @update:open="state.open = $event"
     @action="handleContextMenuAction"
+  />
+  <ActionBar
+    v-if="playerEntity"
+    :player-name="playerEntity.name"
+    :player-hp="playerEntity.hp ?? 0"
+    :player-max-hp="playerEntity.maxHp ?? 0"
+    :slots="slots"
+    @activate="activateSlot"
   />
 </template>

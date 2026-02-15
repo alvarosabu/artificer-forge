@@ -18,7 +18,7 @@ const gameStore = useGameStore()
 const entity = computed(() => gameStore.getEntity(props.entityId))
 const modelPath = computed(() => entity.value?.model!)
 
-const { nodes } = useGLTF(modelPath.value)
+const { nodes } = useGLTF(modelPath.value, { draco: true })
 const rig = computed(() => nodes.value?.Rig_Medium)
 
 const { actions, currentAnimName, play, stop } = useCharacterAnimations(rig)

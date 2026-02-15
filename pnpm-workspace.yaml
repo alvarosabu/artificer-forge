@@ -3,6 +3,7 @@ packages:
   - packages/*
 
 catalog:
+  '@iconify-json/heroicons': ^1.2.3
   '@nuxt/eslint': 1.13.0
   '@nuxt/fonts': 0.13.0
   '@nuxt/icon': 2.2.1

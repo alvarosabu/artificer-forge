@@ -16,6 +16,7 @@
     "three": "catalog:three"
   },
   "devDependencies": {
+    "@iconify-json/heroicons": "catalog:",
     "@types/three": "catalog:three",
     "typescript": "catalog:typescript"
   },

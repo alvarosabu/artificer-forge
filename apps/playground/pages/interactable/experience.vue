@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Floor } from '@artificer-forge/components'
 import type { TresPointerEvent } from '@tresjs/core'
-import { BoxGeometry, Mesh, MeshNormalMaterial, Vector3 } from 'three'
+import { Vector3 } from 'three'
 
 const gameStore = useGameStore()
 const { close: closePalette } = useCommandPalette()
@@ -13,7 +13,8 @@ const {
   getInteractableRef,
 } = useSceneRefs()
 
-// Context menu action handler
+const { registerHandler, unregisterHandler, SLOT_ANIMATION_MAP } = useActionBar()
+
 const { onAction } = useContextMenu()
 
 onAction((action, entityId) => {
@@ -31,84 +32,69 @@ onAction((action, entityId) => {
     case 'lockpick':
       console.log('Lockpick:', entityId)
       break
-    case 'attack':
-      console.log('Attack:', entityId)
-      break
-    case 'talk':
-      console.log('Talk:', entityId)
-      break
-    case 'follow':
-      console.log('Follow:', entityId)
-      break
-    case 'pickup':
-      console.log('Pickup:', entityId)
-      break
   }
 })
 
-// Get the selected character's ref
 const selectedCharacterRef = computed(() => {
   if (!gameStore.selectedEntityId) return null
   return getCharacterRef(gameStore.selectedEntityId)
 })
 
-// Target indicator position from selected entity's moveTarget
 const targetIndicatorPosition = computed<[number, number, number] | null>(() => {
   const target = gameStore.selectedEntity?.moveTarget
   if (!target) return null
   return [target.x, 0.01, target.z]
 })
 
-// Register animation commands
 const { register: registerAnimations, unregister: unregisterAnimations } = useAnimationCommands(
   selectedCharacterRef,
   closePalette,
 )
 
-// Register entity commands
 const { register: registerEntities, unregister: unregisterEntities } = useEntityCommands(
   closePalette,
 )
 
+function registerActionBarHandlers() {
+  for (const [slotId, animName] of Object.entries(SLOT_ANIMATION_MAP)) {
+    registerHandler(slotId, () => {
+      selectedCharacterRef.value?.play(animName)
+    })
+  }
+}
+
+function unregisterActionBarHandlers() {
+  for (const slotId of Object.keys(SLOT_ANIMATION_MAP)) {
+    unregisterHandler(slotId)
+  }
+}
+
 onMounted(async () => {
-  // Spawn ranger and add to party
-  const playerId = await gameStore.spawnFromTemplate('ranger', { x: 0, y: 0, z: 0 })
+  const playerId = await gameStore.spawnFromTemplate('hero', { x: 0, y: 0, z: 0 })
   gameStore.addToParty(playerId)
   gameStore.selectEntity(playerId)
   gameStore.equipWeapon(playerId, 'shortsword', 'mainHand')
 
-  // Load scene and position party at spawn point
-  const { spawnPoint } = await gameStore.loadScene('test_scene')
+  const { spawnPoint } = await gameStore.loadScene('interactable_scene')
   gameStore.updateEntity(playerId, { position: spawnPoint })
 
-  // Register commands after mount
   registerAnimations()
   registerEntities()
+  registerActionBarHandlers()
 })
 
 onUnmounted(() => {
   unregisterAnimations()
   unregisterEntities()
+  unregisterActionBarHandlers()
 })
 
-// Get character entities to render (exclude NPCs)
 const characterEntities = computed(() => {
   return [...gameStore.entities.values()].filter(e => e.type === 'character' && e.subtype !== 'npc')
 })
 
-// Get NPC entities to render
-const npcEntities = computed(() => {
-  return gameStore.npcEntities
-})
-
-// Get interactable entities to render
 const interactableEntities = computed(() => {
   return [...gameStore.entities.values()].filter(e => e.type === 'interactable')
-})
-
-// Get item entities to render
-const itemEntities = computed(() => {
-  return [...gameStore.entities.values()].filter(e => e.type === 'item')
 })
 
 function handleFloorClick(event: TresPointerEvent) {
@@ -116,10 +102,7 @@ function handleFloorClick(event: TresPointerEvent) {
   selectedCharacterRef.value?.moveTo(event.point)
 }
 
-// Distance from interactable where player should stop
 const INTERACTION_DISTANCE = 1.5
-
-// Track currently open interactable
 const activeInteractableId = ref<string | null>(null)
 
 function closeActiveInteractable() {
@@ -137,7 +120,6 @@ function handleInteractableClick(entityId: string) {
   const player = gameStore.selectedEntity
   if (!interactable || !player || !selectedCharacterRef.value) return
 
-  // Close previous interactable if different
   if (activeInteractableId.value && activeInteractableId.value !== entityId) {
     closeActiveInteractable()
   }
@@ -153,14 +135,10 @@ function handleInteractableClick(entityId: string) {
     player.position.z,
   )
 
-  // Calculate direction from interactable to player
   const direction = playerPos.clone().sub(interactablePos).normalize()
-
-  // Target position: offset from interactable towards player
   const targetPos = interactablePos.clone().add(direction.multiplyScalar(INTERACTION_DISTANCE))
-  targetPos.y = 0 // Keep on ground
+  targetPos.y = 0
 
-  // Register one-time listener for arrival
   const interactableRef = getInteractableRef(entityId)
   const { off } = selectedCharacterRef.value.onArrive(() => {
     interactableRef?.toggle()
@@ -170,7 +148,6 @@ function handleInteractableClick(entityId: string) {
 
   selectedCharacterRef.value.moveTo(targetPos)
 }
-
 </script>
 
 <template>
@@ -186,11 +163,6 @@ function handleInteractableClick(entityId: string) {
   <Character
     v-for="entity in characterEntities"
     :ref="(el: any) => setCharacterRef(entity.id, el)"
-    :key="entity.id"
-    :entity-id="entity.id"
-  />
-  <Npc
-    v-for="entity in npcEntities"
     :key="entity.id"
     :entity-id="entity.id"
   />

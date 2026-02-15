@@ -17,10 +17,24 @@ interface DemoCategory {
 
 const categories: DemoCategory[] = [
   {
-    title: 'Model',
+    title: 'Character',
+    icon: 'i-heroicons-user',
+    links: [
+      { label: 'Character', to: '/character' },
+    ],
+  },
+  {
+    title: 'Interactable',
     icon: 'i-heroicons-cube',
     links: [
-      { label: 'Model', to: '/model' },
+      { label: 'Interactable', to: '/interactable' },
+    ],
+  },
+  {
+    title: 'NPC',
+    icon: 'i-heroicons-user-group',
+    links: [
+      { label: 'NPC', to: '/npc' },
     ],
   },
 ]

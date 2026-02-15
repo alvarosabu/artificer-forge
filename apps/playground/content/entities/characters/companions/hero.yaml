@@ -1,6 +1,6 @@
-templateId: ranger
+templateId: hero
 type: character
-name: Ranger Companion
+name: Hero
 
 stats:
   hp: 38
@@ -21,7 +21,7 @@ ai:
   behavior: companion
   followDistance: 3
 
-model: /models/characters/Ranger.glb
+model: /models/characters/hero.glb
 animations:
   idle: Idle
   walk: Walk

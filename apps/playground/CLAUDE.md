@@ -31,8 +31,12 @@ playground/
 ├── components/
 │   └── Character.vue       # Dumb model renderer
 └── pages/
-    └── model/
-        └── experience.vue  # Smart scene manager
+    ├── character/           # Character-only: movement + equipment
+    │   └── experience.vue
+    ├── interactable/        # Character + chest interaction
+    │   └── experience.vue
+    └── npc/                 # Character + NPC behavior
+        └── experience.vue
 ```
 
 ## Entity System
@@ -97,7 +101,7 @@ interface EntityState {
 
 | Component | Role |
 |-----------|------|
-| `pages/model/experience.vue` | Smart: accesses store, spawns entities, filters for rendering |
+| `pages/*/experience.vue` | Smart: accesses store, spawns entities, filters for rendering |
 | `components/Character.vue` | Dumb: receives `model`, `position` props, renders primitive |
 
 ## Common Tasks

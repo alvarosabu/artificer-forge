@@ -1,0 +1,12 @@
+sceneId: interactable_scene
+name: Interactable Scene
+
+spawnPoints:
+  default: { x: 0, y: 0, z: 0 }
+
+exits: []
+
+entities:
+  - templateId: chest_common
+    position: { x: 2, y: 0, z: 2 }
+    rotation: { x: 0, y: 0, z: 0 }

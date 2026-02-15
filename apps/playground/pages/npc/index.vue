@@ -1,15 +1,14 @@
 <script setup lang="ts">
-import ModelExperience from './experience.vue'
+import NpcExperience from './experience.vue'
 useHead({
-  title: 'Model - TresJS Playground',
+  title: 'NPC - TresJS Playground',
 })
-
 </script>
 
 <template>
   <div>
     <Game>
-      <ModelExperience />
+      <NpcExperience />
     </Game>
     <GameCommandPalette />
   </div>

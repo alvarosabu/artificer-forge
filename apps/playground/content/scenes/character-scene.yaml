@@ -1,0 +1,9 @@
+sceneId: character_scene
+name: Character Scene
+
+spawnPoints:
+  default: { x: 0, y: 0, z: 0 }
+
+exits: []
+
+entities: []
