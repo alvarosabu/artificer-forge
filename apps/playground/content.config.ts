@@ -111,5 +111,15 @@ export default defineContentConfig({
         }).optional(),
       }),
     }),
+    classes: defineCollection({
+      type: 'data',
+      source: 'classes/*.yaml',
+      schema: z.object({
+        classId: z.string(),
+        name: z.string(),
+        emblem: z.string(),
+        color: z.string(),
+      }),
+    }),
   },
 })
