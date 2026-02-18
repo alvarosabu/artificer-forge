@@ -17,9 +17,9 @@ catalogMode: prefer
 
 catalogs:
   build:
-    tsdown: 0.20.1
+    tsdown: 0.20.3
     unplugin-vue: ^7.1.1
-    vue-tsc: ^2.2.10
+    vue-tsc: ^3.2.4
   eslint:
     eslint: ^9.36.0
   nuxt:
@@ -27,11 +27,11 @@ catalogs:
     '@nuxt/eslint': ^1.9.0
     nuxt: ^4.1.2
   three:
-    '@tresjs/cientos': https://pkg.pr.new/@tresjs/cientos@ab98d73
-    '@tresjs/core': ^5.4.0
+    '@tresjs/cientos': 5.4.0
+    '@tresjs/core': ^5.5.0
     '@tresjs/eslint-config': ^1.5.1
     '@tresjs/leches': ^1.1.4
-    '@tresjs/nuxt': ^5.2.0
+    '@tresjs/nuxt': ^5.3.0
     '@types/three': ^0.182.0
     three: ^0.182.0
   typescript:

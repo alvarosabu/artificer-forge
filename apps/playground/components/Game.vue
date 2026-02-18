@@ -2,6 +2,10 @@
 import type { TresRendererSetupContext } from '@tresjs/core'
 import { WebGPURenderer } from 'three/webgpu'
 
+// Debugger
+
+const { uuid } = useSharedLechesControls()
+
 const { state, close, emitAction } = useContextMenuProvider()
 useOutlinePassProvider()
 
@@ -36,9 +40,13 @@ defineShortcuts({
   '9': () => activateSlot(8),
   '0': () => activateSlot(9),
 })
+
+
+
 </script>
 
 <template>
+  <TresLeches :uuid="uuid" />
   <TresCanvas
     clear-color="#020420"
     window-size

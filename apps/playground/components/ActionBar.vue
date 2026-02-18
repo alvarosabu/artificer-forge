@@ -17,12 +17,12 @@ const emit = defineEmits<{
   <div class="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
     <div class="flex items-end justify-center pb-4 px-4 pointer-events-auto">
       <div
-        class="flex items-center gap-3 bg-gray-950/80 backdrop-blur-sm border border-gray-800/50 rounded-xl p-3 shadow-2xl shadow-black/50"
+        class="flex items-center gap-3 bg-gradient-to-b from-marine-900/80 from-80% to-purple-800/30 backdrop-blur-sm border-2 border-gold-600/70 rounded-xl p-3 shadow-2xl shadow-black/50"
       >
         <!-- Player portrait -->
-        <div class="flex flex-col items-center gap-3 pr-3 border-r border-gray-700/50 relative">
+        <div class="flex flex-col items-center gap-3 pr-3 border-r border-gold-700/50 relative">
           <div
-            class="absolute mb-8 top-0 left-[50%] -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 border-2 border-primary/40 flex items-center justify-center shrink-0"
+            class="absolute mb-8 top-0 left-[50%] -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full bg-gradient-to-br from-primary to-blue border-2 border-gold-400 flex items-center justify-center shrink-0"
           >
             <UIcon
               name="i-heroicons-user"

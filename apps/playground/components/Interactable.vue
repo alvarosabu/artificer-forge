@@ -26,6 +26,7 @@ const emit = defineEmits<{
 }>()
 
 const gameStore = useGameStore()
+const { debugBvh } = toRefs(gameStore)
 const entity = computed(() => gameStore.getEntity(props.entityId))
 const modelPath = computed(() => entity.value?.model!)
 const animations = computed(() => entity.value?.animations as AnimationsConfig | undefined)
@@ -34,6 +35,11 @@ const { state: model } = useGLTF(modelPath.value, {
   draco: true,
 })
 const scene = computed(() => model.value?.scene)
+
+useBVH(() => scene.value, {
+  debug: debugBvh,
+})
+
 /* const { applyBVHWhenReady } = useBVH({
   enabled: true,
 })

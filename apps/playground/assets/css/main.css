@@ -5,4 +5,29 @@
   --font-sans: "Inter", sans-serif;
   --font-serif: "Crimson Pro", serif;
   --font-mono: "Fira Code", monospace;
+
+  /* Leather – base #785331 at 700 */
+  --color-leather-50: #faf5f0;
+  --color-leather-100: #f0e3d6;
+  --color-leather-200: #dfc6af;
+  --color-leather-300: #caa482;
+  --color-leather-400: #b38356;
+  --color-leather-500: #986a3e;
+  --color-leather-600: #825b35;
+  --color-leather-700: #785331;
+  --color-leather-800: #593c22;
+  --color-leather-900: #3c2715;
+  --color-leather-950: #26180d;
+
+  --color-gold-50: #FDF8F0;  /* Lightest - Almost white with gold tint */
+  --color-gold-100: #F9ECD8;
+  --color-gold-200: #F1D7B0;
+  --color-gold-300: #E5C088;
+  --color-gold-400: #D0A970;
+  --color-gold-500: #B4945F;  /* Base color */
+  --color-gold-600: #997B4A;
+  --color-gold-700: #7D6339;
+  --color-gold-800: #634D2D;
+  --color-gold-900: #4E3B21;
+  --color-gold-950: #2A1F10;  /* Darkest - Almost black with gold tint */
 }

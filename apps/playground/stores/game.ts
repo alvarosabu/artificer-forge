@@ -52,6 +52,13 @@ export interface Item {
 }
 
 export const useGameStore = defineStore('game', () => {
+  // === LECHESS ===
+  const { addFolder } = useSharedLechesControls()
+
+  const { debugBvh } = addFolder('debug', {
+    bvh: false,
+  })
+
   // === WORLD STATE ===
   const currentScene = ref<string>('main')
   const worldFlags = ref<Record<string, boolean | number>>({})
@@ -353,5 +360,8 @@ export const useGameStore = defineStore('game', () => {
     hostileEntities,
     npcEntities,
     selectedEntity,
+
+    // Debug actions
+    debugBvh,
   }
 })
