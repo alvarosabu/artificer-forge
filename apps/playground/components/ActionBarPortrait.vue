@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
   name: string
   hp: number
   maxHp: number
@@ -7,65 +7,65 @@ defineProps<{
   classEmblem?: string
   classColor?: string
 }>()
+
+// 0% at full HP → 100% at 0 HP, fills from bottom up
+const bloodFill = computed(() => {
+  if (props.maxHp === 0) return 0
+  return Math.max(0, Math.min(100, (1 - props.hp / props.maxHp) * 100))
+})
 </script>
 
 <template>
-  <div class="flex items-end gap-2 pr-3 border-r border-gold-700/50">
-    <!-- Class emblem — small circle -->
-    <div
-      class="relative shrink-0 w-12 h-12 rounded-full border-2 overflow-hidden bg-gray-900/80 shadow-lg"
-      :class="classColor ? `border-${classColor}-500` : 'border-gold-600/50'"
-    >
-      <img
-        v-if="classEmblem"
-        :src="classEmblem"
-        alt="Class emblem"
-        class="w-full h-full object-cover"
-        @error="($event.target as HTMLImageElement).style.display = 'none'"
-      />
+  <div class="flex flex-col items-center">
+    <!-- Portrait circle with class badge + HP overlaid -->
+    <div class="relative">
       <div
-        v-else
-        class="w-full h-full flex items-center justify-center"
-      >
-        <UIcon name="i-heroicons-shield-check" class="w-6 h-6 text-gold-400/60" />
-      </div>
-    </div>
-
-    <!-- Portrait + name/HP column -->
-    <div class="flex flex-col items-center gap-1 relative">
-      <!-- Portrait circle — larger, half-overlapping upward -->
-      <div
-        class="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 rounded-full border-2 border-gold-400 overflow-hidden shadow-lg shadow-black/60 bg-gray-900"
+        class="relative w-36 h-36 rounded-full border-2 border-[#c8922a] overflow-hidden bg-[#120e08] shadow-lg shadow-black/70"
       >
         <img
           v-if="portrait"
           :src="portrait"
-          :alt="`${name} portrait`"
+          :alt="name"
           class="w-full h-full object-cover object-top"
         />
         <div
           v-else
-          class="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary to-blue"
+          class="w-full h-full flex items-center justify-center"
         >
-          <UIcon name="i-heroicons-user" class="w-8 h-8 text-gold-400" />
+          <UIcon name="i-heroicons-user" class="w-12 h-12 text-[#c8922a]" />
         </div>
+
+        <!-- Blood fill overlay — rises from bottom as HP drops -->
+        <div
+          class="absolute bottom-0 left-0 right-0 pointer-events-none transition-all duration-700 ease-out"
+          :style="{
+            height: `${bloodFill}%`,
+            background: 'linear-gradient(to top, rgba(140, 8, 8, 0.9) 0%, rgba(180, 20, 20, 0.7) 90%, rgba(200, 30, 30, 0) 100%)',
+          }"
+        />
       </div>
 
-      <!-- Spacer for portrait overlap -->
-      <div class="h-10" />
-
-      <!-- Name + HP -->
-      <div class="flex flex-col items-center gap-1 min-w-[100px]">
-        <span class="font-serif font-bold text-white text-sm truncate">{{ name }}</span>
-        <UProgress
-          size="sm"
-          :ui="{ base: 'bg-black' }"
-          class="border border-black rounded-full"
-          color="error"
-          :model-value="hp"
-          :max="maxHp"
+      <!-- Class badge — bottom-left of portrait -->
+      <div
+        class="absolute -bottom-1 -left-1 w-7 h-7 rounded-full border border-[#5a3e1b] bg-[#1a1208] flex items-center justify-center overflow-hidden shadow-sm"
+      >
+        <img
+          v-if="classEmblem"
+          :src="classEmblem"
+          alt="Class"
+          class="w-full h-full object-cover"
+          @error="($event.target as HTMLImageElement).style.display = 'none'"
         />
-        <span class="text-[10px] text-gold-400/70">{{ hp }} / {{ maxHp }}</span>
+        <UIcon
+          v-else
+          name="i-heroicons-shield-check"
+          class="w-4 h-4 text-[#c8922a]/70"
+        />
+      </div>
+
+      <!-- HP — overlaid at bottom of portrait -->
+      <div class="absolute bottom-1 left-1/2 -translate-x-1/2 text-[11px] font-mono font-bold text-white tabular-nums drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+        {{ hp }} / {{ maxHp }}
       </div>
     </div>
   </div>

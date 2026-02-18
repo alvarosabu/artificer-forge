@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ActionSlot } from '~/composables/useActionBar'
 
+const GRID_SIZE = 24 // 8×3
+
 const props = defineProps<{
   slots: ActionSlot[]
   activeCategory: 'common' | 'items' | 'passives'
@@ -10,40 +12,51 @@ const emit = defineEmits<{
   activate: [index: number]
   categoryChange: ['common' | 'items' | 'passives']
 }>()
+
+const paddedSlots = computed<(ActionSlot | null)[]>(() => {
+  const result: (ActionSlot | null)[] = [...props.slots]
+  while (result.length < GRID_SIZE) result.push(null)
+  return result.slice(0, GRID_SIZE)
+})
 </script>
 
 <template>
-  <div class="flex flex-col">
-    <!-- Action grid -->
-    <div class="grid grid-cols-4 gap-1">
+  <div class="flex flex-col gap-1.5">
+    <!-- 8×3 action grid -->
+    <div class="grid grid-cols-8 gap-1">
       <div
-        v-for="(slot, index) in slots"
-        :key="slot.id"
-        class="relative"
+        v-for="(slot, index) in paddedSlots"
+        :key="slot?.id ?? `empty-${index}`"
+        class="relative w-11 h-11"
       >
-        <UButton
-          :disabled="slot.disabled"
-          :title="slot.label"
-          :color="slot.color ?? 'neutral'"
-          variant="ghost"
-          square
-          size="xl"
-          class="w-12 h-12"
-          :icon="slot.icon"
-          @click="emit('activate', index)"
+        <!-- Filled slot -->
+        <UTooltip
+          v-if="slot"
+          :text="slot.label"
+          :kbds="slot.shortcut ? [slot.shortcut] : undefined"
+        >
+          <button
+            :disabled="slot.disabled"
+            class="w-full h-full flex items-center justify-center rounded-sm transition-all
+              bg-[#120e08] border border-[#5a3e1b]
+              hover:border-[#c8922a] hover:bg-[#1e1609]
+              active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+            :class="slot.active ? 'border-[#e8b84b] shadow-[0_0_6px_rgba(232,184,75,0.4)]' : ''"
+            @click="emit('activate', index)"
+          >
+            <UIcon :name="slot.icon" class="w-5 h-5 text-[#d4a843]" />
+          </button>
+        </UTooltip>
+
+        <!-- Empty slot frame -->
+        <div
+          v-else
+          class="w-full h-full rounded-sm bg-[#0c0a06] border border-[#2a1f0e] opacity-50"
         />
 
-        <!-- Keyboard shortcut badge (top-left) -->
-        <span
-          v-if="slot.shortcut"
-          class="absolute top-0.5 left-0.5 text-[9px] font-mono text-gray-500 leading-tight pointer-events-none"
-        >
-          {{ slot.shortcut }}
-        </span>
-
-        <!-- Stack quantity (top-right, for items) -->
+        <!-- Quantity badge (top-right) -->
         <UBadge
-          v-if="slot.quantity !== undefined"
+          v-if="slot?.quantity !== undefined"
           :label="String(slot.quantity)"
           color="neutral"
           variant="solid"
@@ -51,11 +64,11 @@ const emit = defineEmits<{
           class="absolute -top-1 -right-1 pointer-events-none"
         />
 
-        <!-- AP cost indicator dot (bottom-right) -->
+        <!-- AP cost dot (bottom-right) -->
         <span
-          v-if="slot.cost && slot.cost !== 'free'"
+          v-if="slot?.cost && slot.cost !== 'free'"
           class="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full pointer-events-none"
-          :class="slot.cost === 'action' ? 'bg-gold-400' : 'bg-blue-400'"
+          :class="slot.cost === 'action' ? 'bg-[#d4a843]' : 'bg-[#6ab0e8]'"
         />
       </div>
     </div>
