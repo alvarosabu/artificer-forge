@@ -26,6 +26,7 @@ export interface EntityState {
   animations?: Record<string, unknown>
 
   // Character-specific
+  class?: string
   faction?: string
   hostile?: boolean
   controllable?: boolean
@@ -130,6 +131,7 @@ export const useGameStore = defineStore('game', () => {
       portrait: template.portrait,
       model: template.model,
       animations: template.animations,
+      class: template.class,
       faction: template.faction,
       hostile: template.hostile,
       controllable: template.controllable,

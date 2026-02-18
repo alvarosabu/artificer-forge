@@ -121,6 +121,8 @@ export function useActionBar() {
     return gameStore.getEntity(gameStore.party.leader)
   })
 
+  const playerClassId = computed(() => playerEntity.value?.class as string | undefined)
+
   function registerHandler(id: string, handler: () => void) {
     const existing = handlers.value.findIndex(h => h.id === id)
     if (existing > -1) {
@@ -150,6 +152,7 @@ export function useActionBar() {
 
   return {
     playerEntity,
+    playerClassId,
     slots: filteredSlots,
     activeCategory,
     setCategory,

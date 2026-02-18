@@ -9,7 +9,7 @@ const { uuid } = useSharedLechesControls()
 const { state, close, emitAction } = useContextMenuProvider()
 useOutlinePassProvider()
 
-const { playerEntity, slots, activateSlot } = useActionBar()
+const { activateSlot } = useActionBar()
 
 function handlePointerMissed() {
   close()
@@ -66,13 +66,5 @@ defineShortcuts({
     @update:open="state.open = $event"
     @action="handleContextMenuAction"
   />
-  <ActionBar
-    v-if="playerEntity"
-    :player-name="playerEntity.name"
-    :player-hp="playerEntity.hp ?? 0"
-    :player-max-hp="playerEntity.maxHp ?? 0"
-    :player-portrait="playerEntity.portrait"
-    :slots="slots"
-    @activate="activateSlot"
-  />
+  <ActionBar />
 </template>
