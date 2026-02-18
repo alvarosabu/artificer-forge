@@ -46,6 +46,7 @@ export default defineContentConfig({
         type: z.enum(['character', 'item', 'interactable']),
         subtype: z.string().optional(),
         name: z.string(),
+        class: z.string().optional(),
         // Character fields
         faction: z.string().optional(),
         hostile: z.boolean().optional(),

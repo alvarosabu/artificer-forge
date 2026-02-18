@@ -1,6 +1,7 @@
 templateId: hero
 type: character
 name: Hero
+class: fighter
 
 stats:
   hp: 38
@@ -12,6 +13,8 @@ stats:
   intelligence: 10
   wisdom: 14
   charisma: 10
+  maxActions: 1
+  maxBonusActions: 1
 
 faction: player
 hostile: false
