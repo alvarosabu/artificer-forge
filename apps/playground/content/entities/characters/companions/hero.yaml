@@ -21,6 +21,7 @@ ai:
   behavior: companion
   followDistance: 3
 
+portrait: /img/portraits/hero-portrait.png
 model: /models/characters/hero.glb
 animations:
   idle: Idle

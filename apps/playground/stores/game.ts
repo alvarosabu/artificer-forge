@@ -21,6 +21,7 @@ export interface EntityState {
   moveTarget?: Position | null
 
   // Rendering
+  portrait?: string
   model?: string
   animations?: Record<string, unknown>
 
@@ -126,6 +127,7 @@ export const useGameStore = defineStore('game', () => {
       subtype: template.subtype,
       name: template.name,
       position,
+      portrait: template.portrait,
       model: template.model,
       animations: template.animations,
       faction: template.faction,

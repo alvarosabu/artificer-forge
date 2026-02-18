@@ -71,6 +71,7 @@ defineShortcuts({
     :player-name="playerEntity.name"
     :player-hp="playerEntity.hp ?? 0"
     :player-max-hp="playerEntity.maxHp ?? 0"
+    :player-portrait="playerEntity.portrait"
     :slots="slots"
     @activate="activateSlot"
   />

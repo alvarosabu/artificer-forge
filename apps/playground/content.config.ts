@@ -54,6 +54,7 @@ export default defineContentConfig({
         ai: z.object({
           behavior: z.string(),
         }).passthrough().optional(),
+        portrait: z.string().optional(),
         model: z.string().optional(),
         // Interactable animations: code-driven transforms
         animations: z.object({

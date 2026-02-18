@@ -5,6 +5,7 @@ defineProps<{
   playerName: string
   playerHp: number
   playerMaxHp: number
+  playerPortrait?: string
   slots: ActionSlot[]
 }>()
 
@@ -22,12 +23,23 @@ const emit = defineEmits<{
         <!-- Player portrait -->
         <div class="flex flex-col items-center gap-3 pr-3 border-r border-gold-700/50 relative">
           <div
-            class="absolute mb-8 top-0 left-[50%] -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full bg-gradient-to-br from-primary to-blue border-2 border-gold-400 flex items-center justify-center shrink-0"
+            class="absolute top-0 left-[50%] -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full border-2 border-gold-400 shrink-0 overflow-hidden shadow-lg shadow-black/60"
           >
-            <UIcon
-              name="i-heroicons-user"
-              class="w-8 h-8 text-primary"
+            <img
+              v-if="playerPortrait"
+              :src="playerPortrait"
+              :alt="`${playerName} portrait`"
+              class="w-full h-full object-cover object-top"
             />
+            <div
+              v-else
+              class="w-full h-full bg-gradient-to-br from-primary to-blue flex items-center justify-center"
+            >
+              <UIcon
+                name="i-heroicons-user"
+                class="w-8 h-8 text-primary"
+              />
+            </div>
           </div>
           <div class="h-[50px]"></div>
           <div class="flex flex-col items-center gap-1 min-w-[120px]">
@@ -42,9 +54,7 @@ const emit = defineEmits<{
               :model-value="playerHp"
               :max="playerMaxHp"
             />
-            <span class="-mt-[8px] text-xs text-white text-shadow-lg/30 font-bold bg-black rounded-full px-1 py-0.5">
-              {{ playerHp }} / {{ playerMaxHp }}
-            </span>
+            
           </div>
         </div>
 
