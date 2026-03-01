@@ -76,13 +76,15 @@ onMounted(async () => {
   gameStore.updateEntity(playerId, { position: spawnPoint })
 
   // Spawn Zynrae offset from hero spawn point
-  const id = await gameStore.spawnFromTemplate('zynrae', {
+  const companionId = await gameStore.spawnFromTemplate('zynrae', {
     x: spawnPoint.x + 5,
     y: spawnPoint.y,
     z: spawnPoint.z,
   })
-  zynraeId.value = id
-  gameStore.addToParty(id)
+  zynraeId.value = companionId
+  gameStore.addToParty(companionId)
+
+  gameStore.equipWeapon(companionId, 'dagger', 'mainHand')
 
   registerAnimations()
   registerEntities()

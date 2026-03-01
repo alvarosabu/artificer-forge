@@ -2,7 +2,7 @@ templateId: dagger
 type: item
 subtype: weapon
 name: Dagger
-model: /models/items/weapons/Dagger.glb
+model: /models/items/weapons/dagger.glb
 damage:
   dice: "1d4"
   type: piercing
