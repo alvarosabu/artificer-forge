@@ -99,6 +99,12 @@ const nameplateColor = computed(() => {
             :max="entity.maxHp"
           />
           <span class="-mt-[8px] text-xs text-shadow-lg/30 font-bold bg-black rounded-full px-1 py-0.5" :class="nameplateColor">{{ entity.hp }} / {{ entity.maxHp }}</span>
+          <StatusEffectBadges
+            v-if="entity.statusEffects?.length"
+            :status-effects="entity.statusEffects"
+            direction="row"
+            class="mt-0.5"
+          />
         </div>
       </Html>
     </primitive>
