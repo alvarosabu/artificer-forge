@@ -1,0 +1,38 @@
+templateId: zynrae
+type: character
+name: Zynrae Vexblade
+class: rogue
+level: 1
+race: Drow
+
+stats:
+  hp: 10
+  maxHp: 10
+  ac: 13
+  strength: 8
+  dexterity: 18
+  constitution: 12
+  intelligence: 14
+  wisdom: 12
+  charisma: 14
+  maxActions: 1
+  maxBonusActions: 1
+
+team: player
+controllable: true
+
+ai:
+  behavior: companion
+  followDistance: 2
+
+portrait: /img/portraits/zynrae-portrait.png
+model: /models/characters/zynrae.glb
+animations:
+  idle: Idle
+  walk: Walk
+  run: Run
+  attack: Attack
+
+equipment:
+  mainHand: dagger
+  offHand: dagger
