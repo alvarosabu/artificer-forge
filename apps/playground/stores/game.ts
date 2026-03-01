@@ -10,6 +10,12 @@ export interface Equipment {
   offHand?: string
 }
 
+export type StatusEffectId = 'poisoned' | 'stunned' | 'burning' | 'blessed' | 'hasted'
+
+export interface StatusEffect {
+  id: StatusEffectId
+}
+
 export type Team = 'player' | 'ally' | 'neutral' | 'hostile'
 
 export interface EntityState {
@@ -49,6 +55,9 @@ export interface EntityState {
 
   // Equipment-specific
   equipment?: Equipment
+
+  // Status effects
+  statusEffects?: StatusEffect[]
 }
 
 export interface Item {
@@ -291,6 +300,24 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  function addStatusEffect(entityId: string, effectId: StatusEffectId) {
+    const entity = entities.value.get(entityId)
+    if (!entity) return
+    const effects = entity.statusEffects ?? []
+    if (!effects.some(e => e.id === effectId)) {
+      entities.value.set(entityId, { ...entity, statusEffects: [...effects, { id: effectId }] })
+    }
+  }
+
+  function removeStatusEffect(entityId: string, effectId: StatusEffectId) {
+    const entity = entities.value.get(entityId)
+    if (!entity) return
+    entities.value.set(entityId, {
+      ...entity,
+      statusEffects: (entity.statusEffects ?? []).filter(e => e.id !== effectId),
+    })
+  }
+
   // --- Getters ---
 
   const partyEntities = computed(() =>
@@ -363,6 +390,10 @@ export const useGameStore = defineStore('game', () => {
     // Equipment actions
     equipWeapon,
     unequipWeapon,
+
+    // Status effect actions
+    addStatusEffect,
+    removeStatusEffect,
 
     // Getters
     partyEntities,
