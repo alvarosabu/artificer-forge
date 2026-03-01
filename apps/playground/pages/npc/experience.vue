@@ -64,6 +64,8 @@ function unregisterActionBarHandlers() {
   }
 }
 
+const zynraeId = ref<string | null>(null)
+
 onMounted(async () => {
   const playerId = await gameStore.spawnFromTemplate('hero', { x: 0, y: 0, z: 0 })
   gameStore.addToParty(playerId)
@@ -71,6 +73,15 @@ onMounted(async () => {
 
   const { spawnPoint } = await gameStore.loadScene('npc_scene')
   gameStore.updateEntity(playerId, { position: spawnPoint })
+
+  // Spawn Zynrae offset from hero spawn point
+  const id = await gameStore.spawnFromTemplate('zynrae', {
+    x: spawnPoint.x + 1.5,
+    y: spawnPoint.y,
+    z: spawnPoint.z,
+  })
+  zynraeId.value = id
+  gameStore.addToParty(id)
 
   registerAnimations()
   registerEntities()
@@ -83,13 +94,26 @@ onUnmounted(() => {
   unregisterActionBarHandlers()
 })
 
-const characterEntities = computed(() => {
-  return [...gameStore.entities.values()].filter(e => e.type === 'character' && e.subtype !== 'npc')
-})
+const characterEntities = computed(() => gameStore.partyEntities)
 
-const npcEntities = computed(() => {
-  return gameStore.npcEntities
-})
+const actorEntities = computed(() => gameStore.actorEntities)
+
+// Follow: when leader moves, Zynrae follows at an offset
+watch(
+  () => {
+    const leaderId = gameStore.party.leader
+    if (!leaderId || leaderId === zynraeId.value) return null
+    return gameStore.getEntity(leaderId)?.moveTarget
+  },
+  (target) => {
+    if (!target || !zynraeId.value) return
+    // Only follow if Zynrae is not the selected (controlled) character
+    if (gameStore.selectedEntityId === zynraeId.value) return
+    const zynraeRef = getCharacterRef(zynraeId.value)
+    if (!zynraeRef) return
+    zynraeRef.moveTo({ x: target.x + 1.5, y: target.y, z: target.z })
+  },
+)
 
 function handleFloorClick(event: TresPointerEvent) {
   selectedCharacterRef.value?.moveTo(event.point)
@@ -112,8 +136,8 @@ function handleFloorClick(event: TresPointerEvent) {
     :key="entity.id"
     :entity-id="entity.id"
   />
-  <Npc
-    v-for="entity in npcEntities"
+  <Actor
+    v-for="entity in actorEntities"
     :key="entity.id"
     :entity-id="entity.id"
   />
