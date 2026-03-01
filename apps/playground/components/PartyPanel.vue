@@ -34,6 +34,13 @@ function bloodFill(hp: number | undefined, maxHp: number | undefined) {
           background: 'linear-gradient(to top, rgba(140, 8, 8, 0.9) 0%, rgba(180, 20, 20, 0.7) 90%, rgba(200, 30, 30, 0) 100%)',
         }"
       />
+      <!-- Status effect badges — right edge, vertical stack -->
+      <StatusEffectBadges
+        v-if="member.statusEffects?.length"
+        :status-effects="member.statusEffects"
+        direction="col"
+        class="absolute top-1 right-1 z-10"
+      />
       <span class="absolute bottom-0 left-0 right-0 text-xs text-shadow-lg/30 font-bold font-serif rounded-full px-1 py-0.5 text-white/70">
         {{ member?.hp }} / {{ member?.maxHp }}
       </span>
