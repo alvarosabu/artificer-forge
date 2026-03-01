@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useGLTF } from '@tresjs/cientos'
+import { useGLTF, Html } from '@tresjs/cientos'
 import type { TresPointerEvent } from '@tresjs/core'
 import type { Group } from 'three'
 import { useCharacterAnimations, AnimationName } from '~/composables/useCharacterAnimations'
@@ -77,15 +77,20 @@ function handleContextMenu(event: TresPointerEvent) {
   )
 }
 
+const isPlayable = computed(() => gameStore.selectedEntityId === props.entityId)
+const isHovering = ref(false)
+
 function handlePointerEnter() {
-  if (rig.value) {
-    addToSelection(rig.value, 'character')
+  if (!isPlayable.value) {
+    isHovering.value = true
+    if (rig.value) addToSelection(rig.value, 'party')
   }
 }
 
 function handlePointerLeave() {
-  if (rig.value) {
-    removeFromSelection(rig.value, 'character')
+  isHovering.value = false
+  if (rig.value && !isPlayable.value) {
+    removeFromSelection(rig.value, 'party')
   }
 }
 
@@ -113,6 +118,33 @@ defineExpose({
       @contextmenu="handleContextMenu"
       @pointerenter="handlePointerEnter"
       @pointerleave="handlePointerLeave"
-    />
+    >
+      <Html
+        v-if="isHovering && !isPlayable"
+        center
+        :position="[0, 3, 0]"
+      >
+        <div class="flex flex-col items-center gap-1 w-[150px] text-center font-serif">
+          <span class="text-lg text-shadow-lg font-bold text-cyan-300">
+            {{ entity?.name }}
+          </span>
+          <p v-if="entity?.level || entity?.race" class="text-sm text-white/70 font-bold flex items-center justify-center gap-1">
+            <span v-if="entity?.level">Lv. {{ entity.level }}</span>
+            <span v-if="entity?.race">{{ entity.race }}</span>
+          </p>
+          <UProgress
+            size="lg"
+            :ui="{ base: 'bg-black' }"
+            class="border border-3 border-black rounded-full"
+            color="success"
+            :model-value="entity?.hp"
+            :max="entity?.maxHp"
+          />
+          <span class="-mt-[8px] text-xs text-shadow-lg/30 font-bold bg-black rounded-full px-1 py-0.5 text-cyan-300">
+            {{ entity?.hp }} / {{ entity?.maxHp }}
+          </span>
+        </div>
+      </Html>
+    </primitive>
   </TresGroup>
 </template>
