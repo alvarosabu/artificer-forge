@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Floor } from '@artificer-forge/components'
 import type { TresPointerEvent } from '@tresjs/core'
+import { Vector3 } from 'three'
 
 const gameStore = useGameStore()
 const { close: closePalette } = useCommandPalette()
@@ -111,7 +112,7 @@ watch(
     if (gameStore.selectedEntityId === zynraeId.value) return
     const zynraeRef = getCharacterRef(zynraeId.value)
     if (!zynraeRef) return
-    zynraeRef.moveTo({ x: target.x + 1.5, y: target.y, z: target.z })
+    zynraeRef.moveTo(new Vector3(target.x + 1.5, target.y, target.z))
   },
 )
 
