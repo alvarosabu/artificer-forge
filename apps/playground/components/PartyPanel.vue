@@ -2,6 +2,11 @@
 const gameStore = useGameStore()
 
 const partyMembers = computed(() => gameStore.partyEntities)
+
+function bloodFill(hp: number | undefined, maxHp: number | undefined) {
+  if (!maxHp) return 0
+  return Math.max(0, Math.min(100, (1 - (hp ?? 0) / maxHp) * 100))
+}
 </script>
 
 <template>
@@ -9,31 +14,30 @@ const partyMembers = computed(() => gameStore.partyEntities)
     <button
       v-for="member in partyMembers"
       :key="member.id"
-      class="w-16 h-20 rounded border-2 bg-black/70 flex flex-col items-center justify-between p-1 transition-colors cursor-pointer"
+      class="w-20 h-28 relative rounded border-2 bg-gold-600 flex flex-col items-center justify-between transition-colors cursor-pointer"
       :class="gameStore.selectedEntityId === member.id
-        ? 'border-cyan-400 shadow-[0_0_8px_#00e5ff]'
-        : 'border-white/30 hover:border-white/60'"
+        ? 'border-white shadow-[0_0_8px_#ffffff]'
+        : 'border-gold-400/30 hover:border-gold-400/60'"
       @click="gameStore.selectEntity(member.id)"
     >
       <img
         v-if="member.portrait"
         :src="member.portrait"
         :alt="member.name"
-        class="w-12 h-12 object-cover rounded"
+        class="w-full h-full object-cover rounded"
       >
+      <!-- Blood fill overlay — rises from bottom as HP drops -->
       <div
-        v-else
-        class="w-12 h-12 rounded bg-white/10 flex items-center justify-center text-white/40 text-xs"
-      >
-        ?
-      </div>
-      <UProgress
-        size="xs"
-        color="success"
-        class="w-full"
-        :model-value="member.hp ?? 0"
-        :max="member.maxHp ?? 1"
+        class="absolute bottom-0 left-0 right-0 pointer-events-none transition-all duration-700 ease-out rounded"
+        :style="{
+          height: `${bloodFill(member.hp, member.maxHp)}%`,
+          background: 'linear-gradient(to top, rgba(140, 8, 8, 0.9) 0%, rgba(180, 20, 20, 0.7) 90%, rgba(200, 30, 30, 0) 100%)',
+        }"
       />
+      <span class="absolute bottom-0 left-0 right-0 text-xs text-shadow-lg/30 font-bold font-serif rounded-full px-1 py-0.5 text-white/70">
+        {{ member?.hp }} / {{ member?.maxHp }}
+      </span>
+  
     </button>
   </div>
 </template>
