@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import NpcExperience from './experience.vue'
 useHead({
-  title: 'NPC - TresJS Playground',
+  title: 'Actor - TresJS Playground',
 })
 </script>
 
@@ -11,5 +11,6 @@ useHead({
       <NpcExperience />
     </Game>
     <GameCommandPalette />
+    <PartyPanel />
   </div>
 </template>
