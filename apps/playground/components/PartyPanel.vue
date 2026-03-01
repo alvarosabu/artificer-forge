@@ -2,10 +2,6 @@
 const gameStore = useGameStore()
 
 const partyMembers = computed(() => gameStore.partyEntities)
-
-function selectMember(id: string) {
-  gameStore.selectEntity(id)
-}
 </script>
 
 <template>
@@ -17,7 +13,7 @@ function selectMember(id: string) {
       :class="gameStore.selectedEntityId === member.id
         ? 'border-cyan-400 shadow-[0_0_8px_#00e5ff]'
         : 'border-white/30 hover:border-white/60'"
-      @click="selectMember(member.id)"
+      @click="gameStore.selectEntity(member.id)"
     >
       <img
         v-if="member.portrait"
