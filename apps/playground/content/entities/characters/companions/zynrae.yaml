@@ -25,7 +25,7 @@ ai:
   behavior: companion
   followDistance: 2
 
-portrait: /img/portraits/zynrae-portrait.png
+portrait: /img/portraits/zynrae_portrait.png
 model: /models/characters/zynrae.glb
 animations:
   idle: Idle

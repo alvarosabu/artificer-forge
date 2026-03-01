@@ -2,6 +2,8 @@ templateId: hero
 type: character
 name: Hero
 class: fighter
+level: 1
+race: Human
 
 stats:
   hp: 38
@@ -16,15 +18,14 @@ stats:
   maxActions: 1
   maxBonusActions: 1
 
-faction: player
-hostile: false
+team: player
 controllable: true
 
 ai:
   behavior: companion
   followDistance: 3
 
-portrait: /img/portraits/hero-portrait.png
+portrait: /img/portraits/hero_portrait.png
 model: /models/characters/hero.glb
 animations:
   idle: Idle

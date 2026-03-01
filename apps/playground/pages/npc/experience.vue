@@ -77,7 +77,7 @@ onMounted(async () => {
 
   // Spawn Zynrae offset from hero spawn point
   const id = await gameStore.spawnFromTemplate('zynrae', {
-    x: spawnPoint.x + 1.5,
+    x: spawnPoint.x + 5,
     y: spawnPoint.y,
     z: spawnPoint.z,
   })

@@ -2,6 +2,8 @@ templateId: guard_captain
 type: character
 subtype: npc
 name: Captain Aldric
+level: 5
+race: Human
 
 stats:
   hp: 45
@@ -14,8 +16,8 @@ stats:
   wisdom: 12
   charisma: 14
 
-faction: neutral
-hostile: false
+faction: knight
+team: neutral
 controllable: false
 
 ai:

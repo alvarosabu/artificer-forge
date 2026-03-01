@@ -4,7 +4,7 @@ import type { EntityState } from '~/stores/game'
 
 const validAnimNames = new Set<string>(Object.values(AnimationName))
 
-export function useNpcBehavior(
+export function useActorBehavior(
   entity: Ref<EntityState | undefined>,
   play: (name: AnimationNameType, fadeTime?: number, timeScale?: number) => void,
 ) {

@@ -2,7 +2,7 @@
 import { useGLTF, Html } from '@tresjs/cientos'
 import type { TresPointerEvent } from '@tresjs/core'
 import { useCharacterAnimations } from '~/composables/useCharacterAnimations'
-import { useNpcBehavior } from '~/composables/useNpcBehavior'
+import { useActorBehavior } from '~/composables/useActorBehavior'
 
 const { open: openContextMenu } = useContextMenu()
 const { addToSelection, removeFromSelection } = useOutlinePass()
@@ -17,7 +17,7 @@ const gameStore = useGameStore()
 const entity = computed(() => gameStore.getEntity(props.entityId))
 const modelPath = computed(() => entity.value?.model!)
 
-const { nodes } = useGLTF(modelPath.value)
+const { nodes } = useGLTF(modelPath.value, { draco: true })
 const rig = computed(() => nodes.value?.Rig_Medium)
 
 const { play } = useCharacterAnimations(rig)
@@ -25,7 +25,7 @@ const { play } = useCharacterAnimations(rig)
 const equipment = computed(() => entity.value?.equipment)
 useEquipment(rig, equipment)
 
-useNpcBehavior(entity, play)
+useActorBehavior(entity, play)
 
 function handleContextMenu(event: TresPointerEvent) {
   event.nativeEvent.preventDefault()
@@ -41,16 +41,25 @@ const isHovering = ref(false)
 function handlePointerEnter() {
   isHovering.value = true
   if (rig.value) {
-    addToSelection(rig.value, 'character')
+    addToSelection(rig.value, entity.value?.team ?? 'neutral')
   }
 }
 
 function handlePointerLeave() {
   isHovering.value = false
   if (rig.value) {
-    removeFromSelection(rig.value, 'character')
+    removeFromSelection(rig.value, entity.value?.team ?? 'neutral')
   }
 }
+
+// Team-based nameplate color
+const nameplateColor = computed(() => {
+  switch (entity.value?.team) {
+    case 'hostile': return 'text-red-400'
+    case 'ally': return 'text-white'
+    default: return 'text-white'
+  }
+})
 </script>
 
 <template>
@@ -73,7 +82,14 @@ function handlePointerLeave() {
         :position="[0, 3, 0]"
       >
         <div v-if="isHovering" class="flex flex-col items-center gap-1 w-[150px] text-center font-serif">
-          <span class="text-lg text-white text-shadow-lg font-bold">{{ entity.name }}</span>
+          <span class="text-lg text-shadow-lg font-bold flex items-center justify-center gap-1" :class="nameplateColor">
+            <UIcon v-if="entity.team === 'hostile'" name="ph:skull-fill" class="size-4 text-white drop-shadow-[0_0_2px_#dc2626]" />{{ entity.name }}
+          </span>
+          <p v-if="entity.level || entity.race" class="text-sm text-white/70 font-bold flex items-center justify-center gap-1">
+            <span v-if="entity.level">Lv. {{ entity.level }}</span>
+
+            <span v-if="entity.race">{{ entity.race }}</span>
+          </p>
           <UProgress
             size="lg"
             :ui="{ base: 'bg-black' }"
@@ -82,7 +98,7 @@ function handlePointerLeave() {
             :model-value="entity.hp"
             :max="entity.maxHp"
           />
-          <span class="-mt-[8px] text-xs text-white text-shadow-lg/30 font-bold bg-black rounded-full px-1 py-0.5">{{ entity.hp }} / {{ entity.maxHp }}</span>
+          <span class="-mt-[8px] text-xs text-shadow-lg/30 font-bold bg-black rounded-full px-1 py-0.5" :class="nameplateColor">{{ entity.hp }} / {{ entity.maxHp }}</span>
         </div>
       </Html>
     </primitive>

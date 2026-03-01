@@ -10,6 +10,8 @@ export interface Equipment {
   offHand?: string
 }
 
+export type Team = 'player' | 'ally' | 'neutral' | 'hostile'
+
 export interface EntityState {
   id: string
   templateId: string
@@ -19,16 +21,18 @@ export interface EntityState {
   position: Position
   rotation?: Position
   moveTarget?: Position | null
-
+  
   // Rendering
   portrait?: string
   model?: string
   animations?: Record<string, unknown>
-
+  
   // Character-specific
   class?: string
+  level?: number
+  race?: string
   faction?: string
-  hostile?: boolean
+  team?: Team
   controllable?: boolean
   hp?: number
   maxHp?: number
@@ -132,8 +136,10 @@ export const useGameStore = defineStore('game', () => {
       model: template.model,
       animations: template.animations,
       class: template.class,
+      level: template.level,
+      race: template.race,
       faction: template.faction,
-      hostile: template.hostile,
+      team: template.team ?? 'neutral',
       controllable: template.controllable,
       hp: template.stats?.hp ?? template.hp,
       maxHp: template.stats?.maxHp ?? template.maxHp,
@@ -304,11 +310,11 @@ export const useGameStore = defineStore('game', () => {
   })
 
   const hostileEntities = computed(() =>
-    [...entities.value.values()].filter(e => e.hostile && e.hp && e.hp > 0),
+    [...entities.value.values()].filter(e => e.team === 'hostile' && e.hp && e.hp > 0),
   )
 
-  const npcEntities = computed(() =>
-    [...entities.value.values()].filter(e => e.type === 'character' && e.subtype === 'npc'),
+  const actorEntities = computed(() =>
+    [...entities.value.values()].filter(e => e.type === 'character' && !party.members.includes(e.id)),
   )
 
   const selectedEntity = computed(() =>
@@ -362,7 +368,7 @@ export const useGameStore = defineStore('game', () => {
     partyEntities,
     partyCenter,
     hostileEntities,
-    npcEntities,
+    actorEntities,
     selectedEntity,
 
     // Debug actions

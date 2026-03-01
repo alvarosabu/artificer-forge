@@ -1,0 +1,12 @@
+templateId: orc_axe
+type: item
+subtype: weapon
+name: Orc Axe
+model: /models/items/weapons/Orc_Axe.glb
+damage:
+  dice: "1d8"
+  type: slashing
+properties:
+  - heavy
+weight: 7
+value: 8

@@ -56,8 +56,11 @@ defineShortcuts({
     <slot />
     <OutlinePostProcessing
       :presets="{
-        character: { visibleEdgeColor: '#ffffff', edgeThickness: 3 },
+        party: { visibleEdgeColor: '#00e5ff', edgeThickness: 3 },
         interactive: { visibleEdgeColor: '#ffcc00', edgeThickness: 3 },
+        hostile: { visibleEdgeColor: '#ff4444', edgeThickness: 3 },
+        neutral: { visibleEdgeColor: '#ffffff', edgeThickness: 3 },
+        ally: { visibleEdgeColor: '#00e5ff', edgeThickness: 3 },
       }"
     />
   </TresCanvas>

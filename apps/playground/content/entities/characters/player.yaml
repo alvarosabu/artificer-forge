@@ -14,7 +14,7 @@ stats:
   charisma: 10
 
 faction: player
-hostile: false
+team: player
 controllable: true
 
 model: /models/player.glb

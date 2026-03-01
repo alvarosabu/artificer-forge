@@ -1,6 +1,9 @@
-templateId: goblin_scout
+templateId: orc_scout
 type: character
-name: Goblin Scout
+subtype: enemy
+name: Orc Scout
+level: 1
+race: Orc
 
 stats:
   hp: 12
@@ -13,8 +16,8 @@ stats:
   wisdom: 8
   charisma: 6
 
-faction: goblin
-hostile: true
+faction: orc
+team: hostile
 controllable: false
 
 ai:
@@ -23,12 +26,15 @@ ai:
   attackRange: 5
   fleeThreshold: 0.2
 
-model: /models/goblin.glb
+model: /models/characters/orc.glb
 animations:
   idle: Idle
   walk: Walk
   run: Run
   attack: Slash
+
+equipment:
+  mainHand: orc_axe
 
 drops:
   - id: gold

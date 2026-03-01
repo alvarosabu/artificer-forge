@@ -36,10 +36,10 @@ title: Page Title
 description: SEO description
 ---
 
-# Page Title
-
-Content with markdown...
+Content starts here directly — no h1 needed.
 ```
+
+> **Rule**: Docus automatically renders `title` from frontmatter as an `h1`. Never add a `# Title` heading in the markdown body — it will appear twice.
 
 ## Nuxt UI Pro Components
 

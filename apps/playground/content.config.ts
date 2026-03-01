@@ -47,9 +47,11 @@ export default defineContentConfig({
         subtype: z.string().optional(),
         name: z.string(),
         class: z.string().optional(),
+        level: z.number().optional(),
+        race: z.string().optional(),
         // Character fields
         faction: z.string().optional(),
-        hostile: z.boolean().optional(),
+        team: z.enum(['player', 'ally', 'neutral', 'hostile']).optional(),
         controllable: z.boolean().optional(),
         stats: z.record(z.number()).optional(),
         ai: z.object({
