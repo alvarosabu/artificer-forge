@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { isOpen, currentGroups, breadcrumbs, popPage, toggle } = useCommandPalette()
+const { isOpen, currentGroups, breadcrumbs, popPage, toggle, close } = useCommandPalette()
 
 const searchInput = ref('')
 
@@ -20,7 +20,7 @@ watch(isOpen, (open) => {
 </script>
 
 <template>
-  <UModal v-model:open="isOpen">
+  <UModal :open="isOpen" @update:open="(val: boolean) => { if (!val) close() }">
     <template #content>
       <div class="flex flex-col">
         <div
