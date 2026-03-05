@@ -11,10 +11,33 @@ export interface CommandGroup {
   items: CommandItem[]
 }
 
+export interface CommandPage {
+  id: string
+  label: string
+  groups: CommandGroup[]
+}
+
 const isOpen = ref(false)
 const groups = ref<CommandGroup[]>([])
+const pageStack = ref<CommandPage[]>([])
 
 export function useCommandPalette() {
+  const currentGroups = computed(() =>
+    pageStack.value.length > 0
+      ? pageStack.value[pageStack.value.length - 1]!.groups
+      : groups.value,
+  )
+
+  const breadcrumbs = computed(() => pageStack.value.map(p => p.label))
+
+  function pushPage(page: CommandPage) {
+    pageStack.value.push(page)
+  }
+
+  function popPage() {
+    pageStack.value.pop()
+  }
+
   function registerGroup(group: CommandGroup) {
     const existingIdx = groups.value.findIndex(g => g.id === group.id)
     if (existingIdx > -1) {
@@ -38,15 +61,26 @@ export function useCommandPalette() {
 
   function close() {
     isOpen.value = false
+    pageStack.value = []
   }
 
   function toggle() {
-    isOpen.value = !isOpen.value
+    if (isOpen.value) {
+      close()
+    }
+    else {
+      isOpen.value = true
+    }
   }
 
   return {
     isOpen,
     groups,
+    pageStack,
+    currentGroups,
+    breadcrumbs,
+    pushPage,
+    popPage,
     registerGroup,
     unregisterGroup,
     open,
