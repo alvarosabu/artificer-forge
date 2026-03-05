@@ -28,6 +28,8 @@ const { register: registerEntities, unregister: unregisterEntities } = useEntity
   closePalette,
 )
 
+const { register: registerStatusEffects, unregister: unregisterStatusEffects } = useStatusEffectCommands()
+
 function registerActionBarHandlers() {
   for (const [slotId, animName] of Object.entries(SLOT_ANIMATION_MAP)) {
     registerHandler(slotId, () => {
@@ -53,12 +55,14 @@ onMounted(async () => {
 
   registerAnimations()
   registerEntities()
+  registerStatusEffects()
   registerActionBarHandlers()
 })
 
 onUnmounted(() => {
   unregisterAnimations()
   unregisterEntities()
+  unregisterStatusEffects()
   unregisterActionBarHandlers()
 })
 

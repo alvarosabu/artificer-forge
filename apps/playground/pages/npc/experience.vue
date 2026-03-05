@@ -51,6 +51,8 @@ const { register: registerEntities, unregister: unregisterEntities } = useEntity
   closePalette,
 )
 
+const { register: registerStatusEffects, unregister: unregisterStatusEffects } = useStatusEffectCommands()
+
 function registerActionBarHandlers() {
   for (const [slotId, animName] of Object.entries(SLOT_ANIMATION_MAP)) {
     registerHandler(slotId, () => {
@@ -71,10 +73,10 @@ onMounted(async () => {
   const playerId = await gameStore.spawnFromTemplate('hero', { x: 0, y: 0, z: 0 })
   gameStore.addToParty(playerId)
   gameStore.selectEntity(playerId)
-
+  
   const { spawnPoint } = await gameStore.loadScene('npc_scene')
   gameStore.updateEntity(playerId, { position: spawnPoint })
-
+  
   // Spawn Zynrae offset from hero spawn point
   const companionId = await gameStore.spawnFromTemplate('zynrae', {
     x: spawnPoint.x + 5,
@@ -83,17 +85,20 @@ onMounted(async () => {
   })
   zynraeId.value = companionId
   gameStore.addToParty(companionId)
-
+  
+  gameStore.addStatusEffect(companionId, 'poisoned')
   gameStore.equipWeapon(companionId, 'dagger', 'mainHand')
 
   registerAnimations()
   registerEntities()
+  registerStatusEffects()
   registerActionBarHandlers()
 })
 
 onUnmounted(() => {
   unregisterAnimations()
   unregisterEntities()
+  unregisterStatusEffects()
   unregisterActionBarHandlers()
 })
 
