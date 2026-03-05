@@ -69,14 +69,13 @@ export function useCommandPalette() {
       close()
     }
     else {
-      isOpen.value = true
+      open()
     }
   }
 
   return {
     isOpen,
     groups,
-    pageStack,
     currentGroups,
     breadcrumbs,
     pushPage,
