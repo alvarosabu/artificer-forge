@@ -37,6 +37,7 @@ export function useStatusEffectCommands(onDone?: () => void) {
     const effectEntries: [StatusEffectId, typeof STATUS_DEFINITIONS[StatusEffectId]][] = mode === 'remove'
       ? (entity.statusEffects ?? []).map(e => [e.id, STATUS_DEFINITIONS[e.id]])
       : (Object.entries(STATUS_DEFINITIONS) as [StatusEffectId, typeof STATUS_DEFINITIONS[StatusEffectId]][])
+          .filter(([id]) => !entity.statusEffects?.some(e => e.id === id))
 
     return [{
       id: `status-effect-pick-${mode}-${entityId}`,
@@ -59,7 +60,7 @@ export function useStatusEffectCommands(onDone?: () => void) {
     }]
   }
 
-  const statusEffectGroup = computed<CommandGroup>(() => ({
+  const statusEffectGroup: CommandGroup = {
     id: 'status-effects',
     label: 'Status Effects',
     items: [
@@ -88,18 +89,10 @@ export function useStatusEffectCommands(onDone?: () => void) {
         },
       },
     ],
-  }))
-
-  watch(
-    () => gameStore.entities.size,
-    () => {
-      registerGroup(statusEffectGroup.value)
-    },
-    { immediate: true },
-  )
+  }
 
   function register() {
-    registerGroup(statusEffectGroup.value)
+    registerGroup(statusEffectGroup)
   }
 
   function unregister() {
