@@ -18,12 +18,13 @@ stats:
   maxActions: 1
   maxBonusActions: 1
 
-team: player
-controllable: true
+team: neutral
+controllable: false
+recruitable: true
+subtype: npc
 
 ai:
-  behavior: companion
-  followDistance: 2
+  behavior: idle
 
 portrait: /img/portraits/zynrae_portrait.png
 model: /models/characters/zynrae.glb
