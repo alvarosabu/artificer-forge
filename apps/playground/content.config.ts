@@ -53,6 +53,7 @@ export default defineContentConfig({
         faction: z.string().optional(),
         team: z.enum(['player', 'ally', 'neutral', 'hostile']).optional(),
         controllable: z.boolean().optional(),
+        recruitable: z.boolean().optional(),
         stats: z.record(z.number()).optional(),
         ai: z.object({
           behavior: z.string(),

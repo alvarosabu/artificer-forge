@@ -41,6 +41,7 @@ export interface EntityState {
   faction?: string
   team?: Team
   controllable?: boolean
+  recruitable?: boolean
   hp?: number
   maxHp?: number
   stats?: Record<string, number>
@@ -151,6 +152,7 @@ export const useGameStore = defineStore('game', () => {
       faction: template.faction,
       team: template.team ?? 'neutral',
       controllable: template.controllable,
+      recruitable: template.recruitable,
       hp: template.stats?.hp ?? template.hp,
       maxHp: template.stats?.maxHp ?? template.maxHp,
       stats: template.stats,
