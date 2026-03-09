@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { Floor } from '@artificer-forge/components'
 import type { TresPointerEvent } from '@tresjs/core'
-import { Vector3 } from 'three'
-
 const gameStore = useGameStore()
 const { close: closePalette } = useCommandPalette()
 
@@ -53,6 +51,8 @@ const { register: registerEntities, unregister: unregisterEntities } = useEntity
 
 const { register: registerStatusEffects, unregister: unregisterStatusEffects } = useStatusEffectCommands()
 
+const { register: registerRecruit, unregister: unregisterRecruit } = useRecruitCommands()
+
 function registerActionBarHandlers() {
   for (const [slotId, animName] of Object.entries(SLOT_ANIMATION_MAP)) {
     registerHandler(slotId, () => {
@@ -66,8 +66,6 @@ function unregisterActionBarHandlers() {
     unregisterHandler(slotId)
   }
 }
-
-const zynraeId = ref<string | null>(null)
 
 onMounted(async () => {
   const playerId = await gameStore.spawnFromTemplate('hero', { x: 0, y: 0, z: 0 })
@@ -83,15 +81,13 @@ onMounted(async () => {
     y: spawnPoint.y,
     z: spawnPoint.z,
   })
-  zynraeId.value = companionId
-  gameStore.addToParty(companionId)
-  
   gameStore.addStatusEffect(companionId, 'poisoned')
   gameStore.equipWeapon(companionId, 'dagger', 'mainHand')
 
   registerAnimations()
   registerEntities()
   registerStatusEffects()
+  registerRecruit()
   registerActionBarHandlers()
 })
 
@@ -99,29 +95,13 @@ onUnmounted(() => {
   unregisterAnimations()
   unregisterEntities()
   unregisterStatusEffects()
+  unregisterRecruit()
   unregisterActionBarHandlers()
 })
 
 const characterEntities = computed(() => gameStore.partyEntities)
 
 const actorEntities = computed(() => gameStore.actorEntities)
-
-// Follow: when leader moves, Zynrae follows at an offset
-watch(
-  () => {
-    const leaderId = gameStore.party.leader
-    if (!leaderId || leaderId === zynraeId.value) return null
-    return gameStore.getEntity(leaderId)?.moveTarget
-  },
-  (target) => {
-    if (!target || !zynraeId.value) return
-    // Only follow if Zynrae is not the selected (controlled) character
-    if (gameStore.selectedEntityId === zynraeId.value) return
-    const zynraeRef = getCharacterRef(zynraeId.value)
-    if (!zynraeRef) return
-    zynraeRef.moveTo(new Vector3(target.x + 1.5, target.y, target.z))
-  },
-)
 
 function handleFloorClick(event: TresPointerEvent) {
   selectedCharacterRef.value?.moveTo(event.point)
