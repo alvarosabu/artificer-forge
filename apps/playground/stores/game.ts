@@ -227,6 +227,30 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  function recruitEntity(entityId: string) {
+    const entity = entities.value.get(entityId)
+    if (!entity || !entity.recruitable || party.members.includes(entityId)) return
+    updateEntity(entityId, {
+      team: 'player',
+      controllable: true,
+      ai: { behavior: 'companion' },
+      subtype: undefined,
+    })
+    addToParty(entityId)
+  }
+
+  function dismissEntity(entityId: string) {
+    const entity = entities.value.get(entityId)
+    if (!entity || !entity.recruitable || !party.members.includes(entityId)) return
+    removeFromParty(entityId)
+    updateEntity(entityId, {
+      team: 'neutral',
+      controllable: false,
+      ai: { behavior: 'idle' },
+      subtype: 'npc',
+    })
+  }
+
   function setPartyLeader(entityId: string) {
     if (party.members.includes(entityId)) {
       party.leader = entityId
@@ -348,6 +372,14 @@ export const useGameStore = defineStore('game', () => {
     [...entities.value.values()].filter(e => e.type === 'character' && !party.members.includes(e.id)),
   )
 
+  const recruitableEntities = computed(() =>
+    [...entities.value.values()].filter(e => e.recruitable && !party.members.includes(e.id)),
+  )
+
+  const dismissableEntities = computed(() =>
+    partyEntities.value.filter(e => e.recruitable),
+  )
+
   const selectedEntity = computed(() =>
     selectedEntityId.value ? entities.value.get(selectedEntityId.value) : null,
   )
@@ -375,6 +407,8 @@ export const useGameStore = defineStore('game', () => {
     // Party actions
     addToParty,
     removeFromParty,
+    recruitEntity,
+    dismissEntity,
     setPartyLeader,
     addToInventory,
     removeFromInventory,
@@ -404,6 +438,8 @@ export const useGameStore = defineStore('game', () => {
     partyCenter,
     hostileEntities,
     actorEntities,
+    recruitableEntities,
+    dismissableEntities,
     selectedEntity,
 
     // Debug actions
