@@ -25,6 +25,9 @@ const { actions, currentAnimName, play, stop } = useCharacterAnimations(rig)
 
 const equipment = computed(() => entity.value?.equipment)
 useEquipment(rig, equipment)
+useStatusEffectOverlay(rig, computed(() => props.entityId))
+useStatusEffectParticles(rig, computed(() => props.entityId))
+useStatusEffectAnimations(computed(() => props.entityId), play)
 
 // Three.js Group ref - controller operates directly on this
 const characterRef = ref<Group>()
@@ -124,26 +127,15 @@ defineExpose({
         center
         :position="[0, 3, 0]"
       >
-        <div class="flex flex-col items-center gap-1 w-[150px] text-center font-serif">
-          <span class="text-lg text-shadow-lg font-bold text-cyan-300">
-            {{ entity?.name }}
-          </span>
-          <p v-if="entity?.level || entity?.race" class="text-sm text-white/70 font-bold flex items-center justify-center gap-1">
-            <span v-if="entity?.level">Lv. {{ entity.level }}</span>
-            <span v-if="entity?.race">{{ entity.race }}</span>
-          </p>
-          <UProgress
-            size="lg"
-            :ui="{ base: 'bg-black' }"
-            class="border border-3 border-black rounded-full"
-            color="success"
-            :model-value="entity?.hp"
-            :max="entity?.maxHp"
-          />
-          <span class="-mt-[8px] text-xs text-shadow-lg/30 font-bold bg-black rounded-full px-1 py-0.5 text-cyan-300">
-            {{ entity?.hp }} / {{ entity?.maxHp }}
-          </span>
-        </div>
+        <Nameplate
+          :name="entity.name"
+          :team="entity.team"
+          :level="entity.level"
+          :race="entity.race"
+          :hp="entity.hp"
+          :max-hp="entity.maxHp"
+          :status-effects="entity.statusEffects"
+        />
       </Html>
     </primitive>
   </TresGroup>

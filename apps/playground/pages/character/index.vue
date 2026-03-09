@@ -11,5 +11,6 @@ useHead({
       <CharacterExperience />
     </Game>
     <GameCommandPalette />
+    <PartyPanel />
   </div>
 </template>

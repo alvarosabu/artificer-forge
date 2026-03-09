@@ -24,6 +24,9 @@ const { play } = useCharacterAnimations(rig)
 
 const equipment = computed(() => entity.value?.equipment)
 useEquipment(rig, equipment)
+useStatusEffectOverlay(rig, computed(() => props.entityId))
+useStatusEffectParticles(rig, computed(() => props.entityId))
+useStatusEffectAnimations(computed(() => props.entityId), play)
 
 useActorBehavior(entity, play)
 
@@ -52,14 +55,6 @@ function handlePointerLeave() {
   }
 }
 
-// Team-based nameplate color
-const nameplateColor = computed(() => {
-  switch (entity.value?.team) {
-    case 'hostile': return 'text-red-400'
-    case 'ally': return 'text-white'
-    default: return 'text-white'
-  }
-})
 </script>
 
 <template>
@@ -81,31 +76,16 @@ const nameplateColor = computed(() => {
         center
         :position="[0, 3, 0]"
       >
-        <div v-if="isHovering" class="flex flex-col items-center gap-1 w-[150px] text-center font-serif">
-          <span class="text-lg text-shadow-lg font-bold flex items-center justify-center gap-1" :class="nameplateColor">
-            <UIcon v-if="entity.team === 'hostile'" name="ph:skull-fill" class="size-4 text-white drop-shadow-[0_0_2px_#dc2626]" />{{ entity.name }}
-          </span>
-          <p v-if="entity.level || entity.race" class="text-sm text-white/70 font-bold flex items-center justify-center gap-1">
-            <span v-if="entity.level">Lv. {{ entity.level }}</span>
-
-            <span v-if="entity.race">{{ entity.race }}</span>
-          </p>
-          <UProgress
-            size="lg"
-            :ui="{ base: 'bg-black' }"
-            class="border border-3 border-black rounded-full"
-            color="error"
-            :model-value="entity.hp"
-            :max="entity.maxHp"
-          />
-          <span class="-mt-[8px] text-xs text-shadow-lg/30 font-bold bg-black rounded-full px-1 py-0.5" :class="nameplateColor">{{ entity.hp }} / {{ entity.maxHp }}</span>
-          <StatusEffectBadges
-            v-if="entity.statusEffects?.length"
-            :status-effects="entity.statusEffects"
-            direction="row"
-            class="mt-0.5"
-          />
-        </div>
+        <Nameplate
+          v-if="isHovering"
+          :name="entity.name"
+          :team="entity.team"
+          :level="entity.level"
+          :race="entity.race"
+          :hp="entity.hp"
+          :max-hp="entity.maxHp"
+          :status-effects="entity.statusEffects"
+        />
       </Html>
     </primitive>
   </TresGroup>

@@ -2,40 +2,38 @@ packages:
   - apps/*
   - packages/*
 
-catalog:
-  '@iconify-json/heroicons': ^1.2.3
-  '@nuxt/eslint': 1.13.0
-  '@nuxt/fonts': 0.13.0
-  '@nuxt/icon': 2.2.1
-  '@nuxt/ui': ^4.4.0
-  '@pinia/nuxt': 0.11.3
-  '@tresjs/post-processing': ^3.3.0
-  '@types/three': ^0.182.0
-  pinia: ^3.0.4
-
 catalogMode: prefer
 
 catalogs:
   build:
-    tsdown: 0.20.3
+    tsdown: 0.21.1
     unplugin-vue: ^7.1.1
-    vue-tsc: ^3.2.4
+    vue-tsc: ^3.2.5
   eslint:
     eslint: ^9.36.0
   nuxt:
-    '@nuxt/content': ^3.5.1
-    '@nuxt/eslint': ^1.9.0
-    nuxt: ^4.1.2
+    '@iconify-json/heroicons': ^1.2.3
+    '@nuxt/content': ^3.12.0
+    '@nuxt/eslint': ^1.15.2
+    '@nuxt/fonts': 0.14.0
+    '@nuxt/icon': 2.2.1
+    '@nuxt/ui': ^4.5.1
+    '@pinia/nuxt': 0.11.3
+    nuxt: ^4.3.1
+    zod: ^4.3.6
+    zod-to-json-schema: ^3.25.1
   three:
-    '@tresjs/cientos': 5.4.0
-    '@tresjs/core': ^5.5.0
+    '@tresjs/cientos': 5.5.0
+    '@tresjs/core': ^5.6.0
     '@tresjs/eslint-config': ^1.5.1
     '@tresjs/leches': ^1.1.4
-    '@tresjs/nuxt': ^5.3.0
-    '@types/three': ^0.182.0
-    three: ^0.182.0
+    '@tresjs/nuxt': ^5.4.0
+    '@tresjs/post-processing': ^3.5.0
+    '@types/three': ^0.183.1
+    three: ^0.183.2
   typescript:
     typescript: ^5.9.3
   vue:
-    vue: ^3.5.27
-    vue-router: ^5.0.2
+    pinia: ^3.0.4
+    vue: ^3.5.30
+    vue-router: ^5.0.3

@@ -17,6 +17,10 @@ function handleKeydown(e: KeyboardEvent) {
 watch(isOpen, (open) => {
   if (!open) searchInput.value = ''
 })
+
+watch(breadcrumbs, () => {
+  searchInput.value = ''
+})
 </script>
 
 <template>

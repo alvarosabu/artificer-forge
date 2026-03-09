@@ -11,9 +11,9 @@ function bloodFill(hp: number | undefined, maxHp: number | undefined) {
 
 <template>
   <div class="fixed left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-50">
+    <div class="flex flex-row gap-2 " v-for="member in partyMembers" :key="member.id">
     <button
-      v-for="member in partyMembers"
-      :key="member.id"
+   
       class="w-20 h-28 relative rounded border-2 bg-gold-600 flex flex-col items-center justify-between transition-colors cursor-pointer"
       :class="gameStore.selectedEntityId === member.id
         ? 'border-white shadow-[0_0_8px_#ffffff]'
@@ -34,17 +34,19 @@ function bloodFill(hp: number | undefined, maxHp: number | undefined) {
           background: 'linear-gradient(to top, rgba(140, 8, 8, 0.9) 0%, rgba(180, 20, 20, 0.7) 90%, rgba(200, 30, 30, 0) 100%)',
         }"
       />
-      <!-- Status effect badges — right edge, vertical stack -->
-      <StatusEffectBadges
-        v-if="member.statusEffects?.length"
-        :status-effects="member.statusEffects"
-        direction="col"
-        class="absolute top-1 right-1 z-10"
-      />
+      
       <span class="absolute bottom-0 left-0 right-0 text-xs text-shadow-lg/30 font-bold font-serif rounded-full px-1 py-0.5 text-white/70">
         {{ member?.hp }} / {{ member?.maxHp }}
       </span>
   
     </button>
+    <!-- Status effect badges — right edge, vertical stack -->
+    <StatusEffectBadges
+        v-if="member.statusEffects?.length"
+        :status-effects="member.statusEffects"
+        direction="col"
+        class=""
+      />
+    </div>
   </div>
 </template>

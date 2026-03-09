@@ -5,11 +5,13 @@
     "build": "nuxt build --extends docus"
   },
   "dependencies": {
-    "@nuxt/eslint": "catalog:",
-    "@nuxt/fonts": "catalog:",
-    "@nuxt/icon": "catalog:",
-    "better-sqlite3": "^12.5.0",
+    "@nuxt/eslint": "catalog:nuxt",
+    "@nuxt/fonts": "catalog:nuxt",
+    "@nuxt/icon": "catalog:nuxt",
+    "better-sqlite3": "^12.6.2",
     "docus": "latest",
-    "nuxt": "^4.2.2"
+    "nuxt": "catalog:nuxt",
+    "zod": "catalog:nuxt",
+    "zod-to-json-schema": "catalog:nuxt"
   }
 }

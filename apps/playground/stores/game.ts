@@ -10,10 +10,11 @@ export interface Equipment {
   offHand?: string
 }
 
-export type StatusEffectId = 'poisoned' | 'stunned' | 'burning' | 'blessed' | 'hasted'
+export type StatusEffectId = 'poisoned' | 'stunned' | 'burning' | 'blessed' | 'hasted' | 'frozen'
 
 export interface StatusEffect {
   id: StatusEffectId
+  turnsLeft?: number
 }
 
 export type Team = 'player' | 'ally' | 'neutral' | 'hostile'
@@ -157,6 +158,7 @@ export const useGameStore = defineStore('game', () => {
       locked: template.locked,
       destructible: template.destructible,
       equipment: template.equipment,
+      statusEffects: [],
       ...overrides,
     }
 
