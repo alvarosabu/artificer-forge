@@ -1,90 +1,123 @@
 import type { CommandGroup } from './useCommandPalette'
 
-export function useEntityCommands(onSelect?: () => void) {
+export function useEntityCommands(onDone?: () => void) {
   const gameStore = useGameStore()
-  const { registerGroup, unregisterGroup } = useCommandPalette()
+  const { registerGroup, unregisterGroup, pushPage, close } = useCommandPalette()
 
-  // Fetch available templates
   const { data: templates } = useAsyncData('entity-templates', () =>
     queryCollection('entities').all(),
   )
 
-  const spawnGroup = computed<CommandGroup>(() => ({
-    id: 'entities-spawn',
-    label: 'Entities: Spawn',
-    items: (templates.value || [])
-      .filter(t => t.type === 'character')
-      .map(template => ({
-        id: `spawn-${template.templateId}`,
-        label: `Spawn ${template.name}`,
-        icon: 'i-heroicons-user-plus',
-        onSelect: async () => {
-          const offset = Math.random() * 4 - 2
-          await gameStore.spawnFromTemplate(template.templateId, {
-            x: offset,
-            y: 0,
-            z: offset,
-          })
-          onSelect?.()
-        },
-      })),
-  }))
+  function buildSpawnPage(): CommandGroup[] {
+    return [{
+      id: 'entities-spawn-pick',
+      label: 'Select Template to Spawn',
+      items: (templates.value || [])
+        .filter(t => t.type === 'character')
+        .map(template => ({
+          id: `spawn-${template.templateId}`,
+          label: template.name,
+          icon: 'i-heroicons-user-plus',
+          onSelect: async () => {
+            const offset = Math.random() * 4 - 2
+            await gameStore.spawnFromTemplate(template.templateId, {
+              x: offset,
+              y: 0,
+              z: offset,
+            })
+            close()
+            onDone?.()
+          },
+        })),
+    }]
+  }
 
-  const removeGroup = computed<CommandGroup>(() => ({
-    id: 'entities-remove',
-    label: 'Entities: Remove',
-    items: [...gameStore.entities.values()].map(entity => ({
-      id: `remove-${entity.id}`,
-      label: `Remove ${entity.name}`,
-      icon: 'i-heroicons-trash',
-      onSelect: () => {
-        gameStore.removeEntity(entity.id)
-        onSelect?.()
-      },
-    })),
-  }))
-
-  const selectGroup = computed<CommandGroup>(() => ({
-    id: 'entities-select',
-    label: 'Entities: Select',
-    items: [...gameStore.entities.values()]
-      .filter(e => e.type === 'character')
-      .map(entity => ({
-        id: `select-${entity.id}`,
-        label: `Select ${entity.name}${gameStore.selectedEntityId === entity.id ? ' (selected)' : ''}`,
-        icon: gameStore.selectedEntityId === entity.id ? 'i-heroicons-check-circle' : 'i-heroicons-cursor-arrow-rays',
+  function buildRemovePage(): CommandGroup[] {
+    return [{
+      id: 'entities-remove-pick',
+      label: 'Select Entity to Remove',
+      items: [...gameStore.entities.values()].map(entity => ({
+        id: `remove-${entity.id}`,
+        label: entity.name,
+        icon: 'i-heroicons-trash',
         onSelect: () => {
-          gameStore.selectEntity(entity.id)
-          onSelect?.()
+          gameStore.removeEntity(entity.id)
+          close()
+          onDone?.()
         },
       })),
-  }))
+    }]
+  }
 
-  // Watch and re-register when data changes
-  watch(
-    [templates, () => gameStore.entities.size, () => gameStore.selectedEntityId],
-    () => {
-      if (spawnGroup.value.items.length) registerGroup(spawnGroup.value)
-      if (removeGroup.value.items.length) registerGroup(removeGroup.value)
-      if (selectGroup.value.items.length) registerGroup(selectGroup.value)
-    },
-    { immediate: true },
-  )
+  function buildSelectPage(): CommandGroup[] {
+    return [{
+      id: 'entities-select-pick',
+      label: 'Select Character',
+      items: [...gameStore.entities.values()]
+        .filter(e => e.type === 'character')
+        .map(entity => ({
+          id: `select-${entity.id}`,
+          label: `${entity.name}${gameStore.selectedEntityId === entity.id ? ' (selected)' : ''}`,
+          icon: gameStore.selectedEntityId === entity.id ? 'i-heroicons-check-circle' : 'i-heroicons-cursor-arrow-rays',
+          onSelect: () => {
+            gameStore.selectEntity(entity.id)
+            close()
+            onDone?.()
+          },
+        })),
+    }]
+  }
+
+  const entitiesGroup: CommandGroup = {
+    id: 'entities',
+    label: 'Entities',
+    items: [
+      {
+        id: 'entities-spawn',
+        label: 'Spawn',
+        icon: 'i-heroicons-user-plus',
+        onSelect: () => {
+          pushPage({
+            id: 'entities-spawn',
+            label: 'Spawn',
+            groups: buildSpawnPage(),
+          })
+        },
+      },
+      {
+        id: 'entities-remove',
+        label: 'Remove',
+        icon: 'i-heroicons-trash',
+        onSelect: () => {
+          pushPage({
+            id: 'entities-remove',
+            label: 'Remove',
+            groups: buildRemovePage(),
+          })
+        },
+      },
+      {
+        id: 'entities-select',
+        label: 'Select',
+        icon: 'i-heroicons-cursor-arrow-rays',
+        onSelect: () => {
+          pushPage({
+            id: 'entities-select',
+            label: 'Select',
+            groups: buildSelectPage(),
+          })
+        },
+      },
+    ],
+  }
 
   function register() {
-    if (spawnGroup.value.items.length) registerGroup(spawnGroup.value)
-    if (removeGroup.value.items.length) registerGroup(removeGroup.value)
-    if (selectGroup.value.items.length) registerGroup(selectGroup.value)
+    registerGroup(entitiesGroup)
   }
 
   function unregister() {
-    unregisterGroup('entities-spawn')
-    unregisterGroup('entities-remove')
-    unregisterGroup('entities-select')
+    unregisterGroup('entities')
   }
 
-  return {
-    register,
-    unregister,
-  }
+  return { register, unregister }
 }

@@ -51,9 +51,7 @@ const { register: registerAnimations, unregister: unregisterAnimations } = useAn
   closePalette,
 )
 
-const { register: registerEntities, unregister: unregisterEntities } = useEntityCommands(
-  closePalette,
-)
+const { register: registerEntities, unregister: unregisterEntities } = useEntityCommands()
 
 function registerActionBarHandlers() {
   for (const [slotId, animName] of Object.entries(SLOT_ANIMATION_MAP)) {

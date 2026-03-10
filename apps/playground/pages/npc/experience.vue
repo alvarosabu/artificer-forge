@@ -45,9 +45,7 @@ const { register: registerAnimations, unregister: unregisterAnimations } = useAn
   closePalette,
 )
 
-const { register: registerEntities, unregister: unregisterEntities } = useEntityCommands(
-  closePalette,
-)
+const { register: registerEntities, unregister: unregisterEntities } = useEntityCommands()
 
 const { register: registerStatusEffects, unregister: unregisterStatusEffects } = useStatusEffectCommands()
 
