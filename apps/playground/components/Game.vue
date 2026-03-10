@@ -46,7 +46,7 @@ defineShortcuts({
 </script>
 
 <template>
-  <TresLeches :uuid="uuid" />
+  <TresLeches :uuid="uuid" collapsed />
   <TresCanvas
     clear-color="#020420"
     window-size

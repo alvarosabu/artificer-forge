@@ -28,6 +28,8 @@ const { register: registerEntities, unregister: unregisterEntities } = useEntity
 
 const { register: registerStatusEffects, unregister: unregisterStatusEffects } = useStatusEffectCommands()
 
+const { register: registerRecruit, unregister: unregisterRecruit } = useRecruitCommands()
+
 function registerActionBarHandlers() {
   for (const [slotId, animName] of Object.entries(SLOT_ANIMATION_MAP)) {
     registerHandler(slotId, () => {
@@ -54,6 +56,7 @@ onMounted(async () => {
   registerAnimations()
   registerEntities()
   registerStatusEffects()
+  registerRecruit()
   registerActionBarHandlers()
 })
 
@@ -61,11 +64,12 @@ onUnmounted(() => {
   unregisterAnimations()
   unregisterEntities()
   unregisterStatusEffects()
+  unregisterRecruit()
   unregisterActionBarHandlers()
 })
 
 const characterEntities = computed(() => {
-  return [...gameStore.entities.values()].filter(e => e.type === 'character' && e.subtype !== 'npc')
+  return [...gameStore.entities.values()].filter(e => e.type === 'character')
 })
 
 function handleFloorClick(event: TresPointerEvent) {
