@@ -93,10 +93,6 @@ export const useGameStore = defineStore('game', () => {
   // === SELECTION ===
   const selectedEntityId = ref<string | null>(null)
 
-  // === ANIMATIONS (for character controller) ===
-  const animations = ref<string[]>([])
-  const currentAnimation = ref<string | null>(null)
-
   // --- Entity Actions ---
 
   function spawnEntity(id: string, state: EntityState) {
@@ -300,18 +296,6 @@ export const useGameStore = defineStore('game', () => {
     return worldFlags.value[key] === true
   }
 
-  // --- Animation Actions ---
-
-  function addAnimation(animation: string) {
-    if (!animations.value.includes(animation)) {
-      animations.value.push(animation)
-    }
-  }
-
-  function setCurrentAnimation(animation: string | null) {
-    currentAnimation.value = animation
-  }
-
   // --- Equipment Actions ---
 
   function equipWeapon(entityId: string, weaponTemplateId: string, slot: 'mainHand' | 'offHand') {
@@ -391,9 +375,6 @@ export const useGameStore = defineStore('game', () => {
     entities,
     party,
     selectedEntityId,
-    animations,
-    currentAnimation,
-
     // Entity actions
     spawnEntity,
     updateEntity,
@@ -420,10 +401,6 @@ export const useGameStore = defineStore('game', () => {
     setFlag,
     getFlag,
     hasFlag,
-
-    // Animation actions
-    addAnimation,
-    setCurrentAnimation,
 
     // Equipment actions
     equipWeapon,
