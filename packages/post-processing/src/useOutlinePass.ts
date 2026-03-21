@@ -1,4 +1,4 @@
-import type { InjectionKey, ShallowRef } from 'vue'
+import { provide, inject, shallowRef, type InjectionKey, type ShallowRef } from 'vue'
 
 // Using 'any' to avoid Three.js type mismatches between packages
 type Object3DLike = any

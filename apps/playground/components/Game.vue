@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { TresRendererSetupContext } from '@tresjs/core'
+import { useControls } from '@tresjs/leches'
+import { ACESFilmicToneMapping, AgXToneMapping, CineonToneMapping, LinearToneMapping, NeutralToneMapping, NoToneMapping, ReinhardToneMapping } from 'three'
 import { WebGPURenderer } from 'three/webgpu'
+import { useOutlinePassProvider, EffectComposer } from '@artificer-forge/post-processing'
 
 // Debugger
 
@@ -41,7 +44,51 @@ defineShortcuts({
   '0': () => activateSlot(9),
 })
 
+const { toneMapping } = useControls('toneMapping', {
+  toneMapping: {
+    value: ACESFilmicToneMapping,
+    options: [
+      { text: 'No Tone Mapping', value: NoToneMapping },
+      { text: 'Linear', value: LinearToneMapping },
+      { text: 'Reinhard', value: ReinhardToneMapping },
+      { text: 'Cineon', value: CineonToneMapping },
+      { text: 'ACES Filmic', value: ACESFilmicToneMapping },
+      { text: 'AgX', value: AgXToneMapping }, // New in Three.js r155
+      { text: 'Neutral', value: NeutralToneMapping },
+    ],
+  },
+}, {uuid})
 
+const { postprocessingBloomStrength, postprocessingBloomThreshold, postprocessingBloomRadius, postprocessingBloomSmoothWidth } = useControls('postprocessing', {
+  bloomStrength: {
+    value: 0.7,
+    min: 0,
+    max: 3,
+    step: 0.01,
+    type: 'range',
+  },
+  bloomRadius: {
+    value: 0.4,
+    min: 0,
+    max: 1,
+    step: 0.01,
+    type: 'range',
+  },
+  bloomThreshold: {
+    value: 0.8,
+    min: 0,
+    max: 1,
+    step: 0.01,
+    type: 'range',
+  },
+  bloomSmoothWidth: {
+    value: 0.3,
+    min: 0,
+    max: 1,
+    step: 0.01,
+    type: 'range',
+  },
+}, {uuid})
 
 </script>
 
@@ -51,16 +98,23 @@ defineShortcuts({
     clear-color="#020420"
     window-size
     :renderer="createWebGPURenderer"
+    :tone-mapping="NoToneMapping"
     @pointer-missed="handlePointerMissed"
   >
     <slot />
-    <OutlinePostProcessing
-      :presets="{
+    <EffectComposer
+      :outline-presets="{
         party: { visibleEdgeColor: '#00e5ff', edgeThickness: 3 },
         interactive: { visibleEdgeColor: '#ffcc00', edgeThickness: 3 },
         hostile: { visibleEdgeColor: '#ff4444', edgeThickness: 3 },
         neutral: { visibleEdgeColor: '#ffffff', edgeThickness: 3 },
         ally: { visibleEdgeColor: '#00e5ff', edgeThickness: 3 },
+      }"
+      :bloom="{
+        strength: postprocessingBloomStrength,
+        radius: postprocessingBloomRadius,
+        threshold: postprocessingBloomThreshold,
+        smoothWidth: postprocessingBloomSmoothWidth,
       }"
     />
   </TresCanvas>

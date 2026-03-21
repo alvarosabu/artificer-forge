@@ -186,6 +186,12 @@ importers:
       '@artificer-forge/composables':
         specifier: workspace:*
         version: link:../../packages/composables
+      '@artificer-forge/post-processing':
+        specifier: workspace:*
+        version: link:../../packages/post-processing
+      '@artificer-forge/vfx':
+        specifier: workspace:*
+        version: link:../../packages/vfx
       '@nuxt/content':
         specifier: catalog:nuxt
         version: 3.12.0(better-sqlite3@12.6.2)(magicast@0.5.2)
@@ -280,6 +286,63 @@ importers:
       '@vueuse/core':
         specifier: ^14.2.1
         version: 14.2.1(vue@3.5.30(typescript@5.9.3))
+      three:
+        specifier: catalog:three
+        version: 0.183.2
+      tsdown:
+        specifier: catalog:build
+        version: 0.21.1(synckit@0.11.12)(typescript@5.9.3)(vue-tsc@3.2.5(typescript@5.9.3))
+      typescript:
+        specifier: catalog:typescript
+        version: 5.9.3
+      unplugin-vue:
+        specifier: catalog:build
+        version: 7.1.1(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(vue@3.5.30(typescript@5.9.3))(yaml@2.8.2)
+      vue:
+        specifier: catalog:vue
+        version: 3.5.30(typescript@5.9.3)
+      vue-tsc:
+        specifier: catalog:build
+        version: 3.2.5(typescript@5.9.3)
+
+  packages/post-processing:
+    devDependencies:
+      '@tresjs/core':
+        specifier: catalog:three
+        version: 5.6.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
+      '@types/three':
+        specifier: catalog:three
+        version: 0.183.1
+      three:
+        specifier: catalog:three
+        version: 0.183.2
+      tsdown:
+        specifier: catalog:build
+        version: 0.21.1(synckit@0.11.12)(typescript@5.9.3)(vue-tsc@3.2.5(typescript@5.9.3))
+      typescript:
+        specifier: catalog:typescript
+        version: 5.9.3
+      unplugin-vue:
+        specifier: catalog:build
+        version: 7.1.1(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(vue@3.5.30(typescript@5.9.3))(yaml@2.8.2)
+      vue:
+        specifier: catalog:vue
+        version: 3.5.30(typescript@5.9.3)
+      vue-tsc:
+        specifier: catalog:build
+        version: 3.2.5(typescript@5.9.3)
+
+  packages/vfx:
+    devDependencies:
+      '@tresjs/cientos':
+        specifier: catalog:three
+        version: 5.5.0(@tresjs/core@5.6.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3)))(@types/three@0.183.1)(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
+      '@tresjs/core':
+        specifier: catalog:three
+        version: 5.6.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
+      '@types/three':
+        specifier: catalog:three
+        version: 0.183.1
       three:
         specifier: catalog:three
         version: 0.183.2
