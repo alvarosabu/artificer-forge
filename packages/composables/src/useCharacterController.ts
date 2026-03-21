@@ -1,3 +1,4 @@
+import type { Ref } from 'vue'
 import type { Group } from 'three'
 import type { AnimationNameType } from './useCharacterAnimations'
 import { usePointerController, type PointerControllerOptions } from './usePointerController'

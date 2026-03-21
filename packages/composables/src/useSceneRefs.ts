@@ -1,3 +1,4 @@
+import { ref } from 'vue'
 import type { Vector3 } from 'three'
 import type { EventHookOn } from '@vueuse/core'
 

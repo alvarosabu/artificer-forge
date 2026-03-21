@@ -1,3 +1,4 @@
+import { computed, ref, shallowRef, unref, watch, readonly, type DeepReadonly, type MaybeRef, type Ref, type ShallowRef } from 'vue'
 import { useAnimations, useGLTF } from '@tresjs/cientos'
 import type { AnimationAction, Object3D } from 'three'
 
@@ -237,9 +238,9 @@ export function useCharacterAnimations(
   )
 
   return {
-    actions: readonly(actions),
-    currentAction: readonly(currentAction),
-    currentAnimName: readonly(currentAnimName),
+    actions: actions as Readonly<Record<string, AnimationAction | null>>,
+    currentAction: readonly(currentAction) as Readonly<ShallowRef<AnimationAction | null>>,
+    currentAnimName: readonly(currentAnimName) as DeepReadonly<Ref<AnimationNameType>>,
     play,
     stop,
   }

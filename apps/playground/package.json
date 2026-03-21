@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@artificer-forge/components": "workspace:*",
+    "@artificer-forge/composables": "workspace:*",
     "@nuxt/content": "catalog:nuxt",
     "@nuxt/eslint": "catalog:nuxt",
     "@nuxt/ui": "catalog:nuxt",

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useGLTF, Html } from '@tresjs/cientos'
 import type { TresPointerEvent } from '@tresjs/core'
-import { useCharacterAnimations } from '~/composables/useCharacterAnimations'
+import { useCharacterAnimations } from '@artificer-forge/composables'
 import { useActorBehavior } from '~/composables/useActorBehavior'
 
 const { open: openContextMenu } = useContextMenu()

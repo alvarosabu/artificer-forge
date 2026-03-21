@@ -1,5 +1,5 @@
 import type { ComputedRef } from 'vue'
-import { AnimationName, type AnimationNameType } from '~/composables/useCharacterAnimations'
+import { AnimationName, type AnimationNameType } from '@artificer-forge/composables'
 import { STATUS_DEFINITIONS } from '~/composables/useStatusEffects'
 
 export function useStatusEffectAnimations(

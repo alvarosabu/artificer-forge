@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { useGLTF, Html } from '@tresjs/cientos'
-import type { TresPointerEvent } from '@tresjs/core'
-import type { Group } from 'three'
-import { useCharacterAnimations, AnimationName } from '~/composables/useCharacterAnimations'
-import { useCharacterController } from '~/composables/useCharacterController'
+import { useLoop, type TresPointerEvent } from '@tresjs/core'
+import { Mesh, type Group } from 'three'
+import { useCharacterAnimations, AnimationName, useCharacterController } from '@artificer-forge/composables'
+import { ghostMaterial } from '~/utils/tsl/ghost'
 
 const { open: openContextMenu } = useContextMenu()
 const { addToSelection, removeFromSelection } = useOutlinePass()
@@ -28,6 +28,8 @@ useEquipment(rig, equipment)
 useStatusEffectOverlay(rig, computed(() => props.entityId))
 useStatusEffectParticles(rig, computed(() => props.entityId))
 useStatusEffectAnimations(computed(() => props.entityId), play)
+
+const { numbers, showDamage, removeNumber } = useDamageNumbers()
 
 // Three.js Group ref - controller operates directly on this
 const characterRef = ref<Group>()
@@ -97,6 +99,17 @@ function handlePointerLeave() {
   }
 }
 
+watch(nodes, (nodesValue) => {
+  if(nodesValue?.Hero_ArmRight) {
+    console.log('Hero_ArmRight', nodesValue.Hero_ArmRight)
+    nodesValue.Hero_ArmRight.traverse((child: Mesh) => {
+      if (child.name === 'Ranger_ArmRight_1') {
+        child.material = ghostMaterial()
+      }
+    })
+  }
+}, { immediate: true })
+
 defineExpose({
   play,
   stop,
@@ -105,6 +118,7 @@ defineExpose({
   AnimationName,
   moveTo,
   onArrive,
+  showDamage,
 })
 </script>
 
@@ -123,7 +137,7 @@ defineExpose({
       @pointerleave="handlePointerLeave"
     >
       <Html
-        v-if="isHovering && !isPlayable"
+        
         center
         :position="[0, 3, 0]"
       >
@@ -137,6 +151,12 @@ defineExpose({
           :status-effects="entity.statusEffects"
         />
       </Html>
+      <DamageNumber
+        v-for="entry in numbers"
+        :key="entry.id"
+        :entry="entry"
+        @done="removeNumber(entry.id)"
+      />
     </primitive>
   </TresGroup>
 </template>

@@ -1,5 +1,4 @@
-import type { AnimationNameType } from '~/composables/useCharacterAnimations'
-import { AnimationName } from '~/composables/useCharacterAnimations'
+import { AnimationName, type AnimationNameType } from '@artificer-forge/composables'
 import type { EntityState } from '~/stores/game'
 
 const validAnimNames = new Set<string>(Object.values(AnimationName))

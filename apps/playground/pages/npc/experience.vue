@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Floor } from '@artificer-forge/components'
 import type { TresPointerEvent } from '@tresjs/core'
+import { useSceneRefs } from '@artificer-forge/composables'
+
 const gameStore = useGameStore()
 const { close: closePalette } = useCommandPalette()
 
