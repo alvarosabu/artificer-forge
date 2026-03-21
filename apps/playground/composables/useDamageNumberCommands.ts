@@ -1,5 +1,5 @@
 import type { CommandGroup } from './useCommandPalette'
-import type { DamageType } from './useDamageNumbers'
+import type { DamageType } from '@artificer-forge/vfx'
 import type { CharacterRef } from '@artificer-forge/composables'
 
 const DAMAGE_TYPES: DamageType[] = ['physical', 'magical', 'fire', 'ice', 'lightning', 'poison']

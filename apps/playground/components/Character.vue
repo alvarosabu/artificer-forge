@@ -3,6 +3,8 @@ import { useGLTF, Html } from '@tresjs/cientos'
 import { useLoop, type TresPointerEvent } from '@tresjs/core'
 import { Mesh, type Group } from 'three'
 import { useCharacterAnimations, AnimationName, useCharacterController } from '@artificer-forge/composables'
+import { useDamageNumbers, DamageNumber } from '@artificer-forge/vfx'
+import { useOutlinePass } from '@artificer-forge/post-processing'
 import { ghostMaterial } from '~/utils/tsl/ghost'
 
 const { open: openContextMenu } = useContextMenu()

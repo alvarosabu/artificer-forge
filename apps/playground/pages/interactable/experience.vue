@@ -3,6 +3,7 @@ import { Floor } from '@artificer-forge/components'
 import type { TresPointerEvent } from '@tresjs/core'
 import { Vector3 } from 'three'
 import { useSceneRefs } from '@artificer-forge/composables'
+import { TargetIndicator } from '@artificer-forge/vfx'
 
 const gameStore = useGameStore()
 const { close: closePalette } = useCommandPalette()

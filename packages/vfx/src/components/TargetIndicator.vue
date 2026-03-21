@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { watch } from 'vue'
 import { CylinderGeometry, DoubleSide } from 'three'
 import { MeshBasicNodeMaterial } from 'three/webgpu'
 import { positionLocal, sin, time, smoothstep, mix, float, uniform, vec3 } from 'three/tsl'

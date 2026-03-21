@@ -1,0 +1,35 @@
+{
+  "name": "@artificer-forge/vfx",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch"
+  },
+  "peerDependencies": {
+    "@tresjs/cientos": ">=5.0.0",
+    "@tresjs/core": ">=5.0.0",
+    "three": ">=0.170.0",
+    "vue": ">=3.4.0"
+  },
+  "devDependencies": {
+    "@tresjs/cientos": "catalog:three",
+    "@tresjs/core": "catalog:three",
+    "@types/three": "catalog:three",
+    "three": "catalog:three",
+    "tsdown": "catalog:build",
+    "typescript": "catalog:typescript",
+    "unplugin-vue": "catalog:build",
+    "vue": "catalog:vue",
+    "vue-tsc": "catalog:build"
+  }
+}
