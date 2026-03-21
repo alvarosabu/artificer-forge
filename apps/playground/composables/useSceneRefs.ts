@@ -5,6 +5,7 @@ export interface CharacterRef {
   play: (name: string) => void
   moveTo: (point: Vector3) => void
   onArrive: EventHookOn<Vector3>
+  showDamage: (value: number, type: string, critical?: boolean) => void
 }
 
 export interface InteractableRef {
