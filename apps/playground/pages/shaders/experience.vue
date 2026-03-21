@@ -3,7 +3,7 @@ import { Floor } from '@artificer-forge/components/tres'
 import { abs, add, color, dot, float, mix, mx_fractal_noise_float, mx_worley_noise_float, normalView, positionLocal, positionViewDirection, pow, sin, smoothstep, time, uniform, vec3 } from 'three/tsl';
 import { MeshPhysicalNodeMaterial } from 'three/webgpu';
 
-import { ghostMaterial } from '~/utils/tsl/ghost';
+import { ghostMaterial } from '@artificer-forge/vfx';
 
 const sphereRef = ref()
 

@@ -3,9 +3,8 @@ import { useGLTF, Html } from '@tresjs/cientos'
 import { useLoop, type TresPointerEvent } from '@tresjs/core'
 import { Mesh, type Group } from 'three'
 import { useCharacterAnimations, AnimationName, useCharacterController } from '@artificer-forge/composables'
-import { useDamageNumbers, DamageNumber } from '@artificer-forge/vfx'
+import { useDamageNumbers, DamageNumber, ghostMaterial } from '@artificer-forge/vfx'
 import { useOutlinePass } from '@artificer-forge/post-processing'
-import { ghostMaterial } from '~/utils/tsl/ghost'
 
 const { open: openContextMenu } = useContextMenu()
 const { addToSelection, removeFromSelection } = useOutlinePass()
@@ -143,15 +142,19 @@ defineExpose({
         center
         :position="[0, 3, 0]"
       >
-        <Nameplate
-          :name="entity.name"
-          :team="entity.team"
-          :level="entity.level"
-          :race="entity.race"
-          :hp="entity.hp"
-          :max-hp="entity.maxHp"
-          :status-effects="entity.statusEffects"
-        />
+        <UApp>
+          <Nameplate
+            v-if="isHovering && !isPlayable"
+            :name="entity.name"
+            :team="entity.team"
+            :level="entity.level"
+            :race="entity.race"
+            :hp="entity.hp"
+            :max-hp="entity.maxHp"
+            :status-effects="entity.statusEffects"
+          />
+        </UApp>
+        
       </Html>
       <DamageNumber
         v-for="entry in numbers"

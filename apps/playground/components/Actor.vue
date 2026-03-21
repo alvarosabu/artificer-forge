@@ -75,18 +75,21 @@ function handlePointerLeave() {
     >
       <Html
         center
+
         :position="[0, 3, 0]"
       >
-        <Nameplate
-          v-if="isHovering"
-          :name="entity.name"
-          :team="entity.team"
-          :level="entity.level"
-          :race="entity.race"
-          :hp="entity.hp"
-          :max-hp="entity.maxHp"
-          :status-effects="entity.statusEffects"
-        />
+        <UApp>
+          <Nameplate
+            v-if="isHovering"
+            :name="entity.name"
+            :team="entity.team"
+            :level="entity.level"
+            :race="entity.race"
+            :hp="entity.hp"
+            :max-hp="entity.maxHp"
+            :status-effects="entity.statusEffects"
+          />
+        </UApp>
       </Html>
     </primitive>
   </TresGroup>
