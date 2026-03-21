@@ -3,13 +3,15 @@
   "version": "0.0.1",
   "type": "module",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.mts",
-      "import": "./dist/index.mjs"
+    "./tres": {
+      "types": "./dist/tres/index.d.mts",
+      "import": "./dist/tres/index.mjs"
+    },
+    "./ui": {
+      "types": "./dist/ui/index.d.mts",
+      "import": "./dist/ui/index.mjs"
     }
   },
-  "main": "./dist/index.mjs",
-  "types": "./dist/index.d.mts",
   "files": [
     "dist"
   ],

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onKeyDown } from '@vueuse/core'
-import { Floor } from '@artificer-forge/components'
+import { Floor } from '@artificer-forge/components/tres'
 import { useSceneRefs } from '@artificer-forge/composables'
 
 const gameStore = useGameStore()
