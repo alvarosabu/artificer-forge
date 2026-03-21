@@ -1,29 +1,27 @@
 {
-  "name": "@artificer-forge/components",
+  "name": "@artificer-forge/post-processing",
   "version": "0.0.1",
   "type": "module",
   "exports": {
-    "./tres": {
-      "types": "./dist/tres/index.d.mts",
-      "import": "./dist/tres/index.mjs"
-    },
-    "./ui": {
-      "types": "./dist/ui/index.d.mts",
-      "import": "./dist/ui/index.mjs"
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "files": ["dist"],
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch"
   },
   "peerDependencies": {
+    "@tresjs/core": ">=5.0.0",
     "three": ">=0.170.0",
     "vue": ">=3.4.0"
   },
   "devDependencies": {
+    "@tresjs/core": "catalog:three",
     "@types/three": "catalog:three",
     "three": "catalog:three",
     "tsdown": "catalog:build",

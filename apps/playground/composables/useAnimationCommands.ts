@@ -1,5 +1,5 @@
 import type { CommandGroup } from './useCommandPalette'
-import { AnimationName, type AnimationNameType } from './useCharacterAnimations'
+import { AnimationName, type AnimationNameType } from '@artificer-forge/composables'
 
 const ANIMATION_CATEGORIES: Record<string, { label: string, animations: AnimationNameType[] }> = {
   'movement-basic': {

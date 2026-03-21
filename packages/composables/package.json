@@ -1,17 +1,15 @@
 {
-  "name": "@artificer-forge/components",
+  "name": "@artificer-forge/composables",
   "version": "0.0.1",
   "type": "module",
   "exports": {
-    "./tres": {
-      "types": "./dist/tres/index.d.mts",
-      "import": "./dist/tres/index.mjs"
-    },
-    "./ui": {
-      "types": "./dist/ui/index.d.mts",
-      "import": "./dist/ui/index.mjs"
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
     }
   },
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "files": [
     "dist"
   ],
@@ -20,11 +18,17 @@
     "dev": "tsdown --watch"
   },
   "peerDependencies": {
+    "@tresjs/cientos": ">=5.0.0",
+    "@tresjs/core": ">=5.0.0",
+    "@vueuse/core": ">=14.0.0",
     "three": ">=0.170.0",
     "vue": ">=3.4.0"
   },
   "devDependencies": {
+    "@tresjs/cientos": "catalog:three",
+    "@tresjs/core": "catalog:three",
     "@types/three": "catalog:three",
+    "@vueuse/core": "^14.2.1",
     "three": "catalog:three",
     "tsdown": "catalog:build",
     "typescript": "catalog:typescript",

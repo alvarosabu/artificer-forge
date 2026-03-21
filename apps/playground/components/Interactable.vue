@@ -2,6 +2,7 @@
 import { useGLTF, Html, useBVH } from '@tresjs/cientos'
 import { useGraph, type TresObject3D, type TresPointerEvent } from '@tresjs/core'
 import { MathUtils } from 'three'
+import { useOutlinePass } from '@artificer-forge/post-processing'
 
 const { open: openContextMenu } = useContextMenu()
 const { addToSelection, removeFromSelection } = useOutlinePass()

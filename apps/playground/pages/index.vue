@@ -37,6 +37,22 @@ const categories: DemoCategory[] = [
       { label: 'NPC', to: '/npc' },
     ],
   },
+  {
+    title: 'Shaders',
+    icon: '',
+    links: [
+      {
+        label: 'Shaders', to: '/shaders'
+      }
+    ]
+  },
+  {
+    title: 'Combat',
+    icon: 'i-heroicons-bolt',
+    links: [
+      { label: 'Damage Numbers', to: '/combat' },
+    ],
+  },
 ]
 </script>
 

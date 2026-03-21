@@ -1,5 +1,6 @@
-import type { Group, Vector3 } from 'three'
+import { computed, shallowRef, type Ref } from 'vue'
 import { createEventHook } from '@vueuse/core'
+import type { Group, Vector3 } from 'three'
 import { AnimationName, type AnimationNameType } from './useCharacterAnimations'
 
 export interface PointerControllerOptions {

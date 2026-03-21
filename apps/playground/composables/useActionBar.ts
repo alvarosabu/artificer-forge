@@ -1,4 +1,4 @@
-import { AnimationName } from './useCharacterAnimations'
+import { AnimationName } from '@artificer-forge/composables'
 
 export interface ActionSlot {
   id: string
