@@ -13,9 +13,10 @@ export interface InteractableRef {
   toggle: () => void
 }
 
+const characterRefs = ref<Map<string, CharacterRef>>(new Map())
+const interactableRefs = ref<Map<string, InteractableRef>>(new Map())
+
 export function useSceneRefs() {
-  const characterRefs = ref<Map<string, CharacterRef>>(new Map())
-  const interactableRefs = ref<Map<string, InteractableRef>>(new Map())
 
   function setCharacterRef(entityId: string, ref: CharacterRef | null) {
     if (ref) {

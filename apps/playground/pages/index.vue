@@ -20,37 +20,36 @@ const categories: DemoCategory[] = [
     title: 'Character',
     icon: 'i-heroicons-user',
     links: [
-      { label: 'Character', to: '/character' },
+      { label: 'Basic', to: '/character/basic' },
     ],
   },
   {
     title: 'Interactable',
     icon: 'i-heroicons-cube',
     links: [
-      { label: 'Interactable', to: '/interactable' },
+      { label: 'Chest', to: '/interactable/chest' },
     ],
   },
   {
     title: 'NPC',
     icon: 'i-heroicons-user-group',
     links: [
-      { label: 'NPC', to: '/npc' },
+      { label: 'Basic', to: '/npc/basic' },
     ],
   },
   {
     title: 'Shaders',
     icon: '',
     links: [
-      {
-        label: 'Shaders', to: '/shaders'
-      }
-    ]
+      { label: 'Basic', to: '/shaders/basic' },
+    ],
   },
   {
     title: 'Combat',
     icon: 'i-heroicons-bolt',
     links: [
-      { label: 'Damage Numbers', to: '/combat' },
+      { label: 'Damage Numbers', to: '/combat/damage-numbers' },
+      { label: 'Attack', to: '/combat/attack' },
     ],
   },
 ]

@@ -1,14 +1,3 @@
 <script setup lang="ts">
-import CombatExperience from './experience.vue'
-useHead({ title: 'Combat - TresJS Playground' })
+await navigateTo('/combat/damage-numbers', { replace: true })
 </script>
-
-<template>
-  <div>
-    <Game>
-      <CombatExperience />
-    </Game>
-    <GameCommandPalette />
-    <PartyPanel />
-  </div>
-</template>

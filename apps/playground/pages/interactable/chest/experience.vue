@@ -6,16 +6,12 @@ import { useSceneRefs } from '@artificer-forge/composables'
 import { TargetIndicator } from '@artificer-forge/vfx'
 
 const gameStore = useGameStore()
-const { close: closePalette } = useCommandPalette()
-
 const {
   setCharacterRef,
   setInteractableRef,
   getCharacterRef,
   getInteractableRef,
 } = useSceneRefs()
-
-const { registerHandler, unregisterHandler, SLOT_ANIMATION_MAP } = useActionBar()
 
 const { onAction } = useContextMenu()
 
@@ -37,10 +33,9 @@ onAction((action, entityId) => {
   }
 })
 
-const selectedCharacterRef = computed(() => {
-  if (!gameStore.selectedEntityId) return null
-  return getCharacterRef(gameStore.selectedEntityId)
-})
+const selectedCharacterRef = computed(() =>
+  gameStore.selectedEntityId ? getCharacterRef(gameStore.selectedEntityId) : null,
+)
 
 const targetIndicatorPosition = computed<[number, number, number] | null>(() => {
   const target = gameStore.selectedEntity?.moveTarget
@@ -48,26 +43,7 @@ const targetIndicatorPosition = computed<[number, number, number] | null>(() => 
   return [target.x, 0.01, target.z]
 })
 
-const { register: registerAnimations, unregister: unregisterAnimations } = useAnimationCommands(
-  selectedCharacterRef,
-  closePalette,
-)
-
-const { register: registerEntities, unregister: unregisterEntities } = useEntityCommands()
-
-function registerActionBarHandlers() {
-  for (const [slotId, animName] of Object.entries(SLOT_ANIMATION_MAP)) {
-    registerHandler(slotId, () => {
-      selectedCharacterRef.value?.play(animName)
-    })
-  }
-}
-
-function unregisterActionBarHandlers() {
-  for (const slotId of Object.keys(SLOT_ANIMATION_MAP)) {
-    unregisterHandler(slotId)
-  }
-}
+useCommands({ entities: true, animations: true, actionBar: true })
 
 onMounted(async () => {
   const playerId = await gameStore.spawnFromTemplate('hero', { x: 0, y: 0, z: 0 })
@@ -77,16 +53,6 @@ onMounted(async () => {
 
   const { spawnPoint } = await gameStore.loadScene('interactable_scene')
   gameStore.updateEntity(playerId, { position: spawnPoint })
-
-  registerAnimations()
-  registerEntities()
-  registerActionBarHandlers()
-})
-
-onUnmounted(() => {
-  unregisterAnimations()
-  unregisterEntities()
-  unregisterActionBarHandlers()
 })
 
 const characterEntities = computed(() => {

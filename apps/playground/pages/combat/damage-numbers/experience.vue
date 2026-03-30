@@ -7,9 +7,7 @@ import { useSceneRefs } from '@artificer-forge/composables'
 const gameStore = useGameStore()
 const { setCharacterRef, getCharacterRef } = useSceneRefs()
 
-const { register: registerEntities, unregister: unregisterEntities } = useEntityCommands()
-const { register: registerStatusEffects, unregister: unregisterStatusEffects } = useStatusEffectCommands()
-const { register: registerDamage, unregister: unregisterDamage } = useDamageNumberCommands(getCharacterRef)
+useCommands({ entities: true, statusEffects: true, damageNumbers: true })
 
 onMounted(async () => {
   const heroId = await gameStore.spawnFromTemplate('hero', { x: -1.5, y: 0, z: 0 })
@@ -17,16 +15,6 @@ onMounted(async () => {
   gameStore.selectEntity(heroId)
 
   await gameStore.spawnFromTemplate('orc_scout', { x: 1.5, y: 0, z: 0 })
-
-  registerEntities()
-  registerStatusEffects()
-  registerDamage()
-})
-
-onUnmounted(() => {
-  unregisterEntities()
-  unregisterStatusEffects()
-  unregisterDamage()
 })
 
 const characterEntities = computed(() =>

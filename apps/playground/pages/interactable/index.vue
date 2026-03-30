@@ -1,15 +1,3 @@
 <script setup lang="ts">
-import InteractableExperience from './experience.vue'
-useHead({
-  title: 'Interactable - TresJS Playground',
-})
+await navigateTo('/interactable/chest', { replace: true })
 </script>
-
-<template>
-  <div>
-    <Game>
-      <InteractableExperience />
-    </Game>
-    <GameCommandPalette />
-  </div>
-</template>

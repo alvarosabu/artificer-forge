@@ -1,16 +1,3 @@
 <script setup lang="ts">
-import NpcExperience from './experience.vue'
-useHead({
-  title: 'Actor - TresJS Playground',
-})
+await navigateTo('/npc/basic', { replace: true })
 </script>
-
-<template>
-  <div>
-    <Game>
-      <NpcExperience />
-    </Game>
-    <GameCommandPalette />
-    <PartyPanel />
-  </div>
-</template>

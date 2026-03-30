@@ -1,16 +1,3 @@
 <script setup lang="ts">
-import CharacterExperience from './experience.vue'
-useHead({
-  title: 'Character - TresJS Playground',
-})
+await navigateTo('/character/basic', { replace: true })
 </script>
-
-<template>
-  <div>
-    <Game>
-      <CharacterExperience />
-    </Game>
-    <GameCommandPalette />
-    <PartyPanel />
-  </div>
-</template>
