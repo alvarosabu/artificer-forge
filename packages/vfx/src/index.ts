@@ -25,3 +25,6 @@ export {
   RESET_Y,
   type EmberMeta,
 } from './particles/emberSystem'
+
+// Components
+export { default as TargetReticle } from './components/TargetReticle.vue'

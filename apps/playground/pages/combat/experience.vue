@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onKeyDown } from '@vueuse/core'
+import { TargetReticle } from '@artificer-forge/vfx'
 import { Floor } from '@artificer-forge/components/tres'
 import { useSceneRefs } from '@artificer-forge/composables'
 
@@ -54,6 +55,12 @@ onKeyDown('d', () => {
     :ref="(el: any) => setCharacterRef(entity.id, el)"
     :key="entity.id"
     :entity-id="entity.id"
+  />
+  <TargetReticle
+    :position="[0, 0.01, 0]"
+    :color="'#ff0000'"
+    :radius="0.8"
+    :visible="true"
   />
   <Floor />
 </template>
