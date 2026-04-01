@@ -89,10 +89,11 @@ material.opacityNode = finalAlpha
 </script>
 
 <template>
-    <TresMesh 
+    <TresMesh
         :geometry="geometry"
         :position="position"
-        :rotation-x="-Math.PI / 2" 
+        :rotation-x="-Math.PI / 2"
         :material="material"
+        :visible="visible"
     />
 </template>

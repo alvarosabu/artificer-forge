@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { Floor } from '@artificer-forge/components/tres'
-import type { TresPointerEvent } from '@tresjs/core'
 import { useSceneRefs } from '@artificer-forge/composables'
-import { TargetIndicator } from '@artificer-forge/vfx'
 
 const gameStore = useGameStore()
-const { setCharacterRef, getCharacterRef } = useSceneRefs()
+const { setCharacterRef } = useSceneRefs()
 
 const { onAction } = useContextMenu()
 
@@ -29,17 +27,7 @@ onAction((action, entityId) => {
   }
 })
 
-const selectedCharacterRef = computed(() =>
-  gameStore.selectedEntityId ? getCharacterRef(gameStore.selectedEntityId) : null,
-)
-
-const targetIndicatorPosition = computed<[number, number, number] | null>(() => {
-  const target = gameStore.selectedEntity?.moveTarget
-  if (!target) return null
-  return [target.x, 0.01, target.z]
-})
-
-useCommands({ entities: true, animations: true, statusEffects: true, recruit: true, actionBar: true })
+useCommands({ entities: true, animations: true, statusEffects: true, recruit: true })
 
 onMounted(async () => {
   const playerId = await gameStore.spawnFromTemplate('hero', { x: 0, y: 0, z: 0 })
@@ -63,9 +51,6 @@ const characterEntities = computed(() => gameStore.partyEntities)
 
 const actorEntities = computed(() => gameStore.actorEntities)
 
-function handleFloorClick(event: TresPointerEvent) {
-  selectedCharacterRef.value?.moveTo(event.point)
-}
 </script>
 
 <template>
@@ -90,12 +75,5 @@ function handleFloorClick(event: TresPointerEvent) {
     :entity-id="entity.id"
   />
   <TresAxesHelper />
-  <Floor @click="handleFloorClick" />
-  <TargetIndicator
-    v-if="targetIndicatorPosition"
-    :position="targetIndicatorPosition"
-    :radius="0.4"
-    :height="0.8"
-    :pulse-speed="3"
-  />
+  <Floor />
 </template>

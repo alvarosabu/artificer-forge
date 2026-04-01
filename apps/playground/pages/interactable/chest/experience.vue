@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { Floor } from '@artificer-forge/components/tres'
-import type { TresPointerEvent } from '@tresjs/core'
 import { Vector3 } from 'three'
 import { useSceneRefs } from '@artificer-forge/composables'
-import { TargetIndicator } from '@artificer-forge/vfx'
 
 const gameStore = useGameStore()
 const {
@@ -37,13 +35,7 @@ const selectedCharacterRef = computed(() =>
   gameStore.selectedEntityId ? getCharacterRef(gameStore.selectedEntityId) : null,
 )
 
-const targetIndicatorPosition = computed<[number, number, number] | null>(() => {
-  const target = gameStore.selectedEntity?.moveTarget
-  if (!target) return null
-  return [target.x, 0.01, target.z]
-})
-
-useCommands({ entities: true, animations: true, actionBar: true })
+useCommands({ entities: true, animations: true })
 
 onMounted(async () => {
   const playerId = await gameStore.spawnFromTemplate('hero', { x: 0, y: 0, z: 0 })
@@ -63,10 +55,6 @@ const interactableEntities = computed(() => {
   return [...gameStore.entities.values()].filter(e => e.type === 'interactable')
 })
 
-function handleFloorClick(event: TresPointerEvent) {
-  closeActiveInteractable()
-  selectedCharacterRef.value?.moveTo(event.point)
-}
 
 const INTERACTION_DISTANCE = 1.5
 const activeInteractableId = ref<string | null>(null)
@@ -140,12 +128,5 @@ function handleInteractableClick(entityId: string) {
     @interact="handleInteractableClick"
   />
   <TresAxesHelper />
-  <Floor @click="handleFloorClick" />
-  <TargetIndicator
-    v-if="targetIndicatorPosition"
-    :position="targetIndicatorPosition"
-    :radius="0.4"
-    :height="0.8"
-    :pulse-speed="3"
-  />
+  <Floor />
 </template>

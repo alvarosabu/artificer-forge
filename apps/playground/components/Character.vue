@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { useGLTF, Html } from '@tresjs/cientos'
 import { useLoop, type TresPointerEvent } from '@tresjs/core'
-import { Mesh, type Group } from 'three'
+import { Mesh, Vector3, type Group } from 'three'
 import { useCharacterAnimations, AnimationName, useCharacterController } from '@artificer-forge/composables'
 import { useDamageNumbers, DamageNumber, ghostMaterial } from '@artificer-forge/vfx'
 import { useOutlinePass } from '@artificer-forge/post-processing'
 
 const { open: openContextMenu } = useContextMenu()
 const { addToSelection, removeFromSelection } = useOutlinePass()
+const combatStore = useCombatStore()
 
 const props = withDefaults(defineProps<{
   entityId: string
@@ -23,6 +24,16 @@ const { nodes } = useGLTF(modelPath.value, { draco: true })
 const rig = computed(() => nodes.value?.Rig_Medium)
 
 const { actions, currentAnimName, play, stop } = useCharacterAnimations(rig)
+
+function meleeAttack() {
+  play(AnimationName.MELEE_1H_ATTACK_CHOP)
+}
+
+function lookAtPoint(point: Vector3) {
+  if (!characterRef.value) return
+  const pos = characterRef.value.position
+  characterRef.value.rotation.y = Math.atan2(point.x - pos.x, point.z - pos.z)
+}
 
 const equipment = computed(() => entity.value?.equipment)
 useEquipment(rig, equipment)
@@ -87,6 +98,14 @@ const isPlayable = computed(() => gameStore.selectedEntityId === props.entityId)
 const isHovering = ref(false)
 
 function handlePointerEnter() {
+  if (combatStore.isTargeting) {
+    combatStore.hoverTarget(props.entityId)
+    if (rig.value) {
+      const entity = gameStore.getEntity(props.entityId)
+      if (entity?.team === 'hostile') addToSelection(rig.value, 'hostile')
+    }
+    return
+  }
   if (!isPlayable.value) {
     isHovering.value = true
     if (rig.value) addToSelection(rig.value, 'party')
@@ -94,9 +113,20 @@ function handlePointerEnter() {
 }
 
 function handlePointerLeave() {
+  if (combatStore.isTargeting) {
+    combatStore.hoverTarget(null)
+    if (rig.value) removeFromSelection(rig.value, 'hostile')
+    return
+  }
   isHovering.value = false
   if (rig.value && !isPlayable.value) {
     removeFromSelection(rig.value, 'party')
+  }
+}
+
+function handleClick() {
+  if (combatStore.isTargeting) {
+    combatStore.confirmTarget(props.entityId)
   }
 }
 
@@ -120,6 +150,8 @@ defineExpose({
   moveTo,
   onArrive,
   showDamage,
+  meleeAttack,
+  lookAt: lookAtPoint,
 })
 </script>
 
@@ -136,6 +168,7 @@ defineExpose({
       @contextmenu="handleContextMenu"
       @pointerenter="handlePointerEnter"
       @pointerleave="handlePointerLeave"
+      @click="handleClick"
     >
       <Html
         

@@ -1,19 +1,25 @@
 <script setup lang="ts">
 import { Floor } from '@artificer-forge/components/tres'
-import { TargetReticle } from '@artificer-forge/vfx'
 import { useSceneRefs } from '@artificer-forge/composables'
 
 const gameStore = useGameStore()
 const { setCharacterRef } = useSceneRefs()
 
-useCommands({ entities: true })
+const { register: registerEntities, unregister: unregisterEntities } = useEntityCommands()
 
 onMounted(async () => {
   const heroId = await gameStore.spawnFromTemplate('hero', { x: -1.5, y: 0, z: 0 })
   gameStore.addToParty(heroId)
   gameStore.selectEntity(heroId)
+  gameStore.equipWeapon(heroId, 'shortsword', 'mainHand')
 
   await gameStore.spawnFromTemplate('orc_scout', { x: 1.5, y: 0, z: 0 })
+
+  registerEntities()
+})
+
+onUnmounted(() => {
+  unregisterEntities()
 })
 
 const characterEntities = computed(() =>
@@ -31,12 +37,7 @@ const characterEntities = computed(() =>
     :ref="(el: any) => setCharacterRef(entity.id, el)"
     :key="entity.id"
     :entity-id="entity.id"
+
   />
-  <TargetReticle                                                  
-    :position="[0, 0.01, 0]"                                   
-    :color="'#ff0000'"                                      
-    :radius="0.8"                                                 
-    :visible="true"                                    
-  /> 
   <Floor />
 </template>
