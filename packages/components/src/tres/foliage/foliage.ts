@@ -1,7 +1,7 @@
 import { TresColor } from "@tresjs/core"
-import { BufferGeometry, Color, DoubleSide, Object3D, PlaneGeometry, Quaternion, Spherical, Vector3 } from "three"
+import { BufferGeometry, Color, DoubleSide, Object3D, PlaneGeometry, Quaternion, Spherical, Texture, Vector3 } from "three"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js"
-import { color, Fn, mix, normalWorld, positionViewDirection, uniform } from "three/tsl"
+import { color, float, Fn, mix, normalWorld, positionViewDirection, rotateUV, texture, uniform, uv, vec2 } from "three/tsl"
 import { MeshStandardNodeMaterial } from "three/webgpu"
 
 export interface FoliageOptions {
@@ -9,6 +9,7 @@ export interface FoliageOptions {
     colorA: TresColor 
     colorB: TresColor   
     seed?: string
+    foliageTexture?: Texture | null
 }
 
 const PLANE_COUNT = 80
@@ -83,23 +84,33 @@ function buildClusterGeometry(rng: () => number): BufferGeometry {
     return mergeGeometries(planes)
 }
 
-function buildFoliageMaterial(colorA: TresColor, colorB: TresColor) {
-    const colorAUniform = uniform(color(new Color(colorA)))
-    const colorBUniform = uniform(color(new Color(colorB)))
+function buildFoliageMaterial(colorA: TresColor, colorB: TresColor, foliageTexture?: Texture | null) {
+    const colorAUniform = uniform(color(new Color(colorA as Color)))
+    const colorBUniform = uniform(color(new Color(colorB as Color)))
+
+    const threshold = uniform(0.3)
+
     const material = new MeshStandardNodeMaterial()
     material.side = DoubleSide
     material.depthWrite = true
+    material.transparent = false
+    material.alphaTest = threshold.value
     material.colorNode = Fn(() => {
         const mixStrength = normalWorld.dot(positionViewDirection).smoothstep(0, 1)
         return mix(colorAUniform, colorBUniform, mixStrength)
-      })()
+    })()
+
+    if (foliageTexture) {
+        material.opacityNode = texture(foliageTexture, uv()).r
+    }
+
     return material
 }
 
 export function createFoliage(options: FoliageOptions) {
-    const { references, colorA, colorB, seed } = options
+    const { references: _references, colorA, colorB, seed, foliageTexture } = options
     const rng = mulberry32(hashSeed(seed || ''))
     const geometry = buildClusterGeometry(rng)
-    const material = buildFoliageMaterial(colorA, colorB)
+    const material = buildFoliageMaterial(colorA, colorB, foliageTexture)
     return { geometry, material }
 }

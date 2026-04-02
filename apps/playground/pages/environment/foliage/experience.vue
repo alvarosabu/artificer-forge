@@ -16,6 +16,14 @@ const references = [
   obj.updateMatrixWorld()
   return obj
 })
+
+const { state: foliageTexture } = useTexture('/textures/foliage/foliage.png')
+
+watch(foliageTexture, (tex) => {
+  console.log('[Experience] watch fired, tex:', tex)
+
+}, { immediate: true, deep: true })
+
 </script>
 
 <template>
@@ -26,6 +34,7 @@ const references = [
   <Floor />
   <Foliage
     :references="references"
+    :foliage-texture="foliageTexture"
     color-a="#b4b536"
     color-b="#d8cf3b"
   />
