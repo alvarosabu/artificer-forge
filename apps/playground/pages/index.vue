@@ -39,7 +39,7 @@ const categories: DemoCategory[] = [
   },
   {
     title: 'Shaders',
-    icon: '',
+    icon: 'i-heroicons-sparkles',
     links: [
       { label: 'Basic', to: '/shaders/basic' },
     ],
@@ -50,6 +50,13 @@ const categories: DemoCategory[] = [
     links: [
       { label: 'Damage Numbers', to: '/combat/damage-numbers' },
       { label: 'Attack', to: '/combat/attack' },
+    ],
+  },
+  {
+    title: 'Environment',
+    icon: 'i-heroicons-',
+    links: [
+      { label: 'Foliage', to: '/environment/foliage' },
     ],
   },
 ]
