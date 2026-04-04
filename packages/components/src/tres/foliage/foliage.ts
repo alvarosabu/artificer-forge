@@ -1,21 +1,23 @@
 import { TresColor } from "@tresjs/core"
-import { BufferGeometry, Color, DoubleSide, Object3D, PlaneGeometry, Quaternion, Spherical, Texture, Vector3 } from "three"
+import { BufferGeometry, Color, DoubleSide, InstancedBufferAttribute, Object3D, PlaneGeometry, Quaternion, Spherical, StaticDrawUsage, Texture, Vector3 } from "three"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js"
-import { color, float, Fn, mix, normalWorld, positionViewDirection, rotateUV, texture, uniform, uv, vec2 } from "three/tsl"
+import { Fn, instance, mix, normalWorld, positionLocal, texture, uniform, uv, vec4 } from "three/tsl"
 import { MeshStandardNodeMaterial } from "three/webgpu"
 
 export interface FoliageOptions {
     references: Object3D[]
-    colorA: TresColor 
-    colorB: TresColor   
+    amount: number
+    size: number
+    colorA: TresColor
+    colorB: TresColor
     seed?: string
     foliageTexture?: Texture | null
+    lightingDirection?: Vector3
+    cameraForward?: Vector3
 }
 
-const PLANE_COUNT = 80
-const PLANE_SIZE = 0.8
+const DEFAULT_LIGHTING_DIR = new Vector3(1, 1, 0).normalize()
 
-// Deterministic seeded RNG — no external dependency
 function hashSeed(str: string): number {
     let h = 0
     for (let i = 0; i < str.length; i++)
@@ -32,24 +34,54 @@ function mulberry32(seed: number): () => number {
     }
 }
 
-function buildClusterGeometry(rng: () => number): BufferGeometry {
+function buildInstanceMatrices(
+    references: Object3D[],
+    rng: () => number,
+    cameraForward: Vector3,
+): InstancedBufferAttribute {
+    const count = references.length
+    const data = new Float32Array(count * 16)
+    const dummy = new Object3D()
+
+    for (let i = 0; i < count; i++) {
+        const ref = references[i]
+
+        dummy.position.setFromMatrixPosition(ref.matrixWorld)
+        dummy.scale.setScalar(ref.matrixWorld.getMaxScaleOnAxis())
+
+        const angle = rng() * Math.PI * 2
+        dummy.up.set(Math.sin(angle), Math.cos(angle), 0)
+        dummy.lookAt(
+            dummy.position.x + cameraForward.x,
+            dummy.position.y + cameraForward.y,
+            dummy.position.z + cameraForward.z,
+        )
+
+        dummy.updateMatrix()
+        dummy.matrix.toArray(data, i * 16)
+    }
+
+    const attr = new InstancedBufferAttribute(data, 16)
+    attr.setUsage(StaticDrawUsage)
+    return attr
+}
+
+function buildClusterGeometry(rng: () => number, amount: number, size: number): BufferGeometry {
     const planes: BufferGeometry[] = []
     const spherical = new Spherical()
     const normal = new Vector3()
     const surfaceNormal = new Vector3()
 
-    for (let i = 0; i < PLANE_COUNT; i++) {
-        const plane = new PlaneGeometry(PLANE_SIZE, PLANE_SIZE)
+    for (let i = 0; i < amount; i++) {
+        const plane = new PlaneGeometry(size, size)
 
-        // Position on sphere surface, biased toward surface with pow3
         spherical.set(
-            1 - Math.pow(rng(), 3),          // radius biased toward 1
-            Math.acos(2 * rng() - 1),        // polar angle (full sphere)
-            rng() * Math.PI * 2,             // azimuth
+            1 - Math.pow(rng(), 3),
+            Math.acos(2 * rng() - 1),
+            rng() * Math.PI * 2,
         )
         const position = new Vector3().setFromSpherical(spherical)
 
-        // Random spin, then orient plane to face outward from sphere center
         const rotZ = rng() * Math.PI * 2
         plane.rotateZ(rotZ)
         const outward = position.clone().normalize()
@@ -66,9 +98,7 @@ function buildClusterGeometry(rng: () => number): BufferGeometry {
             const vy = posArr[v * 3 + 1]
             const vz = posArr[v * 3 + 2]
 
-            // Surface normal at this vertex = direction from origin to vertex position
             surfaceNormal.set(vx, vy, vz).normalize()
-
             normal.set(normArr[v * 3], normArr[v * 3 + 1], normArr[v * 3 + 2])
             normal.lerp(surfaceNormal, 0.85)
             // Intentionally NOT normalized — produces softer lighting
@@ -84,33 +114,91 @@ function buildClusterGeometry(rng: () => number): BufferGeometry {
     return mergeGeometries(planes)
 }
 
-function buildFoliageMaterial(colorA: TresColor, colorB: TresColor, foliageTexture?: Texture | null) {
-    const colorAUniform = uniform(color(new Color(colorA as Color)))
-    const colorBUniform = uniform(color(new Color(colorB as Color)))
-
-    const threshold = uniform(0.3)
-
+function buildFoliageMaterial(options: {
+    colorAUniform: ReturnType<typeof uniform>,
+    colorBUniform: ReturnType<typeof uniform>,
+    lightingDirUniform: ReturnType<typeof uniform>,
+    foliageTexture?: Texture | null,
+    instanceMatrix: InstancedBufferAttribute,
+}) {
     const material = new MeshStandardNodeMaterial()
+    const { colorAUniform, colorBUniform, lightingDirUniform, foliageTexture, instanceMatrix } = options
+
     material.side = DoubleSide
     material.depthWrite = true
     material.transparent = false
-    material.alphaTest = threshold.value
-    material.colorNode = Fn(() => {
-        const mixStrength = normalWorld.dot(positionViewDirection).smoothstep(0, 1)
-        return mix(colorAUniform, colorBUniform, mixStrength)
+    material.alphaTest = 0.3
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    material.positionNode = Fn(({ object }: { object: any }) => {
+        instance(object.count, instanceMatrix).toStack()
+        return positionLocal
     })()
+
+    material.colorNode = Fn(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mixStrength = normalWorld.dot(lightingDirUniform as any).smoothstep(0, 1)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return mix(colorAUniform as any, colorBUniform as any, mixStrength)
+    })()
+
+    material.receivedShadowPositionNode = positionLocal.add(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (lightingDirUniform as any).mul(1)  // shadowOffset uniform, default 1
+      )
 
     if (foliageTexture) {
         material.opacityNode = texture(foliageTexture, uv()).r
+        material.castShadowNode = Fn(() => {
+            const alphaColor = texture(foliageTexture!, uv()).r  // default UVs, no rotation
+            alphaColor.lessThan(0.5).discard()
+            return vec4(0, 1, 1, 1)  // WebGPU shadow pass convention — not RGBA color
+        })()
     }
+
+  
 
     return material
 }
 
 export function createFoliage(options: FoliageOptions) {
-    const { references: _references, colorA, colorB, seed, foliageTexture } = options
+    const {
+        references,
+        amount = 80,
+        size = 0.8,
+        colorA,
+        colorB,
+        foliageTexture,
+        lightingDirection,
+        seed,
+        cameraForward = new Vector3(0, 0, -1),
+    } = options
     const rng = mulberry32(hashSeed(seed || ''))
-    const geometry = buildClusterGeometry(rng)
-    const material = buildFoliageMaterial(colorA, colorB, foliageTexture)
-    return { geometry, material }
+    const geometry = buildClusterGeometry(rng, amount, size)
+    const instanceMatrix = buildInstanceMatrices(references, rng, cameraForward)
+
+    // Pass raw Three.js objects to uniform() — NOT TSL nodes like color()/vec3()
+    // Passing a TSL node as the uniform value causes zero-size GPU buffers
+    const colorAUniform = uniform(new Color(colorA as Color))
+    const colorBUniform = uniform(new Color(colorB as Color))
+    const lightingDirUniform = uniform((lightingDirection ?? DEFAULT_LIGHTING_DIR).clone())
+
+    const material = buildFoliageMaterial({
+        colorAUniform,
+        colorBUniform,
+        lightingDirUniform,
+        foliageTexture,
+        instanceMatrix,
+    })
+
+    return {
+        geometry,
+        material,
+        uniforms: { colorA: colorAUniform, colorB: colorBUniform, lightingDir: lightingDirUniform },
+        count: references.length,
+        dispose: () => {
+            geometry.dispose()
+            material.dispose()
+        },
+    }
 }

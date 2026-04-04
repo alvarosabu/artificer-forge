@@ -1,5 +1,5 @@
 import { Texture } from 'three'
-import type { Mesh, Material, Group } from 'three'
+import { Mesh, type Material, type Group, type Object3D } from 'three'
 import { useGraph, type TresObject3D } from '@tresjs/core'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
@@ -85,6 +85,11 @@ export function useEquipment(
 
     detach(slot)
     const scene = gltf.scene.clone()
+    scene.traverse((child: Object3D) => {
+      if(child instanceof Mesh) {
+        child.castShadow = true
+      }
+    })
     bone.add(scene as unknown as TresObject3D)
     attached[slot] = scene
   }

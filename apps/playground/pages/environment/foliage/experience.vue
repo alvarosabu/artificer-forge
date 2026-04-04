@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { Object3D } from 'three'
+import { computed } from 'vue'
+import { Object3D, Vector3 } from 'three'
 import { Floor, Foliage } from '@artificer-forge/components/tres'
 import { OrbitControls } from '@tresjs/cientos'
+import { useSceneRefs } from '@artificer-forge/composables'
 
 const references = [
   { position: [2, 0, -3] as [number, number, number], scale: 1.0 },
@@ -17,12 +19,48 @@ const references = [
   return obj
 })
 
+
+const gameStore = useGameStore()
+const { setCharacterRef } = useSceneRefs()
+
+
+const characterEntities = computed(() => {
+  return [...gameStore.entities.values()].filter(e => e.type === 'character')
+})
+
 const { state: foliageTexture } = useTexture('/textures/foliage/foliage.png')
 
 watch(foliageTexture, (tex) => {
   console.log('[Experience] watch fired, tex:', tex)
-
 }, { immediate: true, deep: true })
+
+const { uuid } = useSharedLechesControls()
+
+const { foliageColorA, foliageColorB } = useControls('foliage', {
+  colorA: { value: '#b4b536', type: 'color' },
+  colorB: { value: '#d8cf3b', type: 'color' },
+}, { uuid })
+
+
+const { lightX, lightY, lightZ } = useControls('light', {
+  x: { value: 5, type: 'number' },
+  y: { value: 5, type: 'number' },
+  z: { value: 5, type: 'number' },
+}, { uuid })
+
+const lightingDirection = computed(() =>
+  new Vector3(-lightX.value, -lightY.value, -lightZ.value).normalize()
+)
+
+onMounted(async () => {
+  const playerId = await gameStore.spawnFromTemplate('hero', { x: 0, y: 0, z: 0 })
+  gameStore.addToParty(playerId)
+  gameStore.selectEntity(playerId)
+  gameStore.equipWeapon(playerId, 'shortsword', 'mainHand')
+
+  const { spawnPoint } = await gameStore.loadScene('character_scene')
+  gameStore.updateEntity(playerId, { position: spawnPoint })
+})
 
 </script>
 
@@ -30,12 +68,25 @@ watch(foliageTexture, (tex) => {
   <TresPerspectiveCamera :position="[8, 6, 8]" :look-at="[0, 0, 0]" />
   <OrbitControls />
   <TresAmbientLight :intensity="0.8" />
-  <TresDirectionalLight :position="[5, 5, 5]" :intensity="1.5" cast-shadow />
+  <TresDirectionalLight :position="[lightX, lightY, lightZ]" :intensity="1.5" cast-shadow />
+  <Character
+    v-for="entity in characterEntities"
+    :ref="(el: any) => setCharacterRef(entity.id, el)"
+    :key="entity.id"
+    :entity-id="entity.id"
+  />
+  <TresMesh :rotation-x="-Math.PI / 2" :position="[0, 0.01, 0]" receive-shadow>
+    <TresPlaneGeometry :args="[20, 20]" />
+    <TresMeshStandardMaterial />
+  </TresMesh>
   <Floor />
   <Foliage
     :references="references"
     :foliage-texture="foliageTexture"
-    color-a="#b4b536"
-    color-b="#d8cf3b"
+    :color-a="foliageColorA"
+    :color-b="foliageColorB"
+    :lighting-direction="lightingDirection"
+    :amount="80"
+    :size="0.8"
   />
 </template>

@@ -133,6 +133,7 @@ const { postprocessingBloomStrength, postprocessingBloomThreshold, postprocessin
     window-size
     :renderer="createWebGPURenderer"
     :tone-mapping="NoToneMapping"
+    shadows
     @pointer-missed="handlePointerMissed"
   >
     <slot />

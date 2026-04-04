@@ -82,6 +82,16 @@ watch(characterRef, (group) => {
   }
 }, { immediate: true })
 
+watch(rig, (rigValue) => {
+  if (rigValue) {
+    rigValue.traverse((child: Mesh) => {
+      if(child.isMesh) {
+        child.castShadow = true
+      }
+    })
+  }
+}, { immediate: true })
+
 const { onBeforeRender } = useLoop()
 onBeforeRender(({ delta }) => update(delta))
 
@@ -163,8 +173,7 @@ defineExpose({
     <primitive
       v-if="rig"
       :object="rig"
-      cast-shadow
-      receive-shadow
+
       @contextmenu="handleContextMenu"
       @pointerenter="handlePointerEnter"
       @pointerleave="handlePointerLeave"
@@ -196,5 +205,6 @@ defineExpose({
         @done="removeNumber(entry.id)"
       />
     </primitive>
+
   </TresGroup>
 </template>

@@ -52,20 +52,20 @@ catalogs:
       version: 3.25.1
   three:
     '@tresjs/cientos':
-      specifier: 5.5.0
-      version: 5.5.0
+      specifier: 5.7.0
+      version: 5.7.0
     '@tresjs/core':
-      specifier: ^5.6.0
-      version: 5.6.0
+      specifier: ^5.8.0
+      version: 5.8.0
     '@tresjs/eslint-config':
       specifier: ^1.5.1
       version: 1.5.1
     '@tresjs/leches':
-      specifier: ^1.1.4
-      version: 1.1.4
+      specifier: ^1.2.0
+      version: 1.2.0
     '@tresjs/nuxt':
-      specifier: ^5.4.0
-      version: 5.4.0
+      specifier: ^5.6.0
+      version: 5.6.0
     '@types/three':
       specifier: ^0.183.1
       version: 0.183.1
@@ -96,10 +96,10 @@ importers:
     dependencies:
       '@tresjs/cientos':
         specifier: catalog:three
-        version: 5.5.0(@tresjs/core@5.6.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3)))(@types/three@0.183.1)(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
+        version: 5.7.0(@tresjs/core@5.8.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3)))(@types/three@0.183.1)(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
       '@tresjs/core':
         specifier: catalog:three
-        version: 5.6.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
+        version: 5.8.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
       three:
         specifier: catalog:three
         version: 0.183.2
@@ -121,10 +121,10 @@ importers:
         version: 1.15.2(@typescript-eslint/utils@8.57.0(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(@vue/compiler-sfc@3.5.30)(eslint-plugin-format@0.1.3(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1))(magicast@0.5.2)(typescript@5.9.3)(vite@8.0.0-beta.18(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(yaml@2.8.2))
       '@tresjs/cientos':
         specifier: catalog:three
-        version: 5.5.0(@tresjs/core@5.6.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3)))(@types/three@0.183.1)(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
+        version: 5.7.0(@tresjs/core@5.8.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3)))(@types/three@0.183.1)(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
       '@tresjs/nuxt':
         specifier: catalog:three
-        version: 5.4.0(@nuxt/content@3.12.0(better-sqlite3@12.6.2)(magicast@0.5.2))(@rollup/pluginutils@5.3.0(rollup@4.59.0))(db0@0.3.4(better-sqlite3@12.6.2))(esbuild@0.27.3)(ioredis@5.10.0)(magicast@0.5.2)(tailwindcss@4.2.1)(three@0.183.2)(typescript@5.9.3)(vite@8.0.0-beta.18(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(yaml@2.8.2))(vue-router@5.0.3(@vue/compiler-sfc@3.5.30)(pinia@3.0.4(typescript@5.9.3)(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3))(zod@4.3.6)
+        version: 5.6.0(@nuxt/content@3.12.0(better-sqlite3@12.6.2)(magicast@0.5.2))(@rollup/pluginutils@5.3.0(rollup@4.59.0))(db0@0.3.4(better-sqlite3@12.6.2))(esbuild@0.27.3)(ioredis@5.10.0)(magicast@0.5.2)(tailwindcss@4.2.1)(three@0.183.2)(typescript@5.9.3)(vite@8.0.0-beta.18(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(yaml@2.8.2))(vue-router@5.0.3(@vue/compiler-sfc@3.5.30)(pinia@3.0.4(typescript@5.9.3)(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3))(zod@4.3.6)
       eslint:
         specifier: catalog:eslint
         version: 9.39.4(jiti@2.6.1)
@@ -206,13 +206,13 @@ importers:
         version: 0.11.3(magicast@0.5.2)(pinia@3.0.4(typescript@5.9.3)(vue@3.5.30(typescript@5.9.3)))
       '@tresjs/cientos':
         specifier: catalog:three
-        version: 5.5.0(@tresjs/core@5.6.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3)))(@types/three@0.183.1)(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
+        version: 5.7.0(@tresjs/core@5.8.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3)))(@types/three@0.183.1)(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
       '@tresjs/leches':
         specifier: catalog:three
-        version: 1.1.4(magicast@0.5.2)(unocss@66.6.6(vite@8.0.0-beta.18(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(yaml@2.8.2)))(vue@3.5.30(typescript@5.9.3))
+        version: 1.2.0(magicast@0.5.2)(unocss@66.6.6(vite@8.0.0-beta.18(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(yaml@2.8.2)))(vue@3.5.30(typescript@5.9.3))
       '@tresjs/nuxt':
         specifier: catalog:three
-        version: 5.4.0(@nuxt/content@3.12.0(better-sqlite3@12.6.2)(magicast@0.5.2))(@rollup/pluginutils@5.3.0(rollup@4.59.0))(@tiptap/extensions@3.20.1(@tiptap/core@3.20.1(@tiptap/pm@3.20.1))(@tiptap/pm@3.20.1))(@tiptap/y-tiptap@3.0.2(prosemirror-model@1.25.4)(prosemirror-state@1.4.4)(prosemirror-view@1.41.6)(y-protocols@1.0.7(yjs@13.6.29))(yjs@13.6.29))(change-case@5.4.4)(db0@0.3.4(better-sqlite3@12.6.2))(embla-carousel@8.6.0)(esbuild@0.27.3)(ioredis@5.10.0)(magicast@0.5.2)(tailwindcss@4.2.1)(three@0.183.2)(typescript@5.9.3)(vite@8.0.0-beta.18(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(yaml@2.8.2))(vue-router@5.0.3(@vue/compiler-sfc@3.5.30)(pinia@3.0.4(typescript@5.9.3)(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3))(yjs@13.6.29)(zod@4.3.6)
+        version: 5.6.0(@nuxt/content@3.12.0(better-sqlite3@12.6.2)(magicast@0.5.2))(@rollup/pluginutils@5.3.0(rollup@4.59.0))(@tiptap/extensions@3.20.1(@tiptap/core@3.20.1(@tiptap/pm@3.20.1))(@tiptap/pm@3.20.1))(@tiptap/y-tiptap@3.0.2(prosemirror-model@1.25.4)(prosemirror-state@1.4.4)(prosemirror-view@1.41.6)(y-protocols@1.0.7(yjs@13.6.29))(yjs@13.6.29))(change-case@5.4.4)(db0@0.3.4(better-sqlite3@12.6.2))(embla-carousel@8.6.0)(esbuild@0.27.3)(ioredis@5.10.0)(magicast@0.5.2)(tailwindcss@4.2.1)(three@0.183.2)(typescript@5.9.3)(vite@8.0.0-beta.18(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(yaml@2.8.2))(vue-router@5.0.3(@vue/compiler-sfc@3.5.30)(pinia@3.0.4(typescript@5.9.3)(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3))(yjs@13.6.29)(zod@4.3.6)
       eslint:
         specifier: catalog:eslint
         version: 9.39.4(jiti@2.6.1)
@@ -276,10 +276,10 @@ importers:
     devDependencies:
       '@tresjs/cientos':
         specifier: catalog:three
-        version: 5.5.0(@tresjs/core@5.6.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3)))(@types/three@0.183.1)(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
+        version: 5.7.0(@tresjs/core@5.8.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3)))(@types/three@0.183.1)(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
       '@tresjs/core':
         specifier: catalog:three
-        version: 5.6.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
+        version: 5.8.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
       '@types/three':
         specifier: catalog:three
         version: 0.183.1
@@ -309,7 +309,7 @@ importers:
     devDependencies:
       '@tresjs/core':
         specifier: catalog:three
-        version: 5.6.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
+        version: 5.8.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
       '@types/three':
         specifier: catalog:three
         version: 0.183.1
@@ -336,10 +336,10 @@ importers:
     devDependencies:
       '@tresjs/cientos':
         specifier: catalog:three
-        version: 5.5.0(@tresjs/core@5.6.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3)))(@types/three@0.183.1)(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
+        version: 5.7.0(@tresjs/core@5.8.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3)))(@types/three@0.183.1)(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
       '@tresjs/core':
         specifier: catalog:three
-        version: 5.6.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
+        version: 5.8.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
       '@types/three':
         specifier: catalog:three
         version: 0.183.1
@@ -3222,15 +3222,15 @@ packages:
       y-protocols: ^1.0.1
       yjs: ^13.5.38
 
-  '@tresjs/cientos@5.5.0':
-    resolution: {integrity: sha512-pjUXQJS+sXpoFWfRBqXkp4W3Anukl7uvWin8ONJfqqaWGxK/DLqAaJ5WRIkO3oRkrxMWtxBuR76jEDClzNnW4Q==}
+  '@tresjs/cientos@5.7.0':
+    resolution: {integrity: sha512-w57PfD4WNwa23YwDsiQa/j4j202sYW0eZre2jdsb3QT165baGaFn9LMIEJt1t4Y7p4Ecw4jlTiUCE6JdRYAbIg==}
     peerDependencies:
-      '@tresjs/core': 5.6.0
+      '@tresjs/core': 5.8.0
       three: '>=0.133'
       vue: '>=3.5.17'
 
-  '@tresjs/core@5.6.0':
-    resolution: {integrity: sha512-0vzMreKNq7OzSmK4Ts/hqQk7GcUeIxZAE8EAyYX+6Q39TcZztQsg2aCSzXax34Ced1IEuyX0FL1aurP48QsMvA==}
+  '@tresjs/core@5.8.0':
+    resolution: {integrity: sha512-l0ThyBNpEUxIem3iJt1g4Fuhx2FGUYnm8xJzdGAqZeD7E1ofbh0AzKTd7xHKoHhHM/Cdd4MVY2qVz8wXRQs0gg==}
     peerDependencies:
       three: '>=0.133'
       vue: '>=3.4'
@@ -3240,13 +3240,13 @@ packages:
     peerDependencies:
       eslint: '>=8.40.0'
 
-  '@tresjs/leches@1.1.4':
-    resolution: {integrity: sha512-5jNP/3koDlYzXI5dl8Uqqg0fi/RzgM6rnQmOYKJJk94RJ9X4ptQoODoSC8yzqnAEakd2+5k/v9P8RqBcDv22/g==}
+  '@tresjs/leches@1.2.0':
+    resolution: {integrity: sha512-6p/ZVDLlrw9spEHfOoIpCPAKuKns3Gtv9bnovxKi1CShSNhUqgk8w/CFhbTrTQ0cDY1Q2JGgLWdLSpJIvsxT9Q==}
     peerDependencies:
       vue: '>=3.3.4'
 
-  '@tresjs/nuxt@5.4.0':
-    resolution: {integrity: sha512-WsX5C0sw33zoPyIPxlrWAqLbyFiqEfiOJdfOBpxvlfAqgOBnOJD3G8sjO+ZsbxABBFhGkZEV3iMZla5SbQrR6A==}
+  '@tresjs/nuxt@5.6.0':
+    resolution: {integrity: sha512-9sAa+bpMgt8PZagn2JtDsy00WgPXELoF4A/F/qZ0lYLPLkVfGIsQ0wHM8sEatU/xC7jC2+RWErjPxpCwniIsAQ==}
     peerDependencies:
       three: '>=0.133'
 
@@ -11802,9 +11802,9 @@ snapshots:
       y-protocols: 1.0.7(yjs@13.6.29)
       yjs: 13.6.29
 
-  '@tresjs/cientos@5.5.0(@tresjs/core@5.6.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3)))(@types/three@0.183.1)(three@0.183.2)(vue@3.5.30(typescript@5.9.3))':
+  '@tresjs/cientos@5.7.0(@tresjs/core@5.8.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3)))(@types/three@0.183.1)(three@0.183.2)(vue@3.5.30(typescript@5.9.3))':
     dependencies:
-      '@tresjs/core': 5.6.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
+      '@tresjs/core': 5.8.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
       '@vueuse/core': 13.9.0(vue@3.5.30(typescript@5.9.3))
       camera-controls: 2.10.1(three@0.183.2)
       stats-gl: 2.4.2(@types/three@0.183.1)(three@0.183.2)
@@ -11819,7 +11819,7 @@ snapshots:
       - '@types/three'
       - react
 
-  '@tresjs/core@5.6.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3))':
+  '@tresjs/core@5.8.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3))':
     dependencies:
       '@pmndrs/pointer-events': 6.6.29
       '@vue/devtools-api': 7.7.9
@@ -11855,7 +11855,7 @@ snapshots:
       - typescript
       - vitest
 
-  '@tresjs/leches@1.1.4(magicast@0.5.2)(unocss@66.6.6(vite@8.0.0-beta.18(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(yaml@2.8.2)))(vue@3.5.30(typescript@5.9.3))':
+  '@tresjs/leches@1.2.0(magicast@0.5.2)(unocss@66.6.6(vite@8.0.0-beta.18(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(yaml@2.8.2)))(vue@3.5.30(typescript@5.9.3))':
     dependencies:
       '@unocss/core': 66.3.2
       '@vueuse/components': 13.9.0(vue@3.5.30(typescript@5.9.3))
@@ -11866,11 +11866,11 @@ snapshots:
       - magicast
       - unocss
 
-  '@tresjs/nuxt@5.4.0(@nuxt/content@3.12.0(better-sqlite3@12.6.2)(magicast@0.5.2))(@rollup/pluginutils@5.3.0(rollup@4.59.0))(@tiptap/extensions@3.20.1(@tiptap/core@3.20.1(@tiptap/pm@3.20.1))(@tiptap/pm@3.20.1))(@tiptap/y-tiptap@3.0.2(prosemirror-model@1.25.4)(prosemirror-state@1.4.4)(prosemirror-view@1.41.6)(y-protocols@1.0.7(yjs@13.6.29))(yjs@13.6.29))(change-case@5.4.4)(db0@0.3.4(better-sqlite3@12.6.2))(embla-carousel@8.6.0)(esbuild@0.27.3)(ioredis@5.10.0)(magicast@0.5.2)(tailwindcss@4.2.1)(three@0.183.2)(typescript@5.9.3)(vite@8.0.0-beta.18(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(yaml@2.8.2))(vue-router@5.0.3(@vue/compiler-sfc@3.5.30)(pinia@3.0.4(typescript@5.9.3)(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3))(yjs@13.6.29)(zod@4.3.6)':
+  '@tresjs/nuxt@5.6.0(@nuxt/content@3.12.0(better-sqlite3@12.6.2)(magicast@0.5.2))(@rollup/pluginutils@5.3.0(rollup@4.59.0))(@tiptap/extensions@3.20.1(@tiptap/core@3.20.1(@tiptap/pm@3.20.1))(@tiptap/pm@3.20.1))(@tiptap/y-tiptap@3.0.2(prosemirror-model@1.25.4)(prosemirror-state@1.4.4)(prosemirror-view@1.41.6)(y-protocols@1.0.7(yjs@13.6.29))(yjs@13.6.29))(change-case@5.4.4)(db0@0.3.4(better-sqlite3@12.6.2))(embla-carousel@8.6.0)(esbuild@0.27.3)(ioredis@5.10.0)(magicast@0.5.2)(tailwindcss@4.2.1)(three@0.183.2)(typescript@5.9.3)(vite@8.0.0-beta.18(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(yaml@2.8.2))(vue-router@5.0.3(@vue/compiler-sfc@3.5.30)(pinia@3.0.4(typescript@5.9.3)(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3))(yjs@13.6.29)(zod@4.3.6)':
     dependencies:
       '@nuxt/kit': 4.1.2(magicast@0.5.2)
       '@nuxt/ui': 4.5.1(@nuxt/content@3.12.0(better-sqlite3@12.6.2)(magicast@0.5.2))(@tiptap/extensions@3.20.1(@tiptap/core@3.20.1(@tiptap/pm@3.20.1))(@tiptap/pm@3.20.1))(@tiptap/y-tiptap@3.0.2(prosemirror-model@1.25.4)(prosemirror-state@1.4.4)(prosemirror-view@1.41.6)(y-protocols@1.0.7(yjs@13.6.29))(yjs@13.6.29))(change-case@5.4.4)(db0@0.3.4(better-sqlite3@12.6.2))(embla-carousel@8.6.0)(ioredis@5.10.0)(magicast@0.5.2)(tailwindcss@4.2.1)(typescript@5.9.3)(vite@8.0.0-beta.18(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(yaml@2.8.2))(vue-router@5.0.3(@vue/compiler-sfc@3.5.30)(pinia@3.0.4(typescript@5.9.3)(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3))(yjs@13.6.29)(zod@4.3.6)
-      '@tresjs/core': 5.6.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
+      '@tresjs/core': 5.8.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
       defu: 6.1.4
       mlly: 1.8.1
       ohash: 2.0.11
@@ -11932,11 +11932,11 @@ snapshots:
       - yup
       - zod
 
-  '@tresjs/nuxt@5.4.0(@nuxt/content@3.12.0(better-sqlite3@12.6.2)(magicast@0.5.2))(@rollup/pluginutils@5.3.0(rollup@4.59.0))(db0@0.3.4(better-sqlite3@12.6.2))(esbuild@0.27.3)(ioredis@5.10.0)(magicast@0.5.2)(tailwindcss@4.2.1)(three@0.183.2)(typescript@5.9.3)(vite@8.0.0-beta.18(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(yaml@2.8.2))(vue-router@5.0.3(@vue/compiler-sfc@3.5.30)(pinia@3.0.4(typescript@5.9.3)(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3))(zod@4.3.6)':
+  '@tresjs/nuxt@5.6.0(@nuxt/content@3.12.0(better-sqlite3@12.6.2)(magicast@0.5.2))(@rollup/pluginutils@5.3.0(rollup@4.59.0))(db0@0.3.4(better-sqlite3@12.6.2))(esbuild@0.27.3)(ioredis@5.10.0)(magicast@0.5.2)(tailwindcss@4.2.1)(three@0.183.2)(typescript@5.9.3)(vite@8.0.0-beta.18(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(yaml@2.8.2))(vue-router@5.0.3(@vue/compiler-sfc@3.5.30)(pinia@3.0.4(typescript@5.9.3)(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3))(zod@4.3.6)':
     dependencies:
       '@nuxt/kit': 4.1.2(magicast@0.5.2)
       '@nuxt/ui': 4.5.1(@nuxt/content@3.12.0(better-sqlite3@12.6.2)(magicast@0.5.2))(db0@0.3.4(better-sqlite3@12.6.2))(ioredis@5.10.0)(magicast@0.5.2)(tailwindcss@4.2.1)(typescript@5.9.3)(vite@8.0.0-beta.18(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(yaml@2.8.2))(vue-router@5.0.3(@vue/compiler-sfc@3.5.30)(pinia@3.0.4(typescript@5.9.3)(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3)))(vue@3.5.30(typescript@5.9.3))(zod@4.3.6)
-      '@tresjs/core': 5.6.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
+      '@tresjs/core': 5.8.0(three@0.183.2)(vue@3.5.30(typescript@5.9.3))
       defu: 6.1.4
       mlly: 1.8.1
       ohash: 2.0.11
