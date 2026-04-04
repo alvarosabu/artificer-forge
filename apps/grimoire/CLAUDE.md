@@ -22,10 +22,13 @@ content/
 │   ├── 1.overview.md             # Template vs instance pattern
 │   ├── 2.templates.md            # YAML definitions, schema
 │   └── 3.rendering.md            # Smart/dumb component pattern
-└── 4.characters/
-    ├── 1.model-loading.md        # useGLTF, primitive
-    ├── 2.animations.md           # Animation system
-    └── 4.equipment.md            # Bone attachment with useEquipment
+├── 4.characters/
+│   ├── 1.model-loading.md        # useGLTF, primitive
+│   ├── 2.animations.md           # Animation system
+│   └── 4.equipment.md            # Bone attachment with useEquipment
+└── 8.environment/
+    ├── 1.overview.md             # Environment systems overview
+    └── 2.foliage.md              # Procedural billboard foliage
 ```
 
 ## Page Format
