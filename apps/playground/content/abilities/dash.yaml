@@ -1,0 +1,7 @@
+abilityId: dash
+name: Dash
+type: utility
+targeting: self
+animations:
+  execute: Running_A
+cost: action

@@ -1,0 +1,16 @@
+templateId: bow
+type: item
+subtype: weapon
+name: Bow
+model: /models/items/weapons/Bow.glb
+damage:
+  dice: "1d8"
+  type: piercing
+properties:
+  - ammunition
+  - two-handed
+range:
+  normal: 150
+  long: 600
+weight: 2
+value: 25

@@ -60,6 +60,7 @@ export default defineContentConfig({
         }).passthrough().optional(),
         portrait: z.string().optional(),
         model: z.string().optional(),
+        rig: z.string().optional(),
         // Interactable animations: code-driven transforms
         animations: z.object({
           default: z.string(),
@@ -113,6 +114,7 @@ export default defineContentConfig({
           mainHand: z.string().optional(),
           offHand: z.string().optional(),
         }).optional(),
+        abilities: z.array(z.string()).optional(),
       }),
     }),
     classes: defineCollection({
@@ -123,6 +125,47 @@ export default defineContentConfig({
         name: z.string(),
         emblem: z.string(),
         color: z.string(),
+      }),
+    }),
+    abilities: defineCollection({
+      type: 'data',
+      source: 'abilities/*.yaml',
+      schema: z.object({
+        abilityId: z.string(),
+        name: z.string(),
+        type: z.enum(['melee', 'ranged-projectile', 'ranged-aoe', 'utility']),
+        targeting: z.enum(['lock-on', 'ground', 'self']),
+        animations: z.object({
+          targeting: z.string().optional(),
+          execute: z.string(),
+          recover: z.string().optional(),
+        }),
+        projectile: z.object({
+          model: z.string().optional(),
+          visual: z.string().optional(),
+          color: z.string().optional(),
+          speed: z.number(),
+          arc: z.enum(['distance-based', 'straight', 'parabolic']),
+        }).optional(),
+        aoe: z.object({
+          shape: z.enum(['circle', 'cone', 'line']),
+          radius: z.number().optional(),
+          width: z.number().optional(),
+          angle: z.number().optional(),
+        }).optional(),
+        damage: z.object({
+          dice: z.string(),
+          type: z.string(),
+          stat: z.string(),
+        }).optional(),
+        range: z.object({
+          normal: z.number(),
+          long: z.number().optional(),
+        }).optional(),
+        cost: z.enum(['action', 'bonusAction', 'free']),
+        baseProjectiles: z.number().optional(),
+        scalingStat: z.string().optional(),
+        scalingThreshold: z.number().optional(),
       }),
     }),
   },

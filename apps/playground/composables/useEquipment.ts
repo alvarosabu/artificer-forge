@@ -42,6 +42,7 @@ function disposeObject(obj: Group) {
 export function useEquipment(
   rig: Ref<TresObject3D | undefined>,
   equipment: Ref<Equipment | undefined>,
+  activeSlot?: Ref<'mainHand' | 'offHand' | undefined>,
 ) {
   const graph = useGraph(rig)
 
@@ -92,6 +93,17 @@ export function useEquipment(
     })
     bone.add(scene as unknown as TresObject3D)
     attached[slot] = scene
+    applyVisibility()
+  }
+
+  function applyVisibility() {
+    if (!activeSlot) return
+    const active = activeSlot.value
+    for (const slot of ['mainHand', 'offHand'] as Slot[]) {
+      if (attached[slot]) {
+        attached[slot]!.visible = active == null || slot === active
+      }
+    }
   }
 
   function syncSlot(slot: Slot, newId?: string, oldId?: string) {
@@ -107,6 +119,11 @@ export function useEquipment(
     if (eq?.mainHand) attach('mainHand', eq.mainHand)
     if (eq?.offHand) attach('offHand', eq.offHand)
   }, { immediate: true })
+
+  // React to active weapon slot changes
+  if (activeSlot) {
+    watch(activeSlot, () => applyVisibility())
+  }
 
   // React to equipment changes after bones are available
   watch(equipment, (newEq, oldEq) => {

@@ -1,0 +1,22 @@
+abilityId: magic-missile
+name: Magic Missile
+type: ranged-projectile
+targeting: lock-on
+animations:
+  targeting: Ranged_Magic_Raise
+  execute: Ranged_Magic_Shoot
+projectile:
+  visual: orb
+  color: "#60a0ff"
+  speed: 10
+  arc: straight
+damage:
+  dice: "1d4+1"
+  type: force
+  stat: intelligence
+range:
+  normal: 20
+cost: action
+baseProjectiles: 3
+scalingStat: intelligence
+scalingThreshold: 14

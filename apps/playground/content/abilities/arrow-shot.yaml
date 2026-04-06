@@ -1,0 +1,23 @@
+abilityId: arrow-shot
+name: Arrow Shot
+type: ranged-projectile
+targeting: lock-on
+animations:
+  targeting: Ranged_Bow_Draw_Up
+  execute: Ranged_Bow_Release_Up
+  recover: Ranged_Bow_Idle
+projectile:
+  model: /models/items/weapons/Arrow.glb
+  speed: 30
+  arc: distance-based
+damage:
+  dice: "1d8"
+  type: piercing
+  stat: dexterity
+range:
+  normal: 15
+  long: 30
+cost: action
+baseProjectiles: 1
+scalingStat: dexterity
+scalingThreshold: 16

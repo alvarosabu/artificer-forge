@@ -27,9 +27,12 @@ ai:
 
 portrait: /img/portraits/hero_portrait.png
 model: /models/characters/hero.glb
+rig: Rig_Medium
 animations:
   idle: Idle
   walk: Walk
   run: Run
   attack: Bow_Attack
   dodge: Dodge
+abilities:
+  - arrow-shot

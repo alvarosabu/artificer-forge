@@ -1,0 +1,20 @@
+abilityId: throw
+name: Throw
+type: ranged-projectile
+targeting: lock-on
+animations:
+  execute: Throw
+projectile:
+  visual: orb
+  color: "#aa8855"
+  speed: 8
+  arc: parabolic
+damage:
+  dice: "1d4"
+  type: bludgeoning
+  stat: strength
+range:
+  normal: 6
+  long: 12
+cost: action
+baseProjectiles: 1

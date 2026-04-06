@@ -7,33 +7,81 @@ export interface ActionSlot {
   shortcut?: string
   color?: 'error' | 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'neutral'
   disabled?: boolean
-  // New
   category: 'common' | 'items' | 'passives'
   cost?: 'action' | 'bonusAction' | 'free'
   quantity?: number
   active?: boolean
+  abilityId?: string
 }
 
-const DEFAULT_SLOTS: ActionSlot[] = [
-  {
-    id: 'attack-melee',
-    label: 'Attack',
-    icon: 'i-heroicons-bolt',
-    shortcut: '1',
-    color: 'error',
-    category: 'common',
-    cost: 'action',
-  },
-]
+const ABILITY_ICONS: Record<string, string> = {
+  'melee': 'i-heroicons-bolt',
+  'ranged-projectile': 'i-heroicons-arrow-long-right',
+  'ranged-aoe': 'i-heroicons-fire',
+  'utility': 'i-heroicons-arrow-path',
+}
+
+const ABILITY_COLORS: Record<string, ActionSlot['color']> = {
+  slashing: 'error',
+  bludgeoning: 'error',
+  piercing: 'warning',
+  force: 'info',
+  fire: 'error',
+  ice: 'info',
+  lightning: 'warning',
+}
+
+export type WeaponSlot = 'mainHand' | 'offHand'
 
 export const useActionBar = createSharedComposable(() => {
   const gameStore = useGameStore()
 
   const activeCategory = ref<'common' | 'items' | 'passives'>('common')
   const slotActivated = createEventHook<ActionSlot>()
+  const activeWeaponSlot = ref<WeaponSlot>('mainHand')
+
+  const abilitySlots = ref<ActionSlot[]>([])
+
+  watch(
+    () => gameStore.party.leader,
+    async (leaderId) => {
+      if (!leaderId) {
+        abilitySlots.value = []
+        return
+      }
+      const entity = gameStore.getEntity(leaderId)
+      const abilityIds = entity?.abilities ?? []
+
+      if (abilityIds.length === 0) {
+        abilitySlots.value = []
+        return
+      }
+
+      const slots: ActionSlot[] = []
+      for (let i = 0; i < abilityIds.length; i++) {
+        const template = await queryCollection('abilities')
+          .where('abilityId', '=', abilityIds[i])
+          .first()
+        if (!template) continue
+
+        slots.push({
+          id: `ability-${template.abilityId}`,
+          label: template.name,
+          icon: ABILITY_ICONS[template.type] ?? 'i-heroicons-bolt',
+          shortcut: String(i + 1),
+          color: ABILITY_COLORS[template.damage?.type ?? ''] ?? 'primary',
+          category: 'common',
+          cost: template.cost,
+          abilityId: template.abilityId,
+        })
+      }
+      abilitySlots.value = slots
+    },
+    { immediate: true },
+  )
 
   const filteredSlots = computed<ActionSlot[]>(() =>
-    DEFAULT_SLOTS.filter(s => s.category === activeCategory.value)
+    abilitySlots.value.filter(s => s.category === activeCategory.value),
   )
 
   function setCategory(cat: 'common' | 'items' | 'passives') {
@@ -53,6 +101,14 @@ export const useActionBar = createSharedComposable(() => {
     slotActivated.trigger(slot)
   }
 
+  function setActiveWeaponSlot(slot: WeaponSlot) {
+    activeWeaponSlot.value = slot
+  }
+
+  function toggleWeaponSlot() {
+    activeWeaponSlot.value = activeWeaponSlot.value === 'mainHand' ? 'offHand' : 'mainHand'
+  }
+
   defineShortcuts({
     '1': () => activateSlot(0),
     '2': () => activateSlot(1),
@@ -64,6 +120,7 @@ export const useActionBar = createSharedComposable(() => {
     '8': () => activateSlot(7),
     '9': () => activateSlot(8),
     '0': () => activateSlot(9),
+    tab: () => toggleWeaponSlot(),
   })
 
   return {
@@ -74,5 +131,8 @@ export const useActionBar = createSharedComposable(() => {
     setCategory,
     activateSlot,
     onSlotActivated: slotActivated.on,
+    activeWeaponSlot: readonly(activeWeaponSlot),
+    setActiveWeaponSlot,
+    toggleWeaponSlot,
   }
 })

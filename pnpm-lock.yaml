@@ -189,6 +189,9 @@ importers:
       '@artificer-forge/post-processing':
         specifier: workspace:*
         version: link:../../packages/post-processing
+      '@artificer-forge/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       '@artificer-forge/vfx':
         specifier: workspace:*
         version: link:../../packages/vfx
@@ -331,6 +334,15 @@ importers:
       vue-tsc:
         specifier: catalog:build
         version: 3.2.5(typescript@5.9.3)
+
+  packages/utils:
+    devDependencies:
+      tsdown:
+        specifier: catalog:build
+        version: 0.21.1(synckit@0.11.12)(typescript@5.9.3)(vue-tsc@3.2.5(typescript@5.9.3))
+      typescript:
+        specifier: catalog:typescript
+        version: 5.9.3
 
   packages/vfx:
     devDependencies:

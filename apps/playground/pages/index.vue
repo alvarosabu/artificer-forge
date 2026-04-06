@@ -21,6 +21,7 @@ const categories: DemoCategory[] = [
     icon: 'i-heroicons-user',
     links: [
       { label: 'Basic', to: '/character/basic' },
+      { label: 'Large', to: '/character/large' },
     ],
   },
   {
@@ -50,6 +51,7 @@ const categories: DemoCategory[] = [
     links: [
       { label: 'Damage Numbers', to: '/combat/damage-numbers' },
       { label: 'Attack', to: '/combat/attack' },
+      { label: 'Ranged Attacks', to: '/combat/ranged' },
     ],
   },
   {

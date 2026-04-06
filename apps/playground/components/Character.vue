@@ -2,7 +2,7 @@
 import { useGLTF, Html } from '@tresjs/cientos'
 import { useLoop, type TresPointerEvent } from '@tresjs/core'
 import { Mesh, Vector3, type Group } from 'three'
-import { useCharacterAnimations, AnimationName, useCharacterController } from '@artificer-forge/composables'
+import { useCharacterAnimations, AnimationName, useCharacterController, type RigSize } from '@artificer-forge/composables'
 import { useDamageNumbers, DamageNumber, ghostMaterial } from '@artificer-forge/vfx'
 import { useOutlinePass } from '@artificer-forge/post-processing'
 
@@ -21,9 +21,11 @@ const entity = computed(() => gameStore.getEntity(props.entityId))
 const modelPath = computed(() => entity.value?.model!)
 
 const { nodes } = useGLTF(modelPath.value, { draco: true })
-const rig = computed(() => nodes.value?.Rig_Medium)
+const rigKey = computed(() => entity.value?.rig ?? 'Rig_Medium')
+const rigSize = computed(() => rigKey.value.replace('Rig_', '') as RigSize)
+const rig = computed(() => nodes.value?.[rigKey.value])
 
-const { actions, currentAnimName, play, stop } = useCharacterAnimations(rig)
+const { actions, currentAnimName, play, stop } = useCharacterAnimations(rig, rigSize.value)
 
 function meleeAttack() {
   play(AnimationName.MELEE_1H_ATTACK_CHOP)
@@ -36,7 +38,10 @@ function lookAtPoint(point: Vector3) {
 }
 
 const equipment = computed(() => entity.value?.equipment)
-useEquipment(rig, equipment)
+const { activeWeaponSlot } = useActionBar()
+const isLeader = computed(() => gameStore.party.leader === props.entityId)
+const effectiveWeaponSlot = computed<'mainHand' | 'offHand' | undefined>(() => isLeader.value ? activeWeaponSlot.value : undefined)
+useEquipment(rig, equipment, effectiveWeaponSlot)
 useStatusEffectOverlay(rig, computed(() => props.entityId))
 useStatusEffectParticles(rig, computed(() => props.entityId))
 useStatusEffectAnimations(computed(() => props.entityId), play)
@@ -151,6 +156,29 @@ watch(nodes, (nodesValue) => {
   }
 }, { immediate: true })
 
+const BONE_NAMES: Record<string, string> = {
+  mainHand: 'handslotr',
+  offHand: 'handslotl',
+}
+
+const extraAttachments: Record<string, import('three').Object3D | null> = {}
+
+function attachToHand(slot: 'mainHand' | 'offHand', object: import('three').Object3D) {
+  const boneName = BONE_NAMES[slot]
+  const bone = nodes.value?.[boneName]
+  if (!bone) return
+  detachFromHand(slot)
+  bone.add(object)
+  extraAttachments[slot] = object
+}
+
+function detachFromHand(slot: 'mainHand' | 'offHand') {
+  const obj = extraAttachments[slot]
+  if (!obj) return
+  obj.parent?.remove(obj)
+  extraAttachments[slot] = null
+}
+
 defineExpose({
   play,
   stop,
@@ -162,6 +190,8 @@ defineExpose({
   showDamage,
   meleeAttack,
   lookAt: lookAtPoint,
+  attachToHand,
+  detachFromHand,
 })
 </script>
 

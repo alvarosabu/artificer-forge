@@ -1,6 +1,6 @@
 import { computed, ref, shallowRef, unref, watch, readonly, type DeepReadonly, type MaybeRef, type Ref, type ShallowRef } from 'vue'
 import { useAnimations, useGLTF } from '@tresjs/cientos'
-import type { AnimationAction, Object3D } from 'three'
+import { LoopOnce, type AnimationAction, type Object3D } from 'three'
 
 export const AnimationName = {
   // MovementBasic
@@ -154,7 +154,13 @@ export const AnimationName = {
 
 export type AnimationNameType = typeof AnimationName[keyof typeof AnimationName]
 
-export type RigSize = 'Medium'
+export interface PlayOptions {
+  fadeTime?: number
+  timeScale?: number
+  once?: boolean
+}
+
+export type RigSize = 'Medium' | 'Large'
 
 const ANIM_PACKS = [
   'MovementBasic',
@@ -192,26 +198,38 @@ export function useCharacterAnimations(
   const currentAnimName = ref<AnimationNameType>(AnimationName.IDLE_A)
 
 
-  function play(name: AnimationNameType, fadeTime = 0.3, timeScale = 1) {
+  function play(name: AnimationNameType, fadeTimeOrOpts: number | PlayOptions = 0.3, timeScale = 1) {
+    const opts = typeof fadeTimeOrOpts === 'number'
+      ? { fadeTime: fadeTimeOrOpts, timeScale, once: false }
+      : { fadeTime: 0.3, timeScale: 1, once: false, ...fadeTimeOrOpts }
+
     const newAction = actions[name]
     if (!newAction) return
 
     // Already playing this animation - just update timeScale if needed
     if (currentAction.value === newAction) {
-      newAction.setEffectiveTimeScale(timeScale)
+      newAction.setEffectiveTimeScale(opts.timeScale!)
       return
     }
 
-    // Prepare and start new action at full weight immediately
-    newAction.enabled = true
-    newAction.setEffectiveTimeScale(timeScale)
+    // Reset clears finished/paused state from previous LoopOnce plays
+    newAction.reset()
+    newAction.setEffectiveTimeScale(opts.timeScale!)
     newAction.setEffectiveWeight(1)
-    newAction.time = 0
+
+    if (opts.once) {
+      newAction.setLoop(LoopOnce, 1)
+      newAction.clampWhenFinished = true
+    }
+    else {
+      newAction.clampWhenFinished = false
+    }
+
     newAction.play()
 
     // Fade out old action if exists
     if (currentAction.value) {
-      currentAction.value.fadeOut(fadeTime)
+      currentAction.value.fadeOut(opts.fadeTime!)
     }
 
     currentAction.value = newAction

@@ -1,0 +1,17 @@
+abilityId: fireball
+name: Fireball
+type: ranged-aoe
+targeting: ground
+animations:
+  targeting: Ranged_Magic_Raise
+  execute: Ranged_Magic_Spellcasting_Long
+aoe:
+  shape: circle
+  radius: 4
+damage:
+  dice: "2d6"
+  type: fire
+  stat: intelligence
+range:
+  normal: 25
+cost: action

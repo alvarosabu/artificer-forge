@@ -32,6 +32,7 @@ export interface EntityState {
   // Rendering
   portrait?: string
   model?: string
+  rig?: string
   animations?: Record<string, unknown>
   
   // Character-specific
@@ -60,6 +61,9 @@ export interface EntityState {
 
   // Status effects
   statusEffects?: StatusEffect[]
+
+  // Abilities
+  abilities?: string[]
 }
 
 export interface Item {
@@ -67,6 +71,8 @@ export interface Item {
   templateId: string
   quantity: number
 }
+
+const DEFAULT_ABILITIES = ['melee-attack', 'dash', 'throw']
 
 export const useGameStore = defineStore('game', () => {
   // === LECHESS ===
@@ -141,6 +147,7 @@ export const useGameStore = defineStore('game', () => {
       position,
       portrait: template.portrait,
       model: template.model,
+      rig: template.rig,
       animations: template.animations,
       class: template.class,
       level: template.level,
@@ -156,6 +163,7 @@ export const useGameStore = defineStore('game', () => {
       locked: template.locked,
       destructible: template.destructible,
       equipment: template.equipment,
+      abilities: [...DEFAULT_ABILITIES, ...((template as any).abilities ?? [])],
       statusEffects: [],
       ...overrides,
     }
@@ -312,6 +320,24 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  function learnAbility(entityId: string, abilityId: string) {
+    const entity = entities.value.get(entityId)
+    if (!entity) return
+    const abilities = entity.abilities ?? []
+    if (!abilities.includes(abilityId)) {
+      entities.value.set(entityId, { ...entity, abilities: [...abilities, abilityId] })
+    }
+  }
+
+  function forgetAbility(entityId: string, abilityId: string) {
+    const entity = entities.value.get(entityId)
+    if (!entity) return
+    entities.value.set(entityId, {
+      ...entity,
+      abilities: (entity.abilities ?? []).filter(a => a !== abilityId),
+    })
+  }
+
   function addStatusEffect(entityId: string, effectId: StatusEffectId) {
     const entity = entities.value.get(entityId)
     if (!entity) return
@@ -405,6 +431,10 @@ export const useGameStore = defineStore('game', () => {
     // Equipment actions
     equipWeapon,
     unequipWeapon,
+
+    // Ability actions
+    learnAbility,
+    forgetAbility,
 
     // Status effect actions
     addStatusEffect,

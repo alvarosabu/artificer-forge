@@ -27,6 +27,7 @@ ai:
   fleeThreshold: 0.2
 
 model: /models/characters/orc.glb
+rig: Rig_Medium
 animations:
   idle: Idle
   walk: Walk

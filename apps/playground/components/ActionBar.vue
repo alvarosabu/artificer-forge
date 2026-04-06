@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { playerEntity, playerClassId, slots, activeCategory, setCategory, activateSlot } = useActionBar()
+const { playerEntity, playerClassId, slots, activeCategory, setCategory, activateSlot, activeWeaponSlot, setActiveWeaponSlot } = useActionBar()
 
 // Resolve class metadata from content collection
 const { data: playerClass } = await useAsyncData(
@@ -30,6 +30,8 @@ const { data: playerClass } = await useAsyncData(
       <ActionBarWeapon
         :main-hand="playerEntity?.equipment?.mainHand"
         :off-hand="playerEntity?.equipment?.offHand"
+        :active-slot="activeWeaponSlot"
+        @select-slot="setActiveWeaponSlot"
       />
 
       <!-- AP group + main card stacked -->

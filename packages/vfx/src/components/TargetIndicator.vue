@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { watch } from 'vue'
-import { CylinderGeometry, DoubleSide } from 'three'
+import { Color, CylinderGeometry, DoubleSide } from 'three'
 import { MeshBasicNodeMaterial } from 'three/webgpu'
-import { positionLocal, sin, time, smoothstep, mix, float, uniform, vec3 } from 'three/tsl'
+import { positionLocal, sin, time, smoothstep, mix, float, uniform } from 'three/tsl'
 
 const props = withDefaults(defineProps<{
   position?: [number, number, number]
@@ -51,11 +51,16 @@ const pulseIntensity = mix(float(props.pulseMin), float(props.pulseMax), normali
 const finalAlpha = smoothGradient.mul(pulseIntensity)
 
 // 4. Apply color and opacity
-const baseColor = uniform(vec3(1.0, 1.0, 1.0)) // White by default (can be parameterized)
-material.colorNode = baseColor
+const colorUniform = uniform(new Color(props.color))
+material.colorNode = colorUniform
 material.opacityNode = finalAlpha
 
-// Update material when props change
+// Update material when props change — mutate in-place, never replace the Color instance
+watch(() => props.color, (newColor) => {
+  colorUniform.value.set(new Color(newColor))
+  material.needsUpdate = true
+})
+
 watch(() => props.pulseSpeed, () => {
   material.needsUpdate = true
 })

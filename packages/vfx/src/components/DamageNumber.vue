@@ -39,14 +39,14 @@ const label = computed(() => {
 })
 
 const color = computed(() => TYPE_COLORS[props.entry.type])
-const fontSize = computed(() => props.entry.critical ? '1.5rem' : '1rem')
+const fontSize = computed(() => props.entry.critical ? '5rem' : '3rem')
 </script>
 
 <template>
   <Html
     :position="[0, 1.5, 0]"
     center
-    :distance-factor="10"
+    :distance-factor="6"
   >
     <div
       :style="{

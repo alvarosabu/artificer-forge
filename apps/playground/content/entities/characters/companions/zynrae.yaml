@@ -28,6 +28,7 @@ ai:
 
 portrait: /img/portraits/zynrae_portrait.png
 model: /models/characters/zynrae.glb
+rig: Rig_Medium
 animations:
   idle: Idle
   walk: Walk

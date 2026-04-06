@@ -1,0 +1,13 @@
+abilityId: melee-attack
+name: Attack
+type: melee
+targeting: lock-on
+animations:
+  execute: Melee_1H_Attack_Chop
+damage:
+  dice: "1d6"
+  type: slashing
+  stat: strength
+range:
+  normal: 1.5
+cost: action

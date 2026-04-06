@@ -1,0 +1,34 @@
+templateId: fenrath
+type: character
+name: Fenrath the Cursed
+class: fighter
+level: 5
+race: Werewolf
+
+stats:
+  hp: 52
+  maxHp: 52
+  ac: 16
+  strength: 18
+  dexterity: 10
+  constitution: 16
+  intelligence: 10
+  wisdom: 8
+  charisma: 6
+  maxActions: 1
+  maxBonusActions: 1
+
+team: player
+controllable: true
+
+ai:
+  behavior: companion
+  followDistance: 3
+
+model: /models/characters/fenrath.glb
+rig: Rig_Large
+animations:
+  idle: Idle
+  walk: Walk
+  run: Run
+  attack: Attack

@@ -26,6 +26,8 @@ coverage
 **/.vitepress/dist/
 **/.vitepress/cache/
 **/.nuxt
+**/.output
+**/.data
 
 .env
 .env.local

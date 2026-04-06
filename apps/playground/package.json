@@ -16,6 +16,7 @@
     "@artificer-forge/components": "workspace:*",
     "@artificer-forge/composables": "workspace:*",
     "@artificer-forge/post-processing": "workspace:*",
+    "@artificer-forge/utils": "workspace:*",
     "@artificer-forge/vfx": "workspace:*",
     "@nuxt/content": "catalog:nuxt",
     "@nuxt/eslint": "catalog:nuxt",

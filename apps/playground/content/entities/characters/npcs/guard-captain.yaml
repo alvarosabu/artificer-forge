@@ -25,3 +25,4 @@ ai:
   idleAnimation: Idle_B
 
 model: /models/characters/Knight.glb
+rig: Rig_Medium

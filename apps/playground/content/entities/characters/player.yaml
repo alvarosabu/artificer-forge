@@ -18,6 +18,7 @@ team: player
 controllable: true
 
 model: /models/player.glb
+rig: Rig_Medium
 animations:
   idle: Idle
   walk: Walk
