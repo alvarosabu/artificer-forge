@@ -14,13 +14,6 @@ export interface ActionSlot {
   abilityId?: string
 }
 
-const ABILITY_ICONS: Record<string, string> = {
-  'melee': 'i-heroicons-bolt',
-  'ranged-projectile': 'i-heroicons-arrow-long-right',
-  'ranged-aoe': 'i-heroicons-fire',
-  'utility': 'i-heroicons-arrow-path',
-}
-
 const ABILITY_COLORS: Record<string, ActionSlot['color']> = {
   slashing: 'error',
   bludgeoning: 'error',
@@ -31,7 +24,7 @@ const ABILITY_COLORS: Record<string, ActionSlot['color']> = {
   lightning: 'warning',
 }
 
-export type WeaponSlot = 'mainHand' | 'offHand'
+export type WeaponSlot = 'mainHand' | 'offHand' | 'none'
 
 export const useActionBar = createSharedComposable(() => {
   const gameStore = useGameStore()
@@ -67,7 +60,7 @@ export const useActionBar = createSharedComposable(() => {
         slots.push({
           id: `ability-${template.abilityId}`,
           label: template.name,
-          icon: ABILITY_ICONS[template.type] ?? 'i-heroicons-bolt',
+          icon: template.icon ?? 'i-heroicons-bolt',
           shortcut: String(i + 1),
           color: ABILITY_COLORS[template.damage?.type ?? ''] ?? 'primary',
           category: 'common',

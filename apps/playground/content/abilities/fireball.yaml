@@ -2,6 +2,7 @@ abilityId: fireball
 name: Fireball
 type: ranged-aoe
 targeting: ground
+icon: i-heroicons-fire
 animations:
   targeting: Ranged_Magic_Raise
   execute: Ranged_Magic_Spellcasting_Long

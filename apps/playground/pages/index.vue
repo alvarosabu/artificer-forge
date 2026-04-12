@@ -43,6 +43,8 @@ const categories: DemoCategory[] = [
     icon: 'i-heroicons-sparkles',
     links: [
       { label: 'Basic', to: '/shaders/basic' },
+      { label: 'Ghost', to: '/shaders/ghost' },
+      { label: 'Fireball', to: '/shaders/fireball' },
     ],
   },
   {

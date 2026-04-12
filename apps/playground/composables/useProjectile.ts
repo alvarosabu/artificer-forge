@@ -54,7 +54,7 @@ export function useProjectile() {
       : Math.min(3.0, Math.max(0.3, distance * 0.15))
 
     return new Promise<void>((resolve) => {
-      onBeforeRender(({ delta }) => {
+      const { off } = onBeforeRender(({ delta }) => {
         if (done) return
 
         elapsed += delta
@@ -87,6 +87,7 @@ export function useProjectile() {
 
         if (tLinear >= 1) {
           done = true
+          off()
           scene.value.remove(projectileGroup)
           projectileGroup.traverse((child) => {
             if ((child as Mesh).isMesh) {

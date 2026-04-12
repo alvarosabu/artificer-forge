@@ -46,6 +46,11 @@ export const useCombatStore = defineStore('combat', () => {
 
     const abilitySystem = useAbilitySystem()
     if (abilitySystem.phase.value === 'selecting') {
+      // Ground-targeting AoE: clicking an enemy also confirms placement
+      if (abilitySystem.activeAbility.value?.targeting === 'ground') {
+        abilitySystem.confirmGroundTarget()
+        return
+      }
       abilitySystem.confirmLockOnTarget(entityId)
       if (abilitySystem.phase.value !== 'selecting') {
         cancelTargeting()

@@ -26,9 +26,13 @@ export function useStatusEffectAnimations(
   }
 
   watch(
-    () => gameStore.getEntity(entityId.value)?.statusEffects,
-    (effects) => {
-      const hasFlinchEffect = effects?.some(se => {
+    () => gameStore.getEntity(entityId.value),
+    (entity) => {
+      if (!entity || (entity.hp != null && entity.hp <= 0)) {
+        stopFlinchLoop()
+        return
+      }
+      const hasFlinchEffect = entity.statusEffects?.some(se => {
         const def = STATUS_DEFINITIONS[se.id]
         return def?.type === 'debuff' || def?.type === 'dot'
       }) ?? false

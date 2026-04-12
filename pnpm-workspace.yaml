@@ -2,6 +2,9 @@ packages:
   - apps/*
   - packages/*
 
+catalog:
+  '@nuxt/icon': ^2.2.1
+
 catalogMode: prefer
 
 catalogs:

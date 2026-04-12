@@ -2,6 +2,7 @@ abilityId: arrow-shot
 name: Arrow Shot
 type: ranged-projectile
 targeting: lock-on
+icon: i-af-ranged-attk
 animations:
   targeting: Ranged_Bow_Draw_Up
   execute: Ranged_Bow_Release_Up

@@ -2,6 +2,7 @@ abilityId: throw
 name: Throw
 type: ranged-projectile
 targeting: lock-on
+icon: i-af-ranged-attack
 animations:
   execute: Throw
 projectile:

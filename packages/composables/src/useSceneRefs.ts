@@ -2,14 +2,18 @@ import { ref } from 'vue'
 import type { Vector3 } from 'three'
 import type { EventHookOn } from '@vueuse/core'
 import { createSharedComposable } from '@vueuse/core'
+import type { AnimationNameType, PlayOptions } from './useCharacterAnimations'
 
 export interface CharacterRef {
-  play: (name: string, fadeTime?: number, timeScale?: number) => void
+  play: (name: AnimationNameType, fadeTimeOrOpts?: number | PlayOptions, timeScale?: number) => void
   moveTo: (point: Vector3) => void
   onArrive: EventHookOn<Vector3>
   showDamage: (value: number, type: string, critical?: boolean) => void
   meleeAttack: () => void
   lookAt: (point: Vector3) => void
+  attachToHand: (slot: 'mainHand' | 'offHand', object: import('three').Object3D) => void
+  detachFromHand: (slot: 'mainHand' | 'offHand') => void
+  cancelMovement: () => void
 }
 
 export interface InteractableRef {

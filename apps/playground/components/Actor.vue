@@ -40,6 +40,7 @@ function handleContextMenu(event: TresPointerEvent) {
   )
 }
 
+const isDead = computed(() => (entity.value?.hp ?? 1) <= 0)
 const isHovering = ref(false)
 
 function handlePointerEnter() {
@@ -80,7 +81,7 @@ function handlePointerLeave() {
       >
         <UApp>
           <Nameplate
-            v-if="isHovering"
+            v-if="isDead || isHovering"
             :name="entity.name"
             :team="entity.team"
             :level="entity.level"

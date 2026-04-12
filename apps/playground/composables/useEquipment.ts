@@ -42,7 +42,7 @@ function disposeObject(obj: Group) {
 export function useEquipment(
   rig: Ref<TresObject3D | undefined>,
   equipment: Ref<Equipment | undefined>,
-  activeSlot?: Ref<'mainHand' | 'offHand' | undefined>,
+  activeSlot?: Ref<'mainHand' | 'offHand' | 'none' | undefined>,
 ) {
   const graph = useGraph(rig)
 
@@ -101,7 +101,7 @@ export function useEquipment(
     const active = activeSlot.value
     for (const slot of ['mainHand', 'offHand'] as Slot[]) {
       if (attached[slot]) {
-        attached[slot]!.visible = active == null || slot === active
+        attached[slot]!.visible = active === 'none' ? false : (active == null || slot === active)
       }
     }
   }

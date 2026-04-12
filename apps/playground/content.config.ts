@@ -135,6 +135,7 @@ export default defineContentConfig({
         name: z.string(),
         type: z.enum(['melee', 'ranged-projectile', 'ranged-aoe', 'utility']),
         targeting: z.enum(['lock-on', 'ground', 'self']),
+        icon: z.string().optional(),
         animations: z.object({
           targeting: z.string().optional(),
           execute: z.string(),

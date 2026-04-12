@@ -16,6 +16,7 @@ export function useActorBehavior(
   })
 
   watch(idleAnim, (anim) => {
+    if (entity.value?.hp != null && entity.value.hp <= 0) return
     play(anim, 0)
   }, { immediate: true })
 }

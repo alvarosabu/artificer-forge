@@ -2,6 +2,7 @@ abilityId: dash
 name: Dash
 type: utility
 targeting: self
+icon: i-af-dash
 animations:
   execute: Running_A
 cost: action

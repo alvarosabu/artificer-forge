@@ -243,12 +243,18 @@ export function useCharacterAnimations(
     }
   }
 
-  // Play default animation when actions become available
-  // actions is shallowReactive, not a ref, so watch it directly
+  // When actions are recreated (new animation pack loaded), restore current animation
   watch(
     () => Object.keys(actions).length,
     (len) => {
-      if (len > 0 && !currentAction.value) {
+      if (len === 0) return
+      if (currentAction.value && actions[currentAnimName.value] && actions[currentAnimName.value] !== currentAction.value) {
+        // Actions were recreated — current action is orphaned, restore it
+        const wasOnce = currentAction.value.loop === LoopOnce
+        currentAction.value = null
+        play(currentAnimName.value, { fadeTime: 0, once: wasOnce })
+      }
+      else if (!currentAction.value) {
         play(AnimationName.IDLE_A, 0)
       }
     },

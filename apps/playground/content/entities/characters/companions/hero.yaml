@@ -36,3 +36,5 @@ animations:
   dodge: Dodge
 abilities:
   - arrow-shot
+  - magic-missile
+  - fireball

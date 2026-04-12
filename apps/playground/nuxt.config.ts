@@ -1,3 +1,6 @@
+import { createResolver } from '@nuxt/kit'
+const { resolve } = createResolver(import.meta.url)
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   modules: [
@@ -18,5 +21,11 @@ export default defineNuxtConfig({
     families: [
       { name: 'Crimson Pro', provider: 'google', weights: [400, 500, 600, 700] },
     ],
+  },
+  icon: {
+    customCollections: [{
+      prefix: 'af',
+      dir: resolve('./assets/icons'),
+    }],
   },
 })

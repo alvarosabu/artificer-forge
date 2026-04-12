@@ -66,11 +66,17 @@ function damageTypeColor(type: string): string {
   return colors[type] ?? '#ff4444'
 }
 
-const ABILITY_WEAPON_SLOT: Record<string, 'mainHand' | 'offHand'> = {
+const ABILITY_WEAPON_SLOT: Record<string, 'mainHand' | 'offHand' | 'none'> = {
   'melee': 'mainHand',
   'ranged-projectile': 'offHand',
   'ranged-aoe': 'mainHand',
   'utility': 'mainHand',
+}
+
+function resolveWeaponSlot(template: AbilityTemplate): 'mainHand' | 'offHand' | 'none' {
+  // Magic abilities (visual projectiles or AoE spells) hide all weapons
+  if (template.projectile?.visual || template.type === 'ranged-aoe') return 'none'
+  return ABILITY_WEAPON_SLOT[template.type] ?? 'mainHand'
 }
 
 export const useAbilitySystem = createSharedComposable(() => {
@@ -127,7 +133,7 @@ export const useAbilitySystem = createSharedComposable(() => {
     if (!attackerId) return
 
     activeAbility.value = template
-    setActiveWeaponSlot(ABILITY_WEAPON_SLOT[template.type] ?? 'mainHand')
+    setActiveWeaponSlot(resolveWeaponSlot(template))
 
     if (template.targeting === 'lock-on') {
       const count = template.type === 'melee' ? 1 : resolveProjectileCount(template, attackerId)
@@ -137,6 +143,10 @@ export const useAbilitySystem = createSharedComposable(() => {
       phase.value = 'selecting'
       combatStore.enterTargeting()
 
+      // Stop any active movement to prevent idle override on arrival
+      const attackerRef = getCharacterRef(attackerId)
+      attackerRef?.cancelMovement()
+
       // Attach arrow to bow hand during targeting
       if (template.projectile?.model) {
         loadAndAttachProjectile(attackerId, template.projectile.model)
@@ -144,7 +154,6 @@ export const useAbilitySystem = createSharedComposable(() => {
 
       // Play targeting animation clamped on last frame while selecting
       if (template.animations.targeting) {
-        const attackerRef = getCharacterRef(attackerId)
         attackerRef?.play(template.animations.targeting as any, { fadeTime: 0.2, once: true })
       }
     }
@@ -153,6 +162,16 @@ export const useAbilitySystem = createSharedComposable(() => {
       if (!attackerPos) return
 
       phase.value = 'selecting'
+      combatStore.enterTargeting()
+
+      const attackerRef = getCharacterRef(attackerId)
+      attackerRef?.cancelMovement()
+
+      // Play targeting animation while selecting ground target
+      if (template.animations.targeting) {
+        attackerRef?.play(template.animations.targeting as any, { fadeTime: 0.2, once: true })
+      }
+
       aoeSystem.startPreview(
         scene.value,
         new Vector3(attackerPos.x, 0, attackerPos.z),
@@ -208,6 +227,7 @@ export const useAbilitySystem = createSharedComposable(() => {
     if (phase.value !== 'selecting' || !activeAbility.value) return
     if (activeAbility.value.targeting !== 'ground') return
 
+    combatStore.cancelTargeting()
     const hitIds = aoeSystem.confirm()
     executeAoE(hitIds)
   }
@@ -253,10 +273,17 @@ export const useAbilitySystem = createSharedComposable(() => {
 
           gameStore.updateEntity(targetId, { hp: newHp })
           targetRef.showDamage(total, ability.damage.type, critical)
-          targetRef.play(AnimationName.HIT_A, { fadeTime: 0.2, once: true })
+
+          if (newHp <= 0) {
+            targetRef.play(AnimationName.DEATH_A, { fadeTime: 0.2, once: true })
+            setTimeout(() => targetRef.play(AnimationName.DEATH_A_POSE, { fadeTime: 0.3, once: true }), 1200)
+          }
+          else {
+            targetRef.play(AnimationName.HIT_A, { fadeTime: 0.2, once: true })
+          }
 
           setTimeout(() => {
-            targetRef.play(AnimationName.IDLE_A, 0.3)
+            if (newHp > 0) targetRef.play(AnimationName.IDLE_A, 0.3)
             attackerRef.play(AnimationName.IDLE_A, 0.3)
             reset()
             resolve()
@@ -294,46 +321,57 @@ export const useAbilitySystem = createSharedComposable(() => {
       cachedProjectileModel = undefined
     }
 
-    // Fire projectiles sequentially
-    for (let i = 0; i < collectedTargets.value.length; i++) {
-      const targetId = collectedTargets.value[i]
-      const targetEntity = gameStore.getEntity(targetId)
-      const targetRef = getCharacterRef(targetId)
-      if (!targetEntity || !targetRef) continue
-
-      const targetPos = new Vector3(
-        targetEntity.position.x,
-        targetEntity.position.y + 1.0,
-        targetEntity.position.z,
-      )
-
-      attackerRef.lookAt(targetPos)
-
-      await spawnProjectile({
-        from: attackerPos.clone(),
-        to: targetPos,
-        speed: ability.projectile!.speed,
-        arc: ability.projectile!.arc,
-        model: projectileModel,
-        visual: ability.projectile?.visual as 'orb' | undefined,
-        color: ability.projectile?.color,
-      })
-
-      // Apply damage
-      if (ability.damage) {
-        const statValue = attackerEntity.stats?.[ability.damage.stat] ?? 10
-        const { total, critical } = rollDice(ability.damage.dice, statValue)
-        const newHp = Math.max(0, (targetEntity.hp ?? 0) - total)
-        gameStore.updateEntity(targetId, { hp: newHp })
-        targetRef.showDamage(total, ability.damage.type, critical)
-        targetRef.play(AnimationName.HIT_A, { fadeTime: 0.2, once: true })
-        setTimeout(() => targetRef.play(AnimationName.IDLE_A, 0.3), HURT_ANIM_MS)
-      }
-
-      if (i < collectedTargets.value.length - 1) {
-        await delay(PROJECTILE_STAGGER_MS)
-      }
+    // Face the first target before firing
+    const firstTarget = gameStore.getEntity(collectedTargets.value[0])
+    if (firstTarget) {
+      attackerRef.lookAt(new Vector3(firstTarget.position.x, firstTarget.position.y + 1.0, firstTarget.position.z))
     }
+
+    // Fire all projectiles nearly simultaneously with small random delays
+    const projectilePromises = collectedTargets.value.map((targetId, i) => {
+      const stagger = Math.random() * PROJECTILE_STAGGER_MS
+      return delay(stagger).then(async () => {
+        const targetEntity = gameStore.getEntity(targetId)
+        const targetRef = getCharacterRef(targetId)
+        if (!targetEntity || !targetRef) return
+
+        const targetPos = new Vector3(
+          targetEntity.position.x,
+          targetEntity.position.y + 1.0,
+          targetEntity.position.z,
+        )
+
+        await spawnProjectile({
+          from: attackerPos.clone(),
+          to: targetPos,
+          speed: ability.projectile!.speed,
+          arc: ability.projectile!.arc,
+          model: projectileModel,
+          visual: ability.projectile?.visual as 'orb' | undefined,
+          color: ability.projectile?.color,
+        })
+
+        // Apply damage on arrival
+        if (ability.damage) {
+          const statValue = attackerEntity.stats?.[ability.damage.stat] ?? 10
+          const { total, critical } = rollDice(ability.damage.dice, statValue)
+          const newHp = Math.max(0, (targetEntity.hp ?? 0) - total)
+          gameStore.updateEntity(targetId, { hp: newHp })
+          targetRef.showDamage(total, ability.damage.type, critical)
+
+          if (newHp <= 0) {
+            targetRef.play(AnimationName.DEATH_A, { fadeTime: 0.2, once: true })
+            setTimeout(() => targetRef.play(AnimationName.DEATH_A_POSE, { fadeTime: 0.3, once: true }), 1200)
+          }
+          else {
+            targetRef.play(AnimationName.HIT_A, { fadeTime: 0.2, once: true })
+            setTimeout(() => targetRef.play(AnimationName.IDLE_A, 0.3), HURT_ANIM_MS)
+          }
+        }
+      })
+    })
+
+    await Promise.all(projectilePromises)
 
     // Recover → idle
     if (ability.animations.recover) {
@@ -368,8 +406,15 @@ export const useAbilitySystem = createSharedComposable(() => {
         const newHp = Math.max(0, (targetEntity.hp ?? 0) - total)
         gameStore.updateEntity(targetId, { hp: newHp })
         targetRef.showDamage(total, ability.damage.type, critical)
-        targetRef.play(AnimationName.HIT_A, { fadeTime: 0.2, once: true })
-        setTimeout(() => targetRef.play(AnimationName.IDLE_A, 0.3), HURT_ANIM_MS)
+
+        if (newHp <= 0) {
+          targetRef.play(AnimationName.DEATH_A, { fadeTime: 0.2, once: true })
+          setTimeout(() => targetRef.play(AnimationName.DEATH_A_POSE, { fadeTime: 0.3, once: true }), 1200)
+        }
+        else {
+          targetRef.play(AnimationName.HIT_A, { fadeTime: 0.2, once: true })
+          setTimeout(() => targetRef.play(AnimationName.IDLE_A, 0.3), HURT_ANIM_MS)
+        }
       }
     }
 
@@ -411,6 +456,7 @@ export const useAbilitySystem = createSharedComposable(() => {
     collectedTargets.value = []
     requiredTargets.value = 0
     currentTargetIndex.value = 0
+    setActiveWeaponSlot('mainHand')
   }
 
   return {

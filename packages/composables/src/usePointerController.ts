@@ -48,11 +48,16 @@ export function usePointerController(
     character.value.position.add(direction.multiplyScalar(speed * delta))
   }
 
+  function cancelMovement() {
+    target.value = null
+  }
+
   return {
     moveTo,
     update,
     isMoving,
     target,
     onArrive: arriveHook.on,
+    cancelMovement,
   }
 }

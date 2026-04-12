@@ -40,7 +40,7 @@ function lookAtPoint(point: Vector3) {
 const equipment = computed(() => entity.value?.equipment)
 const { activeWeaponSlot } = useActionBar()
 const isLeader = computed(() => gameStore.party.leader === props.entityId)
-const effectiveWeaponSlot = computed<'mainHand' | 'offHand' | undefined>(() => isLeader.value ? activeWeaponSlot.value : undefined)
+const effectiveWeaponSlot = computed<'mainHand' | 'offHand' | 'none' | undefined>(() => isLeader.value ? activeWeaponSlot.value : undefined)
 useEquipment(rig, equipment, effectiveWeaponSlot)
 useStatusEffectOverlay(rig, computed(() => props.entityId))
 useStatusEffectParticles(rig, computed(() => props.entityId))
@@ -62,7 +62,7 @@ function syncToStore() {
   })
 }
 
-const { moveTo, update, target, onArrive } = useCharacterController(characterRef, { play }, {
+const { moveTo, update, target, onArrive, cancelMovement } = useCharacterController(characterRef, { play }, {
   speed: 3,
 })
 
@@ -110,6 +110,7 @@ function handleContextMenu(event: TresPointerEvent) {
 }
 
 const isPlayable = computed(() => gameStore.selectedEntityId === props.entityId)
+const isDead = computed(() => (entity.value?.hp ?? 1) <= 0)
 const isHovering = ref(false)
 
 function handlePointerEnter() {
@@ -150,7 +151,11 @@ watch(nodes, (nodesValue) => {
     console.log('Hero_ArmRight', nodesValue.Hero_ArmRight)
     nodesValue.Hero_ArmRight.traverse((child: Mesh) => {
       if (child.name === 'Ranger_ArmRight_1') {
-        child.material = ghostMaterial()
+        child.material = ghostMaterial({
+          color: '#88ccff',
+          glowStrength: 12.0,
+          fresnelPower: 1.2,
+        }).material
       }
     })
   }
@@ -186,6 +191,7 @@ defineExpose({
   actions,
   AnimationName,
   moveTo,
+  cancelMovement,
   onArrive,
   showDamage,
   meleeAttack,
@@ -216,7 +222,7 @@ defineExpose({
       >
         <UApp>
           <Nameplate
-            v-if="isHovering && !isPlayable"
+            v-if="isDead || (isHovering && !isPlayable)"
             :name="entity.name"
             :team="entity.team"
             :level="entity.level"

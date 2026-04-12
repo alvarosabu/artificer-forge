@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref, shallowRef } from 'vue'
 import { Html } from '@tresjs/cientos'
+import { useLoop, useTresContext } from '@tresjs/core'
+import { Vector3 } from 'three'
 import type { DamageEntry, DamageType } from '../composables/useDamageNumbers'
 
 const props = defineProps<{ entry: DamageEntry }>()
@@ -39,14 +41,33 @@ const label = computed(() => {
 })
 
 const color = computed(() => TYPE_COLORS[props.entry.type])
-const fontSize = computed(() => props.entry.critical ? '5rem' : '3rem')
+const baseFontSize = computed(() => props.entry.critical ? 5 : 3)
+
+// Scale font size inversely with camera distance so numbers are bigger when zoomed out
+const htmlRef = shallowRef()
+const fontSize = ref(`${baseFontSize.value}rem`)
+const { camera } = useTresContext()
+const _worldPos = new Vector3()
+
+const { onBeforeRender } = useLoop()
+onBeforeRender(() => {
+  const cam = camera.value
+  const html = htmlRef.value?.instance
+  if (!cam || !html) return
+
+  html.getWorldPosition(_worldPos)
+  const dist = cam.position.distanceTo(_worldPos)
+
+  const scale = Math.max(1, dist / 15)
+  fontSize.value = `${baseFontSize.value * scale}rem`
+})
 </script>
 
 <template>
   <Html
+    ref="htmlRef"
     :position="[0, 1.5, 0]"
     center
-    :distance-factor="6"
   >
     <div
       :style="{

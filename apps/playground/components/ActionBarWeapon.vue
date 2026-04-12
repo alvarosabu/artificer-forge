@@ -25,12 +25,12 @@ const emit = defineEmits<{
     >
       <UIcon
         v-if="mainHand"
-        name="i-heroicons-bolt"
+        name="i-af-melee-attk"
         class="w-5 h-5 text-[#d4a843]"
       />
       <UIcon
         v-else
-        name="i-heroicons-hand-raised"
+        name="i-af-ranged-attk"
         class="w-5 h-5 text-[#3a2a10]"
       />
       <span class="absolute -bottom-1 -right-1 text-[7px] bg-[#0c0a06] border border-[#3a2a10] rounded px-0.5 text-[#5a4a30] leading-tight">

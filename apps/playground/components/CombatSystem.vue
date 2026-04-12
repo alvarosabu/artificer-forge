@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Vector3 } from 'three'
+import { useLoop } from '@tresjs/core'
 import { Html } from '@tresjs/cientos'
 import { TargetReticle, TargetIndicator } from '@artificer-forge/vfx'
 import { useSceneRefs } from '@artificer-forge/composables'
@@ -7,8 +8,16 @@ import { useSceneRefs } from '@artificer-forge/composables'
 const gameStore = useGameStore()
 const combatStore = useCombatStore()
 const abilitySystem = useAbilitySystem()
+const aoeSystem = useAoESystem()
 const { getCharacterRef } = useSceneRefs()
 const { onSlotActivated } = useActionBar()
+
+// Update AoE preview each frame when active
+const { onBeforeRender } = useLoop()
+onBeforeRender(({ delta }) => {
+  if (!aoeSystem.isActive.value || !combatStore.cursorWorldPoint) return
+  aoeSystem.updatePreview(combatStore.cursorWorldPoint, delta)
+})
 
 onSlotActivated((slot) => {
   if (slot.abilityId) {
@@ -83,7 +92,18 @@ const isOutOfRange = computed(() => {
   return trajectoryDistance.value > maxRange
 })
 
+const isMultiTarget = computed(() => abilitySystem.requiredTargets.value > 1)
+const projectilesLabel = computed(() => {
+  const remaining = abilitySystem.requiredTargets.value - abilitySystem.currentTargetIndex.value
+  return `Projectiles: ${remaining}/${abilitySystem.requiredTargets.value}`
+})
+
 function handleFloorClick(event: any) {
+  // Ground-targeting AoE: confirm placement on click
+  if (combatStore.isTargeting && aoeSystem.isActive.value) {
+    abilitySystem.confirmGroundTarget()
+    return
+  }
   if (combatStore.isTargeting) return
   const entityId = gameStore.selectedEntityId
   if (!entityId) return
@@ -125,12 +145,19 @@ function handleFloorClick(event: any) {
     :color="isOutOfRange ? '#ff4444' : '#ffffff'"
   />
   <TresGroup v-if="showTrajectory" :position="trajectoryEndPosition">
-    <Html center :position-y="1.5">
+    <Html center :position-y="1.5" :position-x="-3">
       <div
-        class="pointer-events-none select-none font-mono text-sm font-bold"
-        :class="isOutOfRange ? 'text-red-400' : 'text-white'"
+        class="pointer-events-none select-none font-mono text-sm font-bold flex flex-col items-center gap-0.5"
       >
-        {{ trajectoryDistanceLabel }}
+        <span :class="isOutOfRange ? 'text-red-400' : 'text-white'">
+          {{ trajectoryDistanceLabel }}
+        </span>
+        <span
+          v-if="isMultiTarget"
+          class="text-xs text-sky-300 text-wrap"
+        >
+          {{ projectilesLabel }}
+        </span>
       </div>
     </Html>
   </TresGroup>

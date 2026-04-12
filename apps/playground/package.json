@@ -20,6 +20,7 @@
     "@artificer-forge/vfx": "workspace:*",
     "@nuxt/content": "catalog:nuxt",
     "@nuxt/eslint": "catalog:nuxt",
+    "@nuxt/icon": "catalog:",
     "@nuxt/ui": "catalog:nuxt",
     "@pinia/nuxt": "catalog:nuxt",
     "@tresjs/cientos": "catalog:three",

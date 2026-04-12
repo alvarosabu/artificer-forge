@@ -2,6 +2,7 @@ abilityId: melee-attack
 name: Attack
 type: melee
 targeting: lock-on
+icon: i-af-melee-attk
 animations:
   execute: Melee_1H_Attack_Chop
 damage:

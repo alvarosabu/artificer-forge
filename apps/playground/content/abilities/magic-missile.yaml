@@ -2,6 +2,7 @@ abilityId: magic-missile
 name: Magic Missile
 type: ranged-projectile
 targeting: lock-on
+icon: i-af-ranged-attack
 animations:
   targeting: Ranged_Magic_Raise
   execute: Ranged_Magic_Shoot
