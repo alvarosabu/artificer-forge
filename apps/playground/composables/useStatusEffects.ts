@@ -1,4 +1,3 @@
-// apps/playground/composables/useStatusEffects.ts
 import type { StatusEffectId } from '~/shared/statusEffectIds'
 import type { StatusEffectDefinition } from '~/stores/statusEffects'
 
