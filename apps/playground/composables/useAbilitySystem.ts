@@ -54,18 +54,6 @@ type TargetingPhase = 'idle' | 'selecting' | 'executing'
 
 const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
 
-function damageTypeColor(type: string): string {
-  const colors: Record<string, string> = {
-    fire: '#ff4400',
-    ice: '#44aaff',
-    lightning: '#ffee00',
-    force: '#8844ff',
-    piercing: '#cccccc',
-    slashing: '#cccccc',
-  }
-  return colors[type] ?? '#ff4444'
-}
-
 const ABILITY_WEAPON_SLOT: Record<string, 'mainHand' | 'offHand' | 'none'> = {
   'melee': 'mainHand',
   'ranged-projectile': 'offHand',
@@ -86,6 +74,7 @@ export const useAbilitySystem = createSharedComposable(() => {
   const { getCharacterRef } = useSceneRefs()
   const { scene } = useTres()
   const { spawnProjectile } = useProjectile()
+  const damageTypeStore = useDamageTypeStore()
   const { setActiveWeaponSlot } = useActionBar()
 
   const phase = ref<TargetingPhase>('idle')
@@ -180,7 +169,7 @@ export const useAbilitySystem = createSharedComposable(() => {
           radius: template.aoe!.radius,
           width: template.aoe!.width,
           angle: template.aoe!.angle,
-          color: damageTypeColor(template.damage?.type ?? 'fire'),
+          color: damageTypeStore.get(template.damage?.type ?? 'fire')?.color ?? '#ff4444',
           range: template.range?.normal ?? 10,
         },
       )
