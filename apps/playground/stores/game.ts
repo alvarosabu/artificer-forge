@@ -39,7 +39,7 @@ export const ALL_EQUIPMENT_SLOTS: EquipmentSlotKey[] = [
   'offHand',
 ]
 
-export type StatusEffectId = 'poisoned' | 'stunned' | 'burning' | 'blessed' | 'hasted' | 'frozen' | 'encumbered'
+export type { StatusEffectId } from '~/shared/statusEffectIds'
 
 export interface StatusEffect {
   id: StatusEffectId
