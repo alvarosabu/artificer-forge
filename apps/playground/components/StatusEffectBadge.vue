@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { StatusEffectId } from '~/stores/game'
+import type { StatusEffectId } from '~/shared/statusEffectIds'
 
 const props = defineProps<{
   effectId: StatusEffectId

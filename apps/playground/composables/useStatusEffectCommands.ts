@@ -35,7 +35,14 @@ export function useStatusEffectCommands(onDone?: () => void) {
     if (!entity) return []
 
     const effectEntries: StatusEffectDefinition[] = mode === 'remove'
-      ? (entity.statusEffects ?? []).map(e => store.get(e.id)).filter(Boolean) as StatusEffectDefinition[]
+      ? (entity.statusEffects ?? []).reduce<StatusEffectDefinition[]>((acc, e) => {
+          const def = store.get(e.id)
+          if (!def) {
+            console.warn(`[StatusEffectCommands] Unknown status effect id: ${e.id}`)
+            return acc
+          }
+          return [...acc, def]
+        }, [])
       : store.allEffects.filter(
           def => !entity.statusEffects?.some(e => e.id === def.statusEffectId),
         )
