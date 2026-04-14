@@ -1,5 +1,4 @@
 import { defineContentConfig, defineCollection, z } from '@nuxt/content'
-import { StatusEffectIdSchema } from './shared/statusEffectIds'
 
 export default defineContentConfig({
   collections: {
@@ -204,7 +203,9 @@ export default defineContentConfig({
       type: 'data',
       source: 'status-effects/*.yaml',
       schema: z.object({
-        statusEffectId: StatusEffectIdSchema,
+        // z.string() instead of StatusEffectIdSchema — Nuxt Content can't resolve imported
+        // Zod schemas and puts them in meta JSON instead of creating a column
+        statusEffectId: z.string(),
         label: z.string(),
         type: z.enum(['buff', 'debuff', 'dot', 'cc']),
         armorGate: z.enum(['physical', 'magical', 'none']),
