@@ -5,7 +5,7 @@ import {
   STATUS_OVERLAY_BUILDERS,
   type StatusOverlayEffectId,
 } from '@artificer-forge/vfx'
-import type { StatusEffectId } from '~/stores/game'
+import type { StatusEffectId } from '~/shared/statusEffectIds'
 
 const PRIORITY: StatusOverlayEffectId[] = ['burning', 'poisoned', 'frozen']
 

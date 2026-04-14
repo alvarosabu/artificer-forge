@@ -17,6 +17,7 @@ export const useStatusEffectStore = defineStore('statusEffects', () => {
   const allEffects = computed(() => [...effects.value.values()])
 
   async function load() {
+    if (effects.value.size > 0) return
     const all = await queryCollection('statusEffect').all() as unknown as StatusEffectDefinition[]
     all.forEach(e => effects.value.set(e.statusEffectId, e))
   }
