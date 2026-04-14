@@ -1,12 +1,12 @@
 import type { ComputedRef } from 'vue'
 import { AnimationName, type AnimationNameType } from '@artificer-forge/composables'
-import { STATUS_DEFINITIONS } from '~/composables/useStatusEffects'
 
 export function useStatusEffectAnimations(
   entityId: ComputedRef<string>,
   play: (name: AnimationNameType, fadeTime?: number) => void,
 ) {
   const gameStore = useGameStore()
+  const store = useStatusEffectStore()
 
   let flinchTimer: ReturnType<typeof setInterval> | null = null
   let flinchReturnTimer: ReturnType<typeof setTimeout> | null = null
@@ -32,8 +32,8 @@ export function useStatusEffectAnimations(
         stopFlinchLoop()
         return
       }
-      const hasFlinchEffect = entity.statusEffects?.some(se => {
-        const def = STATUS_DEFINITIONS[se.id]
+      const hasFlinchEffect = entity.statusEffects?.some((se) => {
+        const def = store.get(se.id)
         return def?.type === 'debuff' || def?.type === 'dot'
       }) ?? false
       if (hasFlinchEffect) startFlinchLoop()

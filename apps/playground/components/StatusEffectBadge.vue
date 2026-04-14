@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import type { StatusEffectId } from '~/stores/game'
-import { STATUS_DEFINITIONS } from '~/composables/useStatusEffects'
 
 const props = defineProps<{
   effectId: StatusEffectId
   turnsLeft?: number
 }>()
 
-const def = computed(() => STATUS_DEFINITIONS[props.effectId])
+const store = useStatusEffectStore()
+const def = computed(() => store.get(props.effectId))
 </script>
 
 <template>
-  <UTooltip :text="def.label">
+  <UTooltip :text="def?.label">
     <UChip
       :show="props.turnsLeft !== undefined"
       :text="turnsLeft"
@@ -22,9 +22,9 @@ const def = computed(() => STATUS_DEFINITIONS[props.effectId])
     >
       <div
         class="size-4 rounded-full flex items-center justify-center shrink-0 cursor-pointer"
-        :class="def.bgColor"
+        :class="def?.bgColor"
       >
-        <UIcon :name="def.icon" size="size" :class="def.color" />
+        <UIcon :name="def?.icon ?? ''" size="size" :class="def?.color" />
       </div>
     </UChip>
   </UTooltip>

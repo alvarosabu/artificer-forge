@@ -1,10 +1,10 @@
 import type { CommandGroup } from './useCommandPalette'
-import type { StatusEffectId } from '~/stores/game'
-import { STATUS_DEFINITIONS } from './useStatusEffects'
+import type { StatusEffectDefinition } from '~/stores/statusEffects'
 
 export function useStatusEffectCommands(onDone?: () => void) {
   const gameStore = useGameStore()
   const { registerGroup, unregisterGroup, pushPage, close } = useCommandPalette()
+  const store = useStatusEffectStore()
 
   function buildEntityPickerPage(mode: 'add' | 'remove'): CommandGroup[] {
     const characters = [...gameStore.entities.values()].filter(e => e.type === 'character')
@@ -34,25 +34,22 @@ export function useStatusEffectCommands(onDone?: () => void) {
     const entity = gameStore.getEntity(entityId)
     if (!entity) return []
 
-    const effectEntries: [StatusEffectId, typeof STATUS_DEFINITIONS[StatusEffectId]][] = mode === 'remove'
-      ? (entity.statusEffects ?? []).map(e => [e.id, STATUS_DEFINITIONS[e.id]])
-      : (Object.entries(STATUS_DEFINITIONS) as [StatusEffectId, typeof STATUS_DEFINITIONS[StatusEffectId]][])
-          .filter(([id]) => !entity.statusEffects?.some(e => e.id === id))
+    const effectEntries: StatusEffectDefinition[] = mode === 'remove'
+      ? (entity.statusEffects ?? []).map(e => store.get(e.id)).filter(Boolean) as StatusEffectDefinition[]
+      : store.allEffects.filter(
+          def => !entity.statusEffects?.some(e => e.id === def.statusEffectId),
+        )
 
     return [{
       id: `status-effect-pick-${mode}-${entityId}`,
       label: `${mode === 'add' ? 'Add' : 'Remove'} Effect`,
-      items: effectEntries.map(([effectId, def]) => ({
-        id: `status-effect-${mode}-${entityId}-${effectId}`,
+      items: effectEntries.map(def => ({
+        id: `status-effect-${mode}-${entityId}-${def.statusEffectId}`,
         label: def.label,
         icon: def.icon,
         onSelect: () => {
-          if (mode === 'add') {
-            gameStore.addStatusEffect(entityId, effectId)
-          }
-          else {
-            gameStore.removeStatusEffect(entityId, effectId)
-          }
+          if (mode === 'add') gameStore.addStatusEffect(entityId, def.statusEffectId)
+          else gameStore.removeStatusEffect(entityId, def.statusEffectId)
           close()
           onDone?.()
         },
