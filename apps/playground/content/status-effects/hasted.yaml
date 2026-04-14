@@ -1,0 +1,7 @@
+statusEffectId: hasted
+label: Hasted
+type: buff
+armorGate: none
+color: text-blue-400
+bgColor: bg-blue-900
+icon: i-lucide-zap

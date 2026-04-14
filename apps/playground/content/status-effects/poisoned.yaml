@@ -1,0 +1,7 @@
+statusEffectId: poisoned
+label: Poisoned
+type: debuff
+armorGate: physical
+color: text-green-400
+bgColor: bg-green-900
+icon: i-lucide-skull

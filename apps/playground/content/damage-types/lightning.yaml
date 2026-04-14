@@ -1,0 +1,5 @@
+damageTypeId: lightning
+label: Lightning
+armorType: magical
+color: '#ffee00'
+icon: i-lucide-zap

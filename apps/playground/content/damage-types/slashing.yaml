@@ -1,0 +1,5 @@
+damageTypeId: slashing
+label: Slashing
+armorType: physical
+color: '#cccccc'
+icon: i-lucide-axe

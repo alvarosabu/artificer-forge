@@ -1,0 +1,5 @@
+damageTypeId: bludgeoning
+label: Bludgeoning
+armorType: physical
+color: '#aa8855'
+icon: i-lucide-shield-off

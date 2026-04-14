@@ -1,0 +1,5 @@
+damageTypeId: piercing
+label: Piercing
+armorType: physical
+color: '#cccccc'
+icon: i-lucide-sword

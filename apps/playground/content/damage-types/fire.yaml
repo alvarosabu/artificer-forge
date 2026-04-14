@@ -1,0 +1,5 @@
+damageTypeId: fire
+label: Fire
+armorType: magical
+color: '#ff4400'
+icon: i-lucide-flame

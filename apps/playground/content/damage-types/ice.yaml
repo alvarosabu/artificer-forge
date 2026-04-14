@@ -1,0 +1,5 @@
+damageTypeId: ice
+label: Ice
+armorType: magical
+color: '#44aaff'
+icon: i-lucide-snowflake

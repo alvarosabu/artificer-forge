@@ -1,0 +1,5 @@
+damageTypeId: necrotic
+label: Necrotic
+armorType: physical
+color: '#553388'
+icon: i-lucide-skull

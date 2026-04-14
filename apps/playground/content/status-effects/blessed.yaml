@@ -1,0 +1,7 @@
+statusEffectId: blessed
+label: Blessed
+type: buff
+armorGate: none
+color: text-amber-300
+bgColor: bg-amber-800
+icon: i-lucide-sparkles

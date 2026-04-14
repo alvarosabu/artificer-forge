@@ -1,0 +1,5 @@
+damageTypeId: force
+label: Force
+armorType: physical
+color: '#8844ff'
+icon: i-lucide-circle-dot
