@@ -1,4 +1,5 @@
 import { defineContentConfig, defineCollection, z } from '@nuxt/content'
+import { StatusEffectIdSchema } from './shared/statusEffectIds'
 
 export default defineContentConfig({
   collections: {
@@ -186,6 +187,30 @@ export default defineContentConfig({
         baseProjectiles: z.number().optional(),
         scalingStat: z.string().optional(),
         scalingThreshold: z.number().optional(),
+      }),
+    }),
+    damageType: defineCollection({
+      type: 'data',
+      source: 'damage-types/*.yaml',
+      schema: z.object({
+        damageTypeId: z.string(),
+        label: z.string(),
+        armorType: z.enum(['physical', 'magical']),
+        color: z.string(),
+        icon: z.string(),
+      }),
+    }),
+    statusEffect: defineCollection({
+      type: 'data',
+      source: 'status-effects/*.yaml',
+      schema: z.object({
+        statusEffectId: StatusEffectIdSchema,
+        label: z.string(),
+        type: z.enum(['buff', 'debuff', 'dot', 'cc']),
+        armorGate: z.enum(['physical', 'magical', 'none']),
+        color: z.string(),
+        bgColor: z.string(),
+        icon: z.string(),
       }),
     }),
   },
