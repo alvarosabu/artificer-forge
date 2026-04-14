@@ -26,5 +26,5 @@ export const useStatusEffectStore = defineStore('statusEffects', () => {
     return effects.value.get(id)
   }
 
-  return { load, get, allEffects }
+  return { load, get, allEffects, effects }
 })

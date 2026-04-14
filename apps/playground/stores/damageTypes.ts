@@ -19,5 +19,5 @@ export const useDamageTypeStore = defineStore('damageTypes', () => {
     return types.value.get(id)
   }
 
-  return { load, get }
+  return { load, get, types }
 })
