@@ -27,7 +27,7 @@ catalogs:
     zod-to-json-schema: ^3.25.1
   three:
     '@tresjs/cientos': 5.7.0
-    '@tresjs/core': ^5.8.0
+    '@tresjs/core': https://pkg.pr.new/@tresjs/core@1400
     '@tresjs/eslint-config': ^1.5.1
     '@tresjs/leches': ^1.2.0
     '@tresjs/nuxt': ^5.6.0
