@@ -10,6 +10,14 @@ export interface Equipment {
   offHand?: string
 }
 
+export interface ContainerInfo {
+  // Optional weight capacity (kg). Undefined => unlimited (chests, corpses).
+  capacity?: number
+}
+
+// Slot keys for character equipment.
+export type EquipmentSlotKey = 'mainHand' | 'offHand'
+
 export type StatusEffectId = 'poisoned' | 'stunned' | 'burning' | 'blessed' | 'hasted' | 'frozen'
 
 export interface StatusEffect {
@@ -64,12 +72,26 @@ export interface EntityState {
 
   // Abilities
   abilities?: string[]
-}
 
-export interface Item {
-  id: string
-  templateId: string
-  quantity: number
+  // NEW — container annotation (characters, chests, corpses)
+  container?: ContainerInfo
+  equipmentSlots?: EquipmentSlotKey[]
+
+  // NEW — item-instance fields (only meaningful when type === 'item')
+  containerId?: string | null    // owning entity id, or null = in world
+  slot?: EquipmentSlotKey        // when equipped, names the slot
+  quantity?: number              // for stackables
+  stackable?: boolean
+  maxStack?: number
+  weight?: number                // per unit (kg)
+
+  // Item template metadata copied from YAML at spawn
+  damage?: { dice: string, type: string }
+  properties?: string[]
+  range?: { normal: number, long: number }
+  effect?: { type: string, dice?: string, bonus?: number }
+  value?: number
+  usable?: boolean
 }
 
 const DEFAULT_ABILITIES = ['melee-attack', 'dash', 'throw']
@@ -93,7 +115,6 @@ export const useGameStore = defineStore('game', () => {
   const party = reactive({
     members: [] as string[],
     leader: null as string | null,
-    inventory: [] as Item[],
   })
 
   // === SELECTION ===
@@ -267,29 +288,6 @@ export const useGameStore = defineStore('game', () => {
     selectedEntityId.value = entityId
   }
 
-  function addToInventory(item: Item) {
-    const existing = party.inventory.find(i => i.templateId === item.templateId)
-    if (existing) {
-      existing.quantity += item.quantity
-    }
-    else {
-      party.inventory.push(item)
-    }
-  }
-
-  function removeFromInventory(templateId: string, quantity = 1) {
-    const idx = party.inventory.findIndex(i => i.templateId === templateId)
-    if (idx > -1) {
-      const item = party.inventory[idx]
-      if (item) {
-        item.quantity -= quantity
-        if (item.quantity <= 0) {
-          party.inventory.splice(idx, 1)
-        }
-      }
-    }
-  }
-
   // --- Flag Actions ---
 
   function setFlag(key: string, value: boolean | number) {
@@ -417,8 +415,6 @@ export const useGameStore = defineStore('game', () => {
     recruitEntity,
     dismissEntity,
     setPartyLeader,
-    addToInventory,
-    removeFromInventory,
 
     // Selection actions
     selectEntity,
