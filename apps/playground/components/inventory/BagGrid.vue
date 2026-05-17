@@ -8,8 +8,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'item-click': [item: EntityState]
-  'item-context': [event: MouseEvent, item: EntityState]
+  itemClick: [item: EntityState]
+  itemContext: [event: MouseEvent, item: EntityState]
 }>()
 
 const gameStore = useGameStore()
@@ -27,7 +27,7 @@ const bagEl = useTemplateRef<HTMLElement>('bagEl')
 useDropZone(bagEl, {
   onDrop: () => {
     const dragged = itemDrag.state.draggingItem
-    if (!dragged) return
+    if (!dragged) { return }
     // If dropped onto bag of same character but item was equipped, unequip
     if (dragged.containerId === props.characterId && dragged.slot) {
       gameStore.unequipItem(dragged.id)
@@ -53,8 +53,8 @@ useDropZone(bagEl, {
         v-for="item in items"
         :key="item.id"
         :item="item"
-        @click="(i) => emit('item-click', i)"
-        @contextmenu="(e, i) => emit('item-context', e, i)"
+        @click="(i) => emit('itemClick', i)"
+        @contextmenu="(e, i) => emit('itemContext', e, i)"
       />
       <!-- Fill empty cells visually -->
       <InventoryItemCell

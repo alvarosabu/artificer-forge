@@ -7,7 +7,7 @@ export const useInventory = createSharedComposable(() => {
   const focusedCharacterId = ref<string | null>(null)
 
   const focusedCharacter = computed(() => {
-    if (!focusedCharacterId.value) return null
+    if (!focusedCharacterId.value) { return null }
     return gameStore.getEntity(focusedCharacterId.value) ?? null
   })
 
@@ -17,7 +17,7 @@ export const useInventory = createSharedComposable(() => {
       ?? gameStore.party.leader
       ?? gameStore.party.members[0]
       ?? null
-    if (focusedCharacterId.value) isOpen.value = true
+    if (focusedCharacterId.value) { isOpen.value = true }
   }
 
   function close() {
@@ -29,20 +29,22 @@ export const useInventory = createSharedComposable(() => {
   }
 
   function toggle() {
-    if (isOpen.value) close()
-    else open()
+    if (isOpen.value) {
+      close()
+    }
+    else { open() }
   }
 
   // Global hotkey
   onKeyStroke('i', (e) => {
     const tag = (e.target as HTMLElement | null)?.tagName
-    if (tag === 'INPUT' || tag === 'TEXTAREA') return
+    if (tag === 'INPUT' || tag === 'TEXTAREA') { return }
     e.preventDefault()
     toggle()
   })
 
   onKeyStroke('Escape', () => {
-    if (isOpen.value) close()
+    if (isOpen.value) { close() }
   })
 
   return {

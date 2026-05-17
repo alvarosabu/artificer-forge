@@ -13,18 +13,18 @@ const items = computed(() =>
 
 function takeAll() {
   const leader = gameStore.party.leader
-  if (!leader || !loot.state.containerId) return
+  if (!leader || !loot.state.containerId) { return }
   for (const item of [...items.value]) {
     const result = gameStore.moveItem(item.id, { containerId: leader })
     if (!result.ok) {
       console.warn(`[loot] failed to move ${item.name}: ${result.reason}`)
     }
   }
-  if (items.value.length === 0) loot.close()
+  if (items.value.length === 0) { loot.close() }
 }
 
 onKeyStroke('Escape', () => {
-  if (loot.state.containerId) loot.close()
+  if (loot.state.containerId) { loot.close() }
 })
 </script>
 
@@ -32,7 +32,8 @@ onKeyStroke('Escape', () => {
   <div
     v-if="container && loot.state.containerId"
     class="fixed z-50 w-72 bg-gradient-to-b from-marine-900/95 to-purple-800/40 border-2 border-gold-600/70 rounded-xl shadow-xl shadow-black/60"
-    :style="{ left: `${loot.state.x}px`, top: `${loot.state.y}px` }"
+    :style="{ left: `${loot.state.x}px`,
+              top: `${loot.state.y}px` }"
   >
     <div class="flex items-center justify-between px-3 py-2 border-b border-gold-600/30">
       <div class="flex items-center gap-2">

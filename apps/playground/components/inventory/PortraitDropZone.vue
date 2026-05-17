@@ -13,7 +13,7 @@ const zoneEl = useTemplateRef<HTMLElement>('zoneEl')
 const { isOverDropZone } = useDropZone(zoneEl, {
   onDrop: () => {
     const dragged = itemDrag.state.draggingItem
-    if (!dragged) return
+    if (!dragged) { return }
     gameStore.transferItem(dragged.id, props.characterId)
     itemDrag.end()
   },
@@ -23,8 +23,9 @@ const { isOverDropZone } = useDropZone(zoneEl, {
 <template>
   <div
     ref="zoneEl"
-    :class="['rounded transition-colors', isOverDropZone ? 'ring-2 ring-gold-300' : '']"
+    class="rounded transition-colors"
+    :class="[isOverDropZone ? 'ring-2 ring-gold-300' : '']"
   >
-    <slot />
+    <slot></slot>
   </div>
 </template>

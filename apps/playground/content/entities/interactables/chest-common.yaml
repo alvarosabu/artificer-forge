@@ -29,3 +29,9 @@ lootTable:
     chance: 0.3
   - id: longsword
     chance: 0.1
+  - id: healing_potion
+    quantity: 3
+    chance: 1.0
+  - id: healing_potion
+    quantity: 2
+    chance: 1.0

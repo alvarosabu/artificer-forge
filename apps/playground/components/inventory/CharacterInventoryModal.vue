@@ -45,8 +45,8 @@ function onItemClick(_item: EntityState) {}
             <InventoryEquipmentSlot
               v-for="slot in slots"
               :key="slot"
+              :slot-key="slot"
               :character-id="character.id"
-              :slot="slot"
               @context="onEquipmentContext"
             />
           </div>
@@ -67,7 +67,8 @@ function onItemClick(_item: EntityState) {}
   <div
     v-if="menuState.open && menuGroups.length"
     class="fixed z-[60]"
-    :style="{ left: `${menuState.x}px`, top: `${menuState.y}px` }"
+    :style="{ left: `${menuState.x}px`,
+              top: `${menuState.y}px` }"
   >
     <UDropdownMenu
       v-model:open="menuState.open"

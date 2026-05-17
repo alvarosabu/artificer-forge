@@ -29,7 +29,7 @@ export const useItemContextMenu = createSharedComposable(() => {
   }
 
   function actionsFor(it: EntityState): DropdownMenuItem[][] {
-    if (!it || it.type !== 'item') return []
+    if (!it || it.type !== 'item') { return [] }
     const ownerId = it.containerId
     const owner = ownerId ? gameStore.getEntity(ownerId) : null
     const isInCharacter = owner?.type === 'character'
@@ -90,7 +90,7 @@ export const useItemContextMenu = createSharedComposable(() => {
   }
 
   const menuGroups = computed<DropdownMenuItem[][]>(() => {
-    if (!item.value) return []
+    if (!item.value) { return [] }
     return actionsFor(item.value)
   })
 

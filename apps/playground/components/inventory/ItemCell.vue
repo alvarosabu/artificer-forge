@@ -7,8 +7,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'click': [item: EntityState]
-  'contextmenu': [event: MouseEvent, item: EntityState]
+  click: [item: EntityState]
+  contextmenu: [event: MouseEvent, item: EntityState]
 }>()
 
 const sizeClass = computed(() =>
@@ -20,19 +20,19 @@ const cell = useTemplateRef<HTMLElement>('cell')
 const itemDrag = useItemDrag()
 
 function onClick() {
-  if (props.item) emit('click', props.item)
+  if (props.item) { emit('click', props.item) }
 }
 
 function onContext(e: MouseEvent) {
   e.preventDefault()
-  if (props.item) emit('contextmenu', e, props.item)
+  if (props.item) { emit('contextmenu', e, props.item) }
 }
 
 function onDragStart(e: DragEvent) {
-  if (!props.item) return
+  if (!props.item) { return }
   itemDrag.start(props.item)
   e.dataTransfer?.setData('text/plain', props.item.id)
-  if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'
+  if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move' }
 }
 
 function onDragEnd() {
@@ -44,9 +44,9 @@ function onDragEnd() {
   <UTooltip v-if="item" :delay-duration="200">
     <button
       ref="cell"
+      class="relative rounded border border-leather-700/50 bg-leather-800/60 hover:border-gold-400/60 transition-colors cursor-grab active:cursor-grabbing"
       :class="[
         sizeClass,
-        'relative rounded border border-leather-700/50 bg-leather-800/60 hover:border-gold-400/60 transition-colors cursor-grab active:cursor-grabbing',
       ]"
       :data-item-id="item.id"
       :draggable="true"
@@ -72,6 +72,7 @@ function onDragEnd() {
   <div
     v-else
     ref="cell"
-    :class="[sizeClass, 'rounded border border-leather-700/30 bg-leather-900/30']"
-  />
+    class="rounded border border-leather-700/30 bg-leather-900/30"
+    :class="[sizeClass]"
+  ></div>
 </template>
