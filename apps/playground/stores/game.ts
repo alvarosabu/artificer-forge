@@ -64,9 +64,6 @@ export interface EntityState {
   opened?: boolean
   destructible?: boolean
 
-  // Equipment-specific
-  equipment?: Equipment
-
   // Status effects
   statusEffects?: StatusEffect[]
 
@@ -158,6 +155,52 @@ export const useGameStore = defineStore('game', () => {
     return entities.value.get(id)
   }
 
+  // Spawn a standalone item entity from an item template.
+  async function spawnItemEntity(
+    templateId: string,
+    opts: {
+      containerId?: string | null
+      slot?: EquipmentSlotKey
+      position?: Position
+      quantity?: number
+    },
+  ): Promise<string | null> {
+    const template = await queryCollection('entities')
+      .where('templateId', '=', templateId)
+      .first()
+    if (!template || template.type !== 'item') {
+      console.warn(`[spawnItemEntity] item template not found or wrong type: ${templateId}`)
+      return null
+    }
+
+    const id = `${template.templateId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
+    const itemState: EntityState = {
+      id,
+      templateId: template.templateId,
+      type: 'item',
+      subtype: template.subtype,
+      name: template.name,
+      position: opts.position ?? { x: 0, y: 0, z: 0 },
+      model: template.model,
+      containerId: opts.containerId ?? null,
+      slot: opts.slot,
+      quantity: opts.quantity ?? 1,
+      stackable: template.stackable ?? false,
+      maxStack: template.maxStack ?? 1,
+      weight: template.weight ?? 0,
+      damage: template.damage,
+      properties: template.properties,
+      range: template.range,
+      effect: template.effect,
+      value: template.value,
+      usable: template.usable,
+    }
+
+    spawnEntity(id, itemState)
+    return id
+  }
+
   // Spawn from a content template by templateId
   async function spawnFromTemplate(
     templateId: string,
@@ -195,13 +238,41 @@ export const useGameStore = defineStore('game', () => {
       ai: template.ai,
       locked: template.locked,
       destructible: template.destructible,
-      equipment: template.equipment,
+      equipmentSlots: template.equipmentSlots,
       abilities: [...DEFAULT_ABILITIES, ...((template as any).abilities ?? [])],
       statusEffects: [],
       ...overrides,
     }
 
     spawnEntity(instanceId, entityState)
+
+    // Spawn starting equipment as item entities reparented to this character.
+    if (template.equipment && entityState.type === 'character') {
+      for (const slot of ['mainHand', 'offHand'] as const) {
+        const itemTemplateId = template.equipment[slot]
+        if (!itemTemplateId) continue
+        await spawnItemEntity(itemTemplateId, { containerId: instanceId, slot })
+      }
+    }
+
+    // Spawn loot table items as item entities reparented to this interactable.
+    if (template.lootTable && entityState.type === 'interactable') {
+      for (const entry of template.lootTable) {
+        const roll = Math.random()
+        if (roll > entry.chance) continue
+        let qty = 1
+        if (Array.isArray(entry.quantity)) {
+          const min = entry.quantity[0] ?? 1
+          const max = entry.quantity[1] ?? min
+          qty = Math.floor(min + Math.random() * (max - min + 1))
+        }
+        else if (typeof entry.quantity === 'number') {
+          qty = entry.quantity
+        }
+        await spawnItemEntity(entry.id, { containerId: instanceId, quantity: qty })
+      }
+    }
+
     return instanceId
   }
 
@@ -312,22 +383,6 @@ export const useGameStore = defineStore('game', () => {
 
   function hasFlag(key: string): boolean {
     return worldFlags.value[key] === true
-  }
-
-  // --- Equipment Actions ---
-
-  function equipWeapon(entityId: string, weaponTemplateId: string, slot: 'mainHand' | 'offHand') {
-    const entity = entities.value.get(entityId)
-    if (entity) {
-      entity.equipment = { ...entity.equipment, [slot]: weaponTemplateId }
-    }
-  }
-
-  function unequipWeapon(entityId: string, slot: 'mainHand' | 'offHand') {
-    const entity = entities.value.get(entityId)
-    if (entity) {
-      entity.equipment = { ...entity.equipment, [slot]: undefined }
-    }
   }
 
   function learnAbility(entityId: string, abilityId: string) {
@@ -620,6 +675,7 @@ export const useGameStore = defineStore('game', () => {
     removeEntity,
     getEntity,
     spawnFromTemplate,
+    spawnItemEntity,
 
     // Scene actions
     loadScene,
@@ -638,10 +694,6 @@ export const useGameStore = defineStore('game', () => {
     setFlag,
     getFlag,
     hasFlag,
-
-    // Equipment actions
-    equipWeapon,
-    unequipWeapon,
 
     // Ability actions
     learnAbility,

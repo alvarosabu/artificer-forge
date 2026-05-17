@@ -37,7 +37,7 @@ function lookAtPoint(point: Vector3) {
   characterRef.value.rotation.y = Math.atan2(point.x - pos.x, point.z - pos.z)
 }
 
-const equipment = computed(() => entity.value?.equipment)
+const equipment = computed(() => gameStore.derivedEquipment(entity.value?.id ?? ''))
 const { activeWeaponSlot } = useActionBar()
 const isLeader = computed(() => gameStore.party.leader === props.entityId)
 const effectiveWeaponSlot = computed<'mainHand' | 'offHand' | 'none' | undefined>(() => isLeader.value ? activeWeaponSlot.value : undefined)

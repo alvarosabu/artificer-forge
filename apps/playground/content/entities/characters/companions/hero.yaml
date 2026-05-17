@@ -38,3 +38,10 @@ abilities:
   - arrow-shot
   - magic-missile
   - fireball
+
+equipmentSlots:
+  - mainHand
+  - offHand
+
+equipment:
+  mainHand: shortsword

@@ -35,6 +35,10 @@ animations:
   run: Run
   attack: Attack
 
+equipmentSlots:
+  - mainHand
+  - offHand
+
 equipment:
   mainHand: dagger
   offHand: dagger

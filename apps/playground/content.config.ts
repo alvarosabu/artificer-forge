@@ -114,6 +114,7 @@ export default defineContentConfig({
           mainHand: z.string().optional(),
           offHand: z.string().optional(),
         }).optional(),
+        equipmentSlots: z.array(z.enum(['mainHand', 'offHand'])).optional(),
         abilities: z.array(z.string()).optional(),
       }),
     }),

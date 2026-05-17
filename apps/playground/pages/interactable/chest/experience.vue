@@ -41,7 +41,6 @@ onMounted(async () => {
   const playerId = await gameStore.spawnFromTemplate('hero', { x: 0, y: 0, z: 0 })
   gameStore.addToParty(playerId)
   gameStore.selectEntity(playerId)
-  gameStore.equipWeapon(playerId, 'shortsword', 'mainHand')
 
   const { spawnPoint } = await gameStore.loadScene('interactable_scene')
   gameStore.updateEntity(playerId, { position: spawnPoint })
