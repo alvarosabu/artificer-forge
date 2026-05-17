@@ -18,7 +18,7 @@ export interface ContainerInfo {
 // Slot keys for character equipment.
 export type EquipmentSlotKey = 'mainHand' | 'offHand'
 
-export type StatusEffectId = 'poisoned' | 'stunned' | 'burning' | 'blessed' | 'hasted' | 'frozen'
+export type StatusEffectId = 'poisoned' | 'stunned' | 'burning' | 'blessed' | 'hasted' | 'frozen' | 'encumbered'
 
 export interface StatusEffect {
   id: StatusEffectId
@@ -93,6 +93,18 @@ export interface EntityState {
   value?: number
   usable?: boolean
 }
+
+export type MoveFailReason =
+  | 'no-slot'
+  | 'wrong-type'
+  | 'over-capacity'
+  | 'occupied'
+  | 'not-found'
+  | 'invalid-target'
+
+export type MoveResult =
+  | { ok: true }
+  | { ok: false, reason: MoveFailReason }
 
 const DEFAULT_ABILITIES = ['melee-attack', 'dash', 'throw']
 
@@ -430,8 +442,7 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function encumbranceOf(characterId: string): number {
-    const cap = capacityOf(characterId)
-    return cap > 0 ? weightOf(characterId) / cap : 0
+    return weightOf(characterId) / capacityOf(characterId)
   }
 
   function derivedEquipment(entityId: string): Equipment {
@@ -441,6 +452,157 @@ export const useGameStore = defineStore('game', () => {
       mainHand: main?.templateId,
       offHand: off?.templateId,
     }
+  }
+
+  // --- Inventory actions ---
+
+  function isItemTypeForSlot(item: EntityState, slot: EquipmentSlotKey): boolean {
+    if (slot === 'mainHand' || slot === 'offHand') {
+      return item.subtype === 'weapon'
+    }
+    return false
+  }
+
+  function moveItem(
+    itemId: string,
+    target: {
+      containerId: string | null
+      slot?: EquipmentSlotKey
+      position?: Position
+      quantity?: number
+    },
+  ): MoveResult {
+    const item = entities.value.get(itemId)
+    if (!item || item.type !== 'item') return { ok: false, reason: 'not-found' }
+
+    // Validate target
+    let targetContainer: EntityState | null = null
+    if (target.containerId !== null) {
+      targetContainer = entities.value.get(target.containerId) ?? null
+      if (!targetContainer) return { ok: false, reason: 'not-found' }
+    }
+    else {
+      if (!target.position) return { ok: false, reason: 'invalid-target' }
+    }
+
+    // Slot validation
+    if (target.slot) {
+      if (!targetContainer) return { ok: false, reason: 'invalid-target' }
+      if (!targetContainer.equipmentSlots?.includes(target.slot)) {
+        return { ok: false, reason: 'no-slot' }
+      }
+      if (!isItemTypeForSlot(item, target.slot)) {
+        return { ok: false, reason: 'wrong-type' }
+      }
+      if (equippedAt(targetContainer.id, target.slot)) {
+        return { ok: false, reason: 'occupied' }
+      }
+    }
+
+    const moveQty = target.quantity ?? item.quantity ?? 1
+    const isPartial = moveQty < (item.quantity ?? 1)
+
+    // Capacity check (only for non-slot moves into characters with capacity)
+    if (target.containerId && targetContainer && !target.slot) {
+      const cap = targetContainer.container?.capacity
+      if (cap !== undefined) {
+        const after = weightOf(target.containerId) + (item.weight ?? 0) * moveQty
+        if (after > cap) return { ok: false, reason: 'over-capacity' }
+      }
+    }
+
+    // Try to merge into an existing stack at the target (only for non-slot moves)
+    if (target.containerId && !target.slot && item.stackable) {
+      const existing = itemsIn(target.containerId).find(e =>
+        e.templateId === item.templateId && (e.quantity ?? 1) < (e.maxStack ?? 1),
+      )
+      if (existing) {
+        const room = (existing.maxStack ?? 1) - (existing.quantity ?? 1)
+        const merged = Math.min(room, moveQty)
+        updateEntity(existing.id, { quantity: (existing.quantity ?? 1) + merged })
+        if (merged === (item.quantity ?? 1)) {
+          // Whole stack absorbed; remove the moved entity
+          removeEntity(item.id)
+        }
+        else {
+          updateEntity(item.id, { quantity: (item.quantity ?? 1) - merged })
+        }
+        syncEncumbrance(item.containerId)
+        syncEncumbrance(target.containerId)
+        return { ok: true }
+      }
+    }
+
+    // Partial move: split into a new entity
+    if (isPartial) {
+      const newId = `${item.templateId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+      const split: EntityState = {
+        ...item,
+        id: newId,
+        quantity: moveQty,
+        containerId: target.containerId,
+        slot: target.slot,
+        position: target.containerId === null ? target.position! : item.position,
+      }
+      spawnEntity(newId, split)
+      updateEntity(item.id, { quantity: (item.quantity ?? 1) - moveQty })
+      syncEncumbrance(item.containerId)
+      syncEncumbrance(target.containerId)
+      return { ok: true }
+    }
+
+    // Whole-entity reparent
+    const prevContainerId = item.containerId
+    updateEntity(item.id, {
+      containerId: target.containerId,
+      slot: target.slot,
+      position: target.containerId === null ? target.position! : item.position,
+    })
+
+    syncEncumbrance(prevContainerId)
+    syncEncumbrance(target.containerId)
+    return { ok: true }
+  }
+
+  function syncEncumbrance(characterId: string | null | undefined) {
+    if (!characterId) return
+    const character = entities.value.get(characterId)
+    if (!character || character.type !== 'character') return
+    const ratio = encumbranceOf(characterId)
+    const hasEffect = character.statusEffects?.some(e => e.id === 'encumbered') ?? false
+    if (ratio >= 1 && !hasEffect) {
+      addStatusEffect(characterId, 'encumbered')
+    }
+    else if (ratio < 1 && hasEffect) {
+      removeStatusEffect(characterId, 'encumbered')
+    }
+  }
+
+  function equipItem(itemId: string, slot: EquipmentSlotKey): MoveResult {
+    const item = entities.value.get(itemId)
+    if (!item) return { ok: false, reason: 'not-found' }
+    const ownerId = item.containerId
+    if (!ownerId) return { ok: false, reason: 'invalid-target' }
+    return moveItem(itemId, { containerId: ownerId, slot })
+  }
+
+  function unequipItem(itemId: string): MoveResult {
+    const item = entities.value.get(itemId)
+    if (!item) return { ok: false, reason: 'not-found' }
+    if (!item.slot || !item.containerId) return { ok: false, reason: 'invalid-target' }
+    return moveItem(itemId, { containerId: item.containerId, slot: undefined })
+  }
+
+  function dropItem(itemId: string, position: Position): MoveResult {
+    return moveItem(itemId, { containerId: null, position })
+  }
+
+  function pickupItem(itemId: string, characterId: string): MoveResult {
+    return moveItem(itemId, { containerId: characterId })
+  }
+
+  function transferItem(itemId: string, toCharacterId: string): MoveResult {
+    return moveItem(itemId, { containerId: toCharacterId })
   }
 
   return {
@@ -503,6 +665,15 @@ export const useGameStore = defineStore('game', () => {
     capacityOf,
     encumbranceOf,
     derivedEquipment,
+
+    // Inventory actions
+    moveItem,
+    equipItem,
+    unequipItem,
+    dropItem,
+    pickupItem,
+    transferItem,
+    syncEncumbrance,
 
     // Debug actions
     debugBvh,

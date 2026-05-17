@@ -53,6 +53,13 @@ export const STATUS_DEFINITIONS: Record<StatusEffectId, StatusDefinition> = {
     color: 'text-cyan-300',
     bgColor: 'bg-cyan-900',
   },
+  encumbered: {
+    label: 'Encumbered',
+    type: 'debuff',
+    icon: 'i-lucide-weight',
+    color: 'text-stone-300',
+    bgColor: 'bg-stone-800',
+  },
 }
 
 export function useStatusEffects() {
