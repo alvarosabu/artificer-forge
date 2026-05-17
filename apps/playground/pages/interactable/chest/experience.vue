@@ -31,6 +31,11 @@ onAction((action, entityId) => {
     case 'loot':
       useLoot().open(entityId, ctxState.x, ctxState.y)
       break
+    case 'pickup': {
+      const recipient = gameStore.selectedEntityId ?? gameStore.party.leader
+      if (recipient) gameStore.pickupItem(entityId, recipient)
+      break
+    }
   }
 })
 
@@ -56,6 +61,12 @@ const characterEntities = computed(() => {
 const interactableEntities = computed(() => {
   return [...gameStore.entities.values()].filter(e => e.type === 'interactable')
 })
+
+const worldItems = computed(() =>
+  [...gameStore.entities.values()].filter(
+    e => e.type === 'item' && (e.containerId === null || e.containerId === undefined) && !!e.model,
+  ),
+)
 
 
 const INTERACTION_DISTANCE = 1.5
@@ -129,6 +140,12 @@ function handleInteractableClick(entityId: string) {
     :entity-id="entity.id"
     @interact="handleInteractableClick"
   />
+  <Suspense
+    v-for="worldItem in worldItems"
+    :key="worldItem.id"
+  >
+    <InventoryWorldItem :item="worldItem" />
+  </Suspense>
   <TresAxesHelper />
   <Floor />
 </template>

@@ -20,6 +20,12 @@ const characterEntities = computed(() => {
   return [...gameStore.entities.values()].filter(e => e.type === 'character')
 })
 
+const worldItems = computed(() =>
+  [...gameStore.entities.values()].filter(
+    e => e.type === 'item' && (e.containerId === null || e.containerId === undefined) && !!e.model,
+  ),
+)
+
 </script>
 
 <template>
@@ -37,6 +43,12 @@ const characterEntities = computed(() => {
     :key="entity.id"
     :entity-id="entity.id"
   />
+  <Suspense
+    v-for="worldItem in worldItems"
+    :key="worldItem.id"
+  >
+    <InventoryWorldItem :item="worldItem" />
+  </Suspense>
   <TresAxesHelper />
   <Floor />
 </template>
