@@ -392,6 +392,57 @@ export const useGameStore = defineStore('game', () => {
     selectedEntityId.value ? entities.value.get(selectedEntityId.value) : null,
   )
 
+  // --- Inventory queries ---
+
+  function itemsIn(containerId: string, opts?: { includeEquipped?: boolean }): EntityState[] {
+    const includeEquipped = opts?.includeEquipped ?? false
+    return [...entities.value.values()].filter((e) => {
+      if (e.type !== 'item') return false
+      if (e.containerId !== containerId) return false
+      if (!includeEquipped && e.slot) return false
+      return true
+    })
+  }
+
+  function equippedAt(characterId: string, slot: EquipmentSlotKey): EntityState | null {
+    for (const e of entities.value.values()) {
+      if (e.type === 'item' && e.containerId === characterId && e.slot === slot) {
+        return e
+      }
+    }
+    return null
+  }
+
+  function weightOf(characterId: string): number {
+    let total = 0
+    for (const e of entities.value.values()) {
+      if (e.type === 'item' && e.containerId === characterId) {
+        total += (e.weight ?? 0) * (e.quantity ?? 1)
+      }
+    }
+    return total
+  }
+
+  function capacityOf(characterId: string): number {
+    const entity = entities.value.get(characterId)
+    const str = entity?.stats?.strength ?? 10
+    return 50 + str * 5
+  }
+
+  function encumbranceOf(characterId: string): number {
+    const cap = capacityOf(characterId)
+    return cap > 0 ? weightOf(characterId) / cap : 0
+  }
+
+  function derivedEquipment(entityId: string): Equipment {
+    const main = equippedAt(entityId, 'mainHand')
+    const off = equippedAt(entityId, 'offHand')
+    return {
+      mainHand: main?.templateId,
+      offHand: off?.templateId,
+    }
+  }
+
   return {
     // State
     currentScene,
@@ -444,6 +495,14 @@ export const useGameStore = defineStore('game', () => {
     recruitableEntities,
     dismissableEntities,
     selectedEntity,
+
+    // Inventory queries
+    itemsIn,
+    equippedAt,
+    weightOf,
+    capacityOf,
+    encumbranceOf,
+    derivedEquipment,
 
     // Debug actions
     debugBvh,
