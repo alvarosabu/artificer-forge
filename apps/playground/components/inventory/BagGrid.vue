@@ -1,6 +1,7 @@
 <!-- apps/playground/components/inventory/BagGrid.vue -->
 <script setup lang="ts">
 import type { EntityState } from '~/stores/game'
+import { useDropZone } from '@vueuse/core'
 
 const props = defineProps<{
   characterId: string
@@ -12,6 +13,7 @@ const emit = defineEmits<{
 }>()
 
 const gameStore = useGameStore()
+const itemDrag = useItemDrag()
 
 const items = computed(() => gameStore.itemsIn(props.characterId))
 const weight = computed(() => gameStore.weightOf(props.characterId))
@@ -19,10 +21,27 @@ const capacity = computed(() => gameStore.capacityOf(props.characterId))
 
 const ROWS_VISIBLE = 6
 const COLS = 8
+
+const bagEl = useTemplateRef<HTMLElement>('bagEl')
+
+useDropZone(bagEl, {
+  onDrop: () => {
+    const dragged = itemDrag.state.draggingItem
+    if (!dragged) return
+    // If dropped onto bag of same character but item was equipped, unequip
+    if (dragged.containerId === props.characterId && dragged.slot) {
+      gameStore.unequipItem(dragged.id)
+    }
+    else {
+      gameStore.moveItem(dragged.id, { containerId: props.characterId })
+    }
+    itemDrag.end()
+  },
+})
 </script>
 
 <template>
-  <div class="flex flex-col gap-2 h-full">
+  <div ref="bagEl" class="flex flex-col gap-2 h-full">
     <div
       class="grid gap-1 overflow-y-auto pr-1"
       :style="{

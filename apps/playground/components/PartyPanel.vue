@@ -18,8 +18,8 @@ function bloodFill(hp: number | undefined, maxHp: number | undefined) {
 <template>
   <div class="fixed left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-50">
     <div class="flex flex-row gap-2 " v-for="member in partyMembers" :key="member.id">
+    <InventoryPortraitDropZone :character-id="member.id">
     <button
-   
       class="w-20 h-28 relative rounded border-2 bg-gold-600 flex flex-col items-center justify-between transition-colors cursor-pointer"
       :class="gameStore.selectedEntityId === member.id
         ? 'border-white shadow-[0_0_8px_#ffffff]'
@@ -46,6 +46,7 @@ function bloodFill(hp: number | undefined, maxHp: number | undefined) {
       </span>
   
     </button>
+    </InventoryPortraitDropZone>
     <!-- Status effect badges — right edge, vertical stack -->
     <StatusEffectBadges
         v-if="member.statusEffects?.length"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { EntityState, EquipmentSlotKey } from '~/stores/game'
+import { useDropZone } from '@vueuse/core'
 
 const props = defineProps<{
   characterId: string
@@ -11,6 +12,7 @@ const emit = defineEmits<{
 }>()
 
 const gameStore = useGameStore()
+const itemDrag = useItemDrag()
 
 const item = computed(() => gameStore.equippedAt(props.characterId, props.slot))
 
@@ -18,13 +20,34 @@ const slotLabel = computed(() => props.slot === 'mainHand' ? 'Main' : 'Off')
 const slotIcon = computed(() =>
   props.slot === 'mainHand' ? 'i-heroicons-sparkles' : 'i-heroicons-shield-check',
 )
+
+const slotEl = useTemplateRef<HTMLElement>('slotEl')
+
+const { isOverDropZone } = useDropZone(slotEl, {
+  onDrop: () => {
+    const dragged = itemDrag.state.draggingItem
+    if (!dragged) return
+    gameStore.moveItem(dragged.id, { containerId: props.characterId, slot: props.slot })
+    itemDrag.end()
+  },
+})
+
+const dropTargetClass = computed(() => {
+  if (!isOverDropZone.value) return ''
+  const valid = itemDrag.state.draggingItem?.subtype === 'weapon'
+  return valid ? 'border-gold-300 bg-gold-500/10' : 'border-error/60 bg-error/10'
+})
 </script>
 
 <template>
   <div class="flex flex-col items-center gap-1">
     <UTooltip v-if="item" :delay-duration="200">
       <button
-        class="w-14 h-14 rounded border-2 bg-leather-800/60 border-gold-500/50 ring-1 ring-gold-500/50 hover:border-gold-400 transition-colors cursor-pointer flex items-center justify-center"
+        ref="slotEl"
+        :class="[
+          'w-14 h-14 rounded border-2 bg-leather-800/60 border-gold-500/50 ring-1 ring-gold-500/50 hover:border-gold-400 transition-colors cursor-pointer flex items-center justify-center',
+          dropTargetClass,
+        ]"
         :data-slot="slot"
         :data-character-id="characterId"
         @contextmenu.prevent="emit('context', $event, item!)"
@@ -37,7 +60,11 @@ const slotIcon = computed(() =>
     </UTooltip>
     <div
       v-else
-      class="w-14 h-14 rounded border-2 border-dashed border-gold-600/40 flex items-center justify-center"
+      ref="slotEl"
+      :class="[
+        'w-14 h-14 rounded border-2 border-dashed border-gold-600/40 flex items-center justify-center',
+        dropTargetClass,
+      ]"
       :data-slot="slot"
       :data-character-id="characterId"
     >

@@ -17,6 +17,8 @@ const sizeClass = computed(() =>
 
 const cell = useTemplateRef<HTMLElement>('cell')
 
+const itemDrag = useItemDrag()
+
 function onClick() {
   if (props.item) emit('click', props.item)
 }
@@ -24,6 +26,17 @@ function onClick() {
 function onContext(e: MouseEvent) {
   e.preventDefault()
   if (props.item) emit('contextmenu', e, props.item)
+}
+
+function onDragStart(e: DragEvent) {
+  if (!props.item) return
+  itemDrag.start(props.item)
+  e.dataTransfer?.setData('text/plain', props.item.id)
+  if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'
+}
+
+function onDragEnd() {
+  itemDrag.end()
 }
 </script>
 
@@ -33,11 +46,14 @@ function onContext(e: MouseEvent) {
       ref="cell"
       :class="[
         sizeClass,
-        'relative rounded border border-leather-700/50 bg-leather-800/60 hover:border-gold-400/60 transition-colors cursor-pointer',
+        'relative rounded border border-leather-700/50 bg-leather-800/60 hover:border-gold-400/60 transition-colors cursor-grab active:cursor-grabbing',
       ]"
       :data-item-id="item.id"
+      :draggable="true"
       @click="onClick"
       @contextmenu="onContext"
+      @dragstart="onDragStart"
+      @dragend="onDragEnd"
     >
       <div class="absolute inset-1 flex items-center justify-center">
         <UIcon name="i-heroicons-cube" class="w-6 h-6 text-gold-300/80" />
