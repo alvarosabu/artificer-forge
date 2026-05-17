@@ -34,6 +34,12 @@ const interactableActions: EntityAction[] = [
     condition: entity => !!entity.locked,
   },
   {
+    id: 'loot',
+    label: 'Loot',
+    icon: 'i-heroicons-archive-box',
+    condition: entity => entity.subtype === 'container' && !entity.locked,
+  },
+  {
     id: 'attack',
     label: 'Attack',
     icon: 'i-heroicons-fire',

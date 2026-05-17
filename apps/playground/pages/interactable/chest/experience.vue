@@ -11,7 +11,7 @@ const {
   getInteractableRef,
 } = useSceneRefs()
 
-const { onAction } = useContextMenu()
+const { onAction, state: ctxState } = useContextMenu()
 
 onAction((action, entityId) => {
   const entity = gameStore.getEntity(entityId)
@@ -27,6 +27,9 @@ onAction((action, entityId) => {
       break
     case 'lockpick':
       console.log('Lockpick:', entityId)
+      break
+    case 'loot':
+      useLoot().open(entityId, ctxState.x, ctxState.y)
       break
   }
 })
