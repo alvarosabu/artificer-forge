@@ -26,7 +26,7 @@ function onItemClick(_item: EntityState) {}
     v-model:open="isOpen"
     :title="character?.name ?? 'Inventory'"
     :ui="{
-      content: 'bg-gradient-to-b from-marine-900/95 to-purple-800/40 border-2 border-gold-600/70 rounded-xl shadow-2xl shadow-black/50 sm:max-w-4xl',
+      content: 'bg-marine-950 bg-gradient-to-b from-marine-900 to-marine-950 border-2 border-gold-600/70 rounded-xl shadow-2xl shadow-black/50 sm:max-w-4xl',
       header: 'border-b border-gold-600/30',
       title: 'font-serif text-gold-200 text-lg',
     }"
