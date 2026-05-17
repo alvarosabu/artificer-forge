@@ -3,6 +3,7 @@ import { onKeyStroke } from '@vueuse/core'
 
 const loot = useLoot()
 const gameStore = useGameStore()
+const toast = useToast()
 
 const container = computed(() =>
   loot.state.containerId ? gameStore.getEntity(loot.state.containerId) : null,
@@ -14,11 +15,21 @@ const items = computed(() =>
 function takeAll() {
   const leader = gameStore.party.leader
   if (!leader || !loot.state.containerId) { return }
+  const failed: string[] = []
   for (const item of [...items.value]) {
     const result = gameStore.moveItem(item.id, { containerId: leader })
     if (!result.ok) {
       console.warn(`[loot] failed to move ${item.name}: ${result.reason}`)
+      failed.push(item.name)
     }
+  }
+  if (failed.length) {
+    toast.add({
+      title: 'Could not take everything',
+      description: `${failed.length} item(s) left behind — inventory full or invalid.`,
+      color: 'warning',
+      icon: 'i-heroicons-exclamation-triangle',
+    })
   }
   if (items.value.length === 0) { loot.close() }
 }
