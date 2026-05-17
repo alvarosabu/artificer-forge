@@ -7,9 +7,17 @@ const { isOpen, focusedCharacter } = useInventory()
 const character = computed(() => focusedCharacter.value)
 const slots = computed(() => character.value?.equipmentSlots ?? [])
 
-// Stub handlers — wired in Task 10
-function onItemContext(_event: MouseEvent, _item: EntityState) {}
-function onEquipmentContext(_event: MouseEvent, _item: EntityState) {}
+const itemMenu = useItemContextMenu()
+// Top-level ref alias → auto-unwrapped in template
+const menuGroups = itemMenu.menuGroups
+const menuState = itemMenu.state
+
+function onItemContext(event: MouseEvent, item: EntityState) {
+  itemMenu.openAt(event, item.id)
+}
+function onEquipmentContext(event: MouseEvent, item: EntityState) {
+  itemMenu.openAt(event, item.id)
+}
 function onItemClick(_item: EntityState) {}
 </script>
 
@@ -55,4 +63,19 @@ function onItemClick(_item: EntityState) {}
       </div>
     </template>
   </UModal>
+
+  <div
+    v-if="menuState.open && menuGroups.length"
+    class="fixed z-[60]"
+    :style="{ left: `${menuState.x}px`, top: `${menuState.y}px` }"
+  >
+    <UDropdownMenu
+      v-model:open="menuState.open"
+      :items="menuGroups"
+    >
+      <template #default>
+        <span class="sr-only">Item context menu trigger</span>
+      </template>
+    </UDropdownMenu>
+  </div>
 </template>
