@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useGLTF } from '@tresjs/cientos'
 import type { TresObject3D } from '@tresjs/core'
+import { useCharacterAnimations, type RigSize } from '@artificer-forge/composables'
 import type { Equipment } from '~/stores/game'
 
 const props = defineProps<{
@@ -19,6 +20,10 @@ const rig = computed<TresObject3D | undefined>(() => nodes.value?.[props.rigKey]
 
 const equipmentRef = computed(() => props.equipment)
 useEquipment(rig, equipmentRef)
+
+// Plays the idle animation automatically once the animation packs load.
+const rigSize = props.rigKey.replace('Rig_', '') as RigSize
+useCharacterAnimations(rig, rigSize)
 </script>
 
 <template>
