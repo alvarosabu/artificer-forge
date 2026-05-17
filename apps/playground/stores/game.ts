@@ -475,6 +475,8 @@ export const useGameStore = defineStore('game', () => {
     const item = entities.value.get(itemId)
     if (!item || item.type !== 'item') return { ok: false, reason: 'not-found' }
 
+    const prevContainerId = item.containerId
+
     // Validate target
     let targetContainer: EntityState | null = null
     if (target.containerId !== null) {
@@ -525,9 +527,10 @@ export const useGameStore = defineStore('game', () => {
           removeEntity(item.id)
         }
         else {
+          // Target stack filled to maxStack; leftover units stay on the source container
           updateEntity(item.id, { quantity: (item.quantity ?? 1) - merged })
         }
-        syncEncumbrance(item.containerId)
+        syncEncumbrance(prevContainerId)
         syncEncumbrance(target.containerId)
         return { ok: true }
       }
@@ -546,13 +549,12 @@ export const useGameStore = defineStore('game', () => {
       }
       spawnEntity(newId, split)
       updateEntity(item.id, { quantity: (item.quantity ?? 1) - moveQty })
-      syncEncumbrance(item.containerId)
+      syncEncumbrance(prevContainerId)
       syncEncumbrance(target.containerId)
       return { ok: true }
     }
 
     // Whole-entity reparent
-    const prevContainerId = item.containerId
     updateEntity(item.id, {
       containerId: target.containerId,
       slot: target.slot,
