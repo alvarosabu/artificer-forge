@@ -41,7 +41,11 @@ const dropTargetClass = computed(() => {
 
 <template>
   <div class="flex flex-col items-center gap-1">
-    <UTooltip v-if="item" :delay-duration="200">
+    <UTooltip
+      v-if="item"
+      :delay-duration="200"
+      :ui="{ content: 'bg-transparent ring-0 shadow-none p-0 h-auto min-w-0' }"
+    >
       <button
         ref="slotEl"
         class="w-14 h-14 rounded border-2 bg-leather-800/60 border-gold-500/50 ring-1 ring-gold-500/50 hover:border-gold-400 transition-colors cursor-pointer flex items-center justify-center"

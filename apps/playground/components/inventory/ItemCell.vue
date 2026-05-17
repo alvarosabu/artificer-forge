@@ -41,7 +41,11 @@ function onDragEnd() {
 </script>
 
 <template>
-  <UTooltip v-if="item" :delay-duration="200">
+  <UTooltip
+    v-if="item"
+    :delay-duration="200"
+    :ui="{ content: 'bg-transparent ring-0 shadow-none p-0 h-auto min-w-0' }"
+  >
     <button
       ref="cell"
       class="relative rounded border border-leather-700/50 bg-leather-800/60 hover:border-gold-400/60 transition-colors cursor-grab active:cursor-grabbing"

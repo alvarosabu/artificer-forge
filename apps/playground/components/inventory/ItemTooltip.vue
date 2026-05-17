@@ -7,7 +7,7 @@ const props = defineProps<{
 </script>
 
 <template>
-  <div class="min-w-56 max-w-72 bg-marine-900/95 border border-gold-600/60 rounded-md p-3 text-sm text-gold-100 shadow-xl">
+  <div class="min-w-56 max-w-72 bg-marine-900 border border-gold-600/60 rounded-md p-3 text-sm text-gold-100 shadow-xl">
     <div class="font-serif text-base text-gold-200 mb-1">{{ props.item.name }}</div>
     <div class="text-xs text-gold-400/80 capitalize mb-2">{{ props.item.subtype ?? 'item' }}</div>
 
