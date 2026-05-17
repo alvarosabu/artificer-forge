@@ -1,7 +1,13 @@
 <script setup lang="ts">
 const gameStore = useGameStore()
+const inventory = useInventory()
 
 const partyMembers = computed(() => gameStore.partyEntities)
+
+function onPortraitClick(id: string) {
+  gameStore.selectEntity(id)
+  inventory.open(id)
+}
 
 function bloodFill(hp: number | undefined, maxHp: number | undefined) {
   if (!maxHp) return 0
@@ -18,7 +24,7 @@ function bloodFill(hp: number | undefined, maxHp: number | undefined) {
       :class="gameStore.selectedEntityId === member.id
         ? 'border-white shadow-[0_0_8px_#ffffff]'
         : 'border-gold-400/30 hover:border-gold-400/60'"
-      @click="gameStore.selectEntity(member.id)"
+      @click="onPortraitClick(member.id)"
     >
       <img
         v-if="member.portrait"

@@ -111,4 +111,5 @@ const { postprocessingBloomStrength, postprocessingBloomThreshold, postprocessin
     @action="handleContextMenuAction"
   />
   <ActionBar />
+  <InventoryCharacterInventoryModal />
 </template>
