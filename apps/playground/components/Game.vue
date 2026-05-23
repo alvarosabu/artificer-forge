@@ -113,4 +113,5 @@ const { postprocessingBloomStrength, postprocessingBloomThreshold, postprocessin
   <ActionBar />
   <InventoryCharacterInventoryModal />
   <InventoryLootPopover />
+  <InventoryItemContextMenu />
 </template>

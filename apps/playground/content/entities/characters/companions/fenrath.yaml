@@ -36,3 +36,10 @@ animations:
 equipmentSlots:
   - mainHand
   - offHand
+  - helmet
+  - armor
+  - gauntlets
+  - boots
+  - amulet
+  - ring1
+  - ring2

@@ -12,6 +12,7 @@ const {
 } = useSceneRefs()
 
 const { onAction, state: ctxState } = useContextMenu()
+const loot = useLoot()
 
 onAction((action, entityId) => {
   const entity = gameStore.getEntity(entityId)
@@ -27,9 +28,6 @@ onAction((action, entityId) => {
       break
     case 'lockpick':
       console.log('Lockpick:', entityId)
-      break
-    case 'loot':
-      useLoot().open(entityId, ctxState.x, ctxState.y)
       break
     case 'pickup': {
       const recipient = gameStore.selectedEntityId ?? gameStore.party.leader
@@ -79,6 +77,7 @@ function closeActiveInteractable() {
   if (ref && entity?.opened) {
     ref.toggle()
   }
+  loot.close()
   activeInteractableId.value = null
 }
 
@@ -110,6 +109,15 @@ function handleInteractableClick(entityId: string) {
   const { off } = selectedCharacterRef.value.onArrive(() => {
     interactableRef?.toggle()
     activeInteractableId.value = entityId
+    const updated = gameStore.getEntity(entityId)
+    if (updated?.subtype === 'container' && !updated.locked) {
+      if (updated.opened) {
+        loot.open(entityId, ctxState.x || window.innerWidth - 320, ctxState.y || 120)
+      }
+      else {
+        loot.close()
+      }
+    }
     off()
   })
 

@@ -33,13 +33,26 @@ export const useItemContextMenu = createSharedComposable(() => {
     const ownerId = it.containerId
     const owner = ownerId ? gameStore.getEntity(ownerId) : null
     const isInCharacter = owner?.type === 'character'
+    const isInContainer = owner?.type === 'interactable'
     const isEquipped = !!it.slot
 
     const primary: DropdownMenuItem[] = []
 
-    if (isInCharacter && owner && !isEquipped && it.subtype === 'weapon') {
+    if (isInContainer) {
+      primary.push({
+        label: 'Pick Up',
+        icon: 'i-heroicons-hand-raised',
+        onSelect: () => {
+          const recipient = gameStore.selectedEntityId ?? gameStore.party.leader
+          if (recipient) gameStore.pickupItem(it.id, recipient)
+        },
+      })
+    }
+
+    if (isInCharacter && owner && !isEquipped) {
       const slots = owner.equipmentSlots ?? []
       for (const slot of slots) {
+        if (!gameStore.isItemTypeForSlot(it, slot as EquipmentSlotKey)) continue
         primary.push({
           label: `Equip (${slot})`,
           icon: 'i-heroicons-sparkles',

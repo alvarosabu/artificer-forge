@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { onKeyStroke } from '@vueuse/core'
+import type { EntityState } from '~/stores/game'
 
 const loot = useLoot()
 const gameStore = useGameStore()
 const toast = useToast()
+const itemMenu = useItemContextMenu()
+
+function onItemContext(event: MouseEvent, item: EntityState) {
+  itemMenu.openAt(event, item.id)
+}
 
 const container = computed(() =>
   loot.state.containerId ? gameStore.getEntity(loot.state.containerId) : null,
@@ -64,6 +70,7 @@ onKeyStroke('Escape', () => {
           :key="item.id"
           :item="item"
           size="sm"
+          @contextmenu="onItemContext"
         />
         <InventoryItemCell
           v-for="i in Math.max(0, 24 - items.length)"

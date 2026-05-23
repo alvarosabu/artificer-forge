@@ -23,7 +23,7 @@ const rigKey = computed(() => entity.value?.rig ?? 'Rig_Medium')
       :antialias="true"
     >
       <TresPerspectiveCamera
-        :position="[0, 1.3, 2.6]"
+        :position="[2, 1.3,5 ]"
         :look-at="[0, 1, 0]"
         :fov="35"
       />
@@ -33,7 +33,7 @@ const rigKey = computed(() => entity.value?.rig ?? 'Rig_Medium')
         :intensity="1.5"
       />
       <Suspense>
-        <InventoryCharacterDollModel
+        <InventoryCharacterPreviewModel
           :model-url="modelUrl"
           :rig-key="rigKey"
           :equipment="equipment"

@@ -16,10 +16,32 @@ const itemDrag = useItemDrag()
 
 const item = computed(() => gameStore.equippedAt(props.characterId, props.slotKey))
 
-const slotLabel = computed(() => props.slotKey === 'mainHand' ? 'Main' : 'Off')
-const slotIcon = computed(() =>
-  props.slotKey === 'mainHand' ? 'i-heroicons-sparkles' : 'i-heroicons-shield-check',
-)
+const SLOT_LABELS: Record<EquipmentSlotKey, string> = {
+  mainHand: 'Main Hand',
+  offHand: 'Off Hand',
+  helmet: 'Helmet',
+  armor: 'Armor',
+  gauntlets: 'Gauntlets',
+  boots: 'Boots',
+  amulet: 'Amulet',
+  ring1: 'Ring 1',
+  ring2: 'Ring 2',
+}
+
+const SLOT_ICONS: Record<EquipmentSlotKey, string> = {
+  mainHand: 'i-lucide-swords',
+  offHand: 'i-lucide-shield',
+  helmet: 'i-lucide-hard-hat',
+  armor: 'i-lucide-shirt',
+  gauntlets: 'i-lucide-grab',
+  boots: 'i-lucide-footprints',
+  amulet: 'i-lucide-gem',
+  ring1: 'i-lucide-circle-dot',
+  ring2: 'i-lucide-circle-dot',
+}
+
+const slotLabel = computed(() => SLOT_LABELS[props.slotKey])
+const slotIcon = computed(() => SLOT_ICONS[props.slotKey])
 
 const slotEl = useTemplateRef<HTMLElement>('slotEl')
 
@@ -34,7 +56,8 @@ const { isOverDropZone } = useDropZone(slotEl, {
 
 const dropTargetClass = computed(() => {
   if (!isOverDropZone.value) { return '' }
-  const valid = itemDrag.state.draggingItem?.subtype === 'weapon'
+  const dragged = itemDrag.state.draggingItem
+  const valid = !!dragged && gameStore.isItemTypeForSlot(dragged, props.slotKey)
   return valid ? 'border-gold-300 bg-gold-500/10' : 'border-error/60 bg-error/10'
 })
 </script>
@@ -56,7 +79,14 @@ const dropTargetClass = computed(() => {
         :data-character-id="characterId"
         @contextmenu.prevent="emit('context', $event, item!)"
       >
-        <UIcon name="i-heroicons-cube" class="w-7 h-7 text-gold-200" />
+        <img
+          v-if="item.icon"
+          :src="item.icon"
+          :alt="item.name"
+          class="w-full h-full object-contain p-1 pointer-events-none select-none"
+          draggable="false"
+        />
+        <UIcon v-else name="i-heroicons-cube" class="w-7 h-7 text-gold-200" />
       </button>
       <template #content>
         <InventoryItemTooltip :item="item" />

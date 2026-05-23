@@ -60,7 +60,14 @@ function onDragEnd() {
       @dragend="onDragEnd"
     >
       <div class="absolute inset-1 flex items-center justify-center">
-        <UIcon name="i-heroicons-cube" class="w-6 h-6 text-gold-300/80" />
+        <img
+          v-if="item.icon"
+          :src="item.icon"
+          :alt="item.name"
+          class="w-full h-full object-contain pointer-events-none select-none"
+          draggable="false"
+        />
+        <UIcon v-else name="i-heroicons-cube" class="w-6 h-6 text-gold-300/80" />
       </div>
       <span
         v-if="(item.quantity ?? 1) > 1"

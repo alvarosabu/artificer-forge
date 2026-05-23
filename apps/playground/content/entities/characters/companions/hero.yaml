@@ -42,6 +42,13 @@ abilities:
 equipmentSlots:
   - mainHand
   - offHand
+  - helmet
+  - armor
+  - gauntlets
+  - boots
+  - amulet
+  - ring1
+  - ring2
 
 equipment:
   mainHand: shortsword

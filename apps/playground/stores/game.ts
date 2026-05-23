@@ -16,7 +16,28 @@ export interface ContainerInfo {
 }
 
 // Slot keys for character equipment.
-export type EquipmentSlotKey = 'mainHand' | 'offHand'
+export type EquipmentSlotKey =
+  | 'mainHand'
+  | 'offHand'
+  | 'helmet'
+  | 'armor'
+  | 'gauntlets'
+  | 'boots'
+  | 'amulet'
+  | 'ring1'
+  | 'ring2'
+
+export const ALL_EQUIPMENT_SLOTS: EquipmentSlotKey[] = [
+  'helmet',
+  'amulet',
+  'armor',
+  'gauntlets',
+  'boots',
+  'ring1',
+  'ring2',
+  'mainHand',
+  'offHand',
+]
 
 export type StatusEffectId = 'poisoned' | 'stunned' | 'burning' | 'blessed' | 'hasted' | 'frozen' | 'encumbered'
 
@@ -39,6 +60,7 @@ export interface EntityState {
   
   // Rendering
   portrait?: string
+  icon?: string
   model?: string
   rig?: string
   animations?: Record<string, unknown>
@@ -182,6 +204,7 @@ export const useGameStore = defineStore('game', () => {
       subtype: template.subtype,
       name: template.name,
       position: opts.position ?? { x: 0, y: 0, z: 0 },
+      icon: template.icon,
       model: template.model,
       containerId: opts.containerId ?? null,
       slot: opts.slot,
@@ -248,8 +271,8 @@ export const useGameStore = defineStore('game', () => {
 
     // Spawn starting equipment as item entities reparented to this character.
     if (template.equipment && entityState.type === 'character') {
-      for (const slot of ['mainHand', 'offHand'] as const) {
-        const itemTemplateId = template.equipment[slot]
+      for (const slot of ALL_EQUIPMENT_SLOTS) {
+        const itemTemplateId = (template.equipment as Record<string, string | undefined>)[slot]
         if (!itemTemplateId) continue
         await spawnItemEntity(itemTemplateId, { containerId: instanceId, slot })
       }
@@ -512,10 +535,26 @@ export const useGameStore = defineStore('game', () => {
   // --- Inventory actions ---
 
   function isItemTypeForSlot(item: EntityState, slot: EquipmentSlotKey): boolean {
-    if (slot === 'mainHand' || slot === 'offHand') {
-      return item.subtype === 'weapon'
+    switch (slot) {
+      case 'mainHand':
+      case 'offHand':
+        return item.subtype === 'weapon'
+      case 'helmet':
+        return item.subtype === 'helmet'
+      case 'armor':
+        return item.subtype === 'armor'
+      case 'gauntlets':
+        return item.subtype === 'gauntlets'
+      case 'boots':
+        return item.subtype === 'boots'
+      case 'amulet':
+        return item.subtype === 'amulet'
+      case 'ring1':
+      case 'ring2':
+        return item.subtype === 'ring'
+      default:
+        return false
     }
-    return false
   }
 
   function moveItem(
@@ -721,6 +760,7 @@ export const useGameStore = defineStore('game', () => {
     derivedEquipment,
 
     // Inventory actions
+    isItemTypeForSlot,
     moveItem,
     equipItem,
     unequipItem,
