@@ -1,0 +1,17 @@
+sceneId: corpse_scene
+name: Corpse Scene
+
+spawnPoints:
+  default: { x: 0, y: 0, z: 0 }
+
+exits: []
+
+entities:
+  - templateId: orc_scout
+    position: { x: 2, y: 0, z: 2 }
+    rotation: { x: 0, y: 0, z: 0 }
+    overrides:
+      dead: true
+      hp: 0
+      team: neutral
+      ai: { behavior: idle }

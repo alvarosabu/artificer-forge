@@ -1,7 +1,6 @@
 <!-- apps/playground/components/inventory/BagGrid.vue -->
 <script setup lang="ts">
 import type { EntityState } from '~/stores/game'
-import { useDropZone } from '@vueuse/core'
 
 const props = defineProps<{
   characterId: string
@@ -22,26 +21,60 @@ const capacity = computed(() => gameStore.capacityOf(props.characterId))
 const ROWS_VISIBLE = 6
 const COLS = 8
 
-const bagEl = useTemplateRef<HTMLElement>('bagEl')
-
-useDropZone(bagEl, {
-  onDrop: () => {
-    const dragged = itemDrag.state.draggingItem
-    if (!dragged) { return }
-    // If dropped onto bag of same character but item was equipped, unequip
-    if (dragged.containerId === props.characterId && dragged.slot) {
-      gameStore.unequipItem(dragged.id)
-    }
-    else {
-      gameStore.moveItem(dragged.id, { containerId: props.characterId })
-    }
-    itemDrag.end()
-  },
+const isOverDropZone = ref(false)
+const dragged = computed(() => itemDrag.state.draggingItem)
+const isValidTarget = computed(() => {
+  const d = dragged.value
+  if (!d) return false
+  // Bag accepts: any item not already in this bag (incl. unequip from same char)
+  return d.containerId !== props.characterId || !!d.slot
 })
+
+const dropZoneClass = computed(() => {
+  if (!dragged.value) return ''
+  if (isOverDropZone.value && isValidTarget.value) {
+    return 'ring-2 ring-gold-300/70 bg-gold-500/5'
+  }
+  if (isValidTarget.value) {
+    return 'ring-2 ring-gold-500/30 ring-dashed'
+  }
+  return ''
+})
+
+function onDragOver(e: DragEvent) {
+  if (!dragged.value || !isValidTarget.value) return
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+  isOverDropZone.value = true
+}
+
+function onDragLeave() {
+  isOverDropZone.value = false
+}
+
+function onDrop(e: DragEvent) {
+  e.preventDefault()
+  isOverDropZone.value = false
+  const d = dragged.value
+  if (!d) return
+  if (d.containerId === props.characterId && d.slot) {
+    gameStore.unequipItem(d.id)
+  }
+  else {
+    gameStore.moveItem(d.id, { containerId: props.characterId })
+  }
+  itemDrag.end()
+}
 </script>
 
 <template>
-  <div ref="bagEl" class="flex flex-col gap-2 h-full">
+  <div
+    class="flex flex-col gap-2 h-full rounded transition-all duration-150"
+    :class="dropZoneClass"
+    @dragover="onDragOver"
+    @dragleave="onDragLeave"
+    @drop="onDrop"
+  >
     <div
       class="grid gap-1 overflow-y-auto pr-1"
       :style="{

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { EntityState, EquipmentSlotKey } from '~/stores/game'
-import { useDropZone } from '@vueuse/core'
 
 const props = defineProps<{
   characterId: string
@@ -15,6 +14,7 @@ const gameStore = useGameStore()
 const itemDrag = useItemDrag()
 
 const item = computed(() => gameStore.equippedAt(props.characterId, props.slotKey))
+const isOverDropZone = ref(false)
 
 const SLOT_LABELS: Record<EquipmentSlotKey, string> = {
   mainHand: 'Main Hand',
@@ -43,22 +43,42 @@ const SLOT_ICONS: Record<EquipmentSlotKey, string> = {
 const slotLabel = computed(() => SLOT_LABELS[props.slotKey])
 const slotIcon = computed(() => SLOT_ICONS[props.slotKey])
 
-const slotEl = useTemplateRef<HTMLElement>('slotEl')
+function onDragOver(e: DragEvent) {
+  if (!itemDrag.state.draggingItem) return
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+  isOverDropZone.value = true
+}
 
-const { isOverDropZone } = useDropZone(slotEl, {
-  onDrop: () => {
-    const dragged = itemDrag.state.draggingItem
-    if (!dragged) { return }
-    gameStore.moveItem(dragged.id, { containerId: props.characterId, slot: props.slotKey })
-    itemDrag.end()
-  },
-})
+function onDragLeave() {
+  isOverDropZone.value = false
+}
+
+function onDrop(e: DragEvent) {
+  e.preventDefault()
+  isOverDropZone.value = false
+  const dragged = itemDrag.state.draggingItem
+  if (!dragged) return
+  gameStore.moveItem(dragged.id, { containerId: props.characterId, slot: props.slotKey })
+  itemDrag.end()
+}
+
+const dragged = computed(() => itemDrag.state.draggingItem)
+const isValidTarget = computed(() =>
+  !!dragged.value && gameStore.isItemTypeForSlot(dragged.value, props.slotKey),
+)
 
 const dropTargetClass = computed(() => {
-  if (!isOverDropZone.value) { return '' }
-  const dragged = itemDrag.state.draggingItem
-  const valid = !!dragged && gameStore.isItemTypeForSlot(dragged, props.slotKey)
-  return valid ? 'border-gold-300 bg-gold-500/10' : 'border-error/60 bg-error/10'
+  if (!dragged.value) { return '' }
+  if (isOverDropZone.value) {
+    return isValidTarget.value
+      ? 'border-gold-300 bg-gold-500/20 ring-2 ring-gold-300/70 scale-105'
+      : 'border-error/70 bg-error/20 ring-2 ring-error/60'
+  }
+  if (isValidTarget.value) {
+    return 'border-gold-400/70 bg-gold-500/5 animate-pulse'
+  }
+  return 'opacity-50'
 })
 </script>
 
@@ -70,14 +90,16 @@ const dropTargetClass = computed(() => {
       :ui="{ content: 'bg-transparent ring-0 shadow-none p-0 h-auto min-w-0' }"
     >
       <button
-        ref="slotEl"
-        class="w-14 h-14 rounded border-2 bg-leather-800/60 border-gold-500/50 ring-1 ring-gold-500/50 hover:border-gold-400 transition-colors cursor-pointer flex items-center justify-center"
+        class="w-14 h-14 rounded border-2 bg-leather-800/60 border-gold-500/50 ring-1 ring-gold-500/50 hover:border-gold-400 transition-all duration-150 cursor-pointer flex items-center justify-center"
         :class="[
           dropTargetClass,
         ]"
         :data-slot="slotKey"
         :data-character-id="characterId"
         @contextmenu.prevent="emit('context', $event, item!)"
+        @dragover="onDragOver"
+        @dragleave="onDragLeave"
+        @drop="onDrop"
       >
         <img
           v-if="item.icon"
@@ -94,13 +116,15 @@ const dropTargetClass = computed(() => {
     </UTooltip>
     <div
       v-else
-      ref="slotEl"
-      class="w-14 h-14 rounded border-2 border-dashed border-gold-600/40 flex items-center justify-center"
+      class="w-14 h-14 rounded border-2 border-dashed border-gold-600/40 flex items-center justify-center transition-all duration-150"
       :class="[
         dropTargetClass,
       ]"
       :data-slot="slotKey"
       :data-character-id="characterId"
+      @dragover="onDragOver"
+      @dragleave="onDragLeave"
+      @drop="onDrop"
     >
       <UIcon :name="slotIcon" class="w-6 h-6 text-gold-500/30" />
     </div>

@@ -86,6 +86,9 @@ export interface EntityState {
   opened?: boolean
   destructible?: boolean
 
+  // Character-specific lifecycle
+  dead?: boolean
+
   // Status effects
   statusEffects?: StatusEffect[]
 
@@ -310,11 +313,11 @@ export const useGameStore = defineStore('game', () => {
       throw new Error(`Scene not found: ${sceneId}`)
     }
 
-    // Clear only NON-party entities
-    for (const [id] of entities.value) {
-      if (!party.members.includes(id)) {
-        entities.value.delete(id)
-      }
+    // Clear only NON-party entities — but keep items owned by party members
+    for (const [id, entity] of entities.value) {
+      if (party.members.includes(id)) continue
+      if (entity.type === 'item' && entity.containerId && party.members.includes(entity.containerId)) continue
+      entities.value.delete(id)
     }
 
     currentScene.value = sceneId
@@ -590,8 +593,10 @@ export const useGameStore = defineStore('game', () => {
       if (!isItemTypeForSlot(item, target.slot)) {
         return { ok: false, reason: 'wrong-type' }
       }
-      if (equippedAt(targetContainer.id, target.slot)) {
-        return { ok: false, reason: 'occupied' }
+      // Swap: if the slot is occupied by a different item, unequip the occupant first
+      const occupant = equippedAt(targetContainer.id, target.slot)
+      if (occupant && occupant.id !== itemId) {
+        updateEntity(occupant.id, { slot: undefined })
       }
     }
 

@@ -110,8 +110,20 @@ function handleContextMenu(event: TresPointerEvent) {
 }
 
 const isPlayable = computed(() => gameStore.selectedEntityId === props.entityId)
-const isDead = computed(() => (entity.value?.hp ?? 1) <= 0)
+const isDead = computed(() => (entity.value?.hp ?? 1) <= 0 || !!entity.value?.dead)
 const isHovering = ref(false)
+
+watch(
+  () => [isDead.value, Object.keys(actions).length] as const,
+  ([dead, len]) => {
+    if (!len || !dead) return
+    cancelMovement()
+    if (actions[AnimationName.DEATH_A_POSE]) {
+      play(AnimationName.DEATH_A_POSE, { fadeTime: 0.3, once: true })
+    }
+  },
+  { immediate: true },
+)
 
 function handlePointerEnter() {
   if (combatStore.isTargeting) {

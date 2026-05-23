@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onKeyStroke } from '@vueuse/core'
+import { onClickOutside, onKeyStroke } from '@vueuse/core'
 import type { EntityState } from '~/stores/game'
 
 const loot = useLoot()
@@ -14,8 +14,14 @@ function onItemContext(event: MouseEvent, item: EntityState) {
 const container = computed(() =>
   loot.state.containerId ? gameStore.getEntity(loot.state.containerId) : null,
 )
+const isDeadContainer = computed(() =>
+  container.value?.type === 'character'
+  && ((container.value.hp ?? 1) <= 0 || !!container.value.dead),
+)
 const items = computed(() =>
-  loot.state.containerId ? gameStore.itemsIn(loot.state.containerId) : [],
+  loot.state.containerId
+    ? gameStore.itemsIn(loot.state.containerId, { includeEquipped: isDeadContainer.value })
+    : [],
 )
 
 function takeAll() {
@@ -43,11 +49,18 @@ function takeAll() {
 onKeyStroke('Escape', () => {
   if (loot.state.containerId) { loot.close() }
 })
+
+const popoverEl = useTemplateRef<HTMLElement>('popoverEl')
+onClickOutside(popoverEl, () => {
+  if (itemMenu.state.open) { return }
+  if (loot.state.containerId) { loot.close() }
+})
 </script>
 
 <template>
   <div
     v-if="container && loot.state.containerId"
+    ref="popoverEl"
     class="fixed z-50 w-72 bg-gradient-to-b from-marine-900/95 to-purple-800/40 border-2 border-gold-600/70 rounded-xl shadow-xl shadow-black/60"
     :style="{ left: `${loot.state.x}px`,
               top: `${loot.state.y}px` }"
