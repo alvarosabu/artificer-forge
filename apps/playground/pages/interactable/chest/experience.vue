@@ -60,11 +60,7 @@ const interactableEntities = computed(() => {
   return [...gameStore.entities.values()].filter(e => e.type === 'interactable')
 })
 
-const worldItems = computed(() =>
-  [...gameStore.entities.values()].filter(
-    e => e.type === 'item' && (e.containerId === null || e.containerId === undefined) && !!e.model,
-  ),
-)
+const { worldItems } = storeToRefs(gameStore)
 
 
 const INTERACTION_DISTANCE = 1.5

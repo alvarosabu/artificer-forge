@@ -265,7 +265,7 @@ export const useGameStore = defineStore('game', () => {
       locked: template.locked,
       destructible: template.destructible,
       equipmentSlots: template.equipmentSlots,
-      abilities: [...DEFAULT_ABILITIES, ...((template as any).abilities ?? [])],
+      abilities: [...DEFAULT_ABILITIES, ...(template.abilities ?? [])],
       statusEffects: [],
       ...overrides,
     }
@@ -485,6 +485,12 @@ export const useGameStore = defineStore('game', () => {
     selectedEntityId.value ? entities.value.get(selectedEntityId.value) : null,
   )
 
+  const worldItems = computed(() =>
+    [...entities.value.values()].filter(
+      e => e.type === 'item' && (e.containerId === null || e.containerId === undefined) && !!e.model,
+    ),
+  )
+
   // --- Inventory queries ---
 
   function itemsIn(containerId: string, opts?: { includeEquipped?: boolean }): EntityState[] {
@@ -602,15 +608,6 @@ export const useGameStore = defineStore('game', () => {
 
     const moveQty = target.quantity ?? item.quantity ?? 1
     const isPartial = moveQty < (item.quantity ?? 1)
-
-    // Capacity check (only for non-slot moves into characters with capacity)
-    if (target.containerId && targetContainer && !target.slot) {
-      const cap = targetContainer.container?.capacity
-      if (cap !== undefined) {
-        const after = weightOf(target.containerId) + (item.weight ?? 0) * moveQty
-        if (after > cap) return { ok: false, reason: 'over-capacity' }
-      }
-    }
 
     // Try to merge into an existing stack at the target (only for non-slot moves)
     if (target.containerId && !target.slot && item.stackable) {
@@ -755,6 +752,7 @@ export const useGameStore = defineStore('game', () => {
     recruitableEntities,
     dismissableEntities,
     selectedEntity,
+    worldItems,
 
     // Inventory queries
     itemsIn,

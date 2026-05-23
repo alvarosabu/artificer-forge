@@ -91,7 +91,7 @@ export const useItemContextMenu = createSharedComposable(() => {
       })
     }
 
-    if (isInCharacter && owner && !isEquipped) {
+    if (isInCharacter && owner && !isDeadOwner && !isEquipped) {
       secondary.push({
         label: 'Drop',
         icon: 'i-heroicons-arrow-down-circle',

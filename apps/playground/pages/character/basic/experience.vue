@@ -20,11 +20,7 @@ const characterEntities = computed(() => {
   return [...gameStore.entities.values()].filter(e => e.type === 'character')
 })
 
-const worldItems = computed(() =>
-  [...gameStore.entities.values()].filter(
-    e => e.type === 'item' && (e.containerId === null || e.containerId === undefined) && !!e.model,
-  ),
-)
+const { worldItems } = storeToRefs(gameStore)
 
 </script>
 

@@ -18,8 +18,7 @@ await execute()
 // useEquipment relies on useGraph(rig) to resolve the hand bones.
 const rig = computed<TresObject3D | undefined>(() => nodes.value?.[props.rigKey])
 
-const equipmentRef = computed(() => props.equipment)
-useEquipment(rig, equipmentRef)
+useEquipment(rig, toRef(props, 'equipment'))
 
 // Plays the idle animation automatically once the animation packs load.
 const rigSize = props.rigKey.replace('Rig_', '') as RigSize
