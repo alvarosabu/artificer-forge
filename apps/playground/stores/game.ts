@@ -10,7 +10,36 @@ export interface Equipment {
   offHand?: string
 }
 
-export type StatusEffectId = 'poisoned' | 'stunned' | 'burning' | 'blessed' | 'hasted' | 'frozen'
+export interface ContainerInfo {
+  // Optional weight capacity (kg). Undefined => unlimited (chests, corpses).
+  capacity?: number
+}
+
+// Slot keys for character equipment.
+export type EquipmentSlotKey =
+  | 'mainHand'
+  | 'offHand'
+  | 'helmet'
+  | 'armor'
+  | 'gauntlets'
+  | 'boots'
+  | 'amulet'
+  | 'ring1'
+  | 'ring2'
+
+export const ALL_EQUIPMENT_SLOTS: EquipmentSlotKey[] = [
+  'helmet',
+  'amulet',
+  'armor',
+  'gauntlets',
+  'boots',
+  'ring1',
+  'ring2',
+  'mainHand',
+  'offHand',
+]
+
+export type StatusEffectId = 'poisoned' | 'stunned' | 'burning' | 'blessed' | 'hasted' | 'frozen' | 'encumbered'
 
 export interface StatusEffect {
   id: StatusEffectId
@@ -31,6 +60,7 @@ export interface EntityState {
   
   // Rendering
   portrait?: string
+  icon?: string
   model?: string
   rig?: string
   animations?: Record<string, unknown>
@@ -56,21 +86,47 @@ export interface EntityState {
   opened?: boolean
   destructible?: boolean
 
-  // Equipment-specific
-  equipment?: Equipment
+  // Character-specific lifecycle
+  dead?: boolean
 
   // Status effects
   statusEffects?: StatusEffect[]
 
   // Abilities
   abilities?: string[]
+
+  // NEW — container annotation (characters, chests, corpses)
+  container?: ContainerInfo
+  equipmentSlots?: EquipmentSlotKey[]
+
+  // NEW — item-instance fields (only meaningful when type === 'item')
+  containerId?: string | null    // owning entity id, or null = in world
+  slot?: EquipmentSlotKey        // when equipped, names the slot
+  quantity?: number              // for stackables
+  stackable?: boolean
+  maxStack?: number
+  weight?: number                // per unit (kg)
+
+  // Item template metadata copied from YAML at spawn
+  damage?: { dice: string, type: string }
+  properties?: string[]
+  range?: { normal: number, long: number }
+  effect?: { type: string, dice?: string, bonus?: number }
+  value?: number
+  usable?: boolean
 }
 
-export interface Item {
-  id: string
-  templateId: string
-  quantity: number
-}
+export type MoveFailReason =
+  | 'no-slot'
+  | 'wrong-type'
+  | 'over-capacity'
+  | 'occupied'
+  | 'not-found'
+  | 'invalid-target'
+
+export type MoveResult =
+  | { ok: true }
+  | { ok: false, reason: MoveFailReason }
 
 const DEFAULT_ABILITIES = ['melee-attack', 'dash', 'throw']
 
@@ -93,7 +149,6 @@ export const useGameStore = defineStore('game', () => {
   const party = reactive({
     members: [] as string[],
     leader: null as string | null,
-    inventory: [] as Item[],
   })
 
   // === SELECTION ===
@@ -123,6 +178,53 @@ export const useGameStore = defineStore('game', () => {
 
   function getEntity(id: string) {
     return entities.value.get(id)
+  }
+
+  // Spawn a standalone item entity from an item template.
+  async function spawnItemEntity(
+    templateId: string,
+    opts: {
+      containerId?: string | null
+      slot?: EquipmentSlotKey
+      position?: Position
+      quantity?: number
+    },
+  ): Promise<string | null> {
+    const template = await queryCollection('entities')
+      .where('templateId', '=', templateId)
+      .first()
+    if (!template || template.type !== 'item') {
+      console.warn(`[spawnItemEntity] item template not found or wrong type: ${templateId}`)
+      return null
+    }
+
+    const id = `${template.templateId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
+    const itemState: EntityState = {
+      id,
+      templateId: template.templateId,
+      type: 'item',
+      subtype: template.subtype,
+      name: template.name,
+      position: opts.position ?? { x: 0, y: 0, z: 0 },
+      icon: template.icon,
+      model: template.model,
+      containerId: opts.containerId ?? null,
+      slot: opts.slot,
+      quantity: opts.quantity ?? 1,
+      stackable: template.stackable ?? false,
+      maxStack: template.maxStack ?? 1,
+      weight: template.weight ?? 0,
+      damage: template.damage,
+      properties: template.properties,
+      range: template.range,
+      effect: template.effect,
+      value: template.value,
+      usable: template.usable,
+    }
+
+    spawnEntity(id, itemState)
+    return id
   }
 
   // Spawn from a content template by templateId
@@ -162,13 +264,41 @@ export const useGameStore = defineStore('game', () => {
       ai: template.ai,
       locked: template.locked,
       destructible: template.destructible,
-      equipment: template.equipment,
-      abilities: [...DEFAULT_ABILITIES, ...((template as any).abilities ?? [])],
+      equipmentSlots: template.equipmentSlots,
+      abilities: [...DEFAULT_ABILITIES, ...(template.abilities ?? [])],
       statusEffects: [],
       ...overrides,
     }
 
     spawnEntity(instanceId, entityState)
+
+    // Spawn starting equipment as item entities reparented to this character.
+    if (template.equipment && entityState.type === 'character') {
+      for (const slot of ALL_EQUIPMENT_SLOTS) {
+        const itemTemplateId = (template.equipment as Record<string, string | undefined>)[slot]
+        if (!itemTemplateId) continue
+        await spawnItemEntity(itemTemplateId, { containerId: instanceId, slot })
+      }
+    }
+
+    // Spawn loot table items as item entities reparented to this interactable.
+    if (template.lootTable && entityState.type === 'interactable') {
+      for (const entry of template.lootTable) {
+        const roll = Math.random()
+        if (roll > entry.chance) continue
+        let qty = 1
+        if (Array.isArray(entry.quantity)) {
+          const min = entry.quantity[0] ?? 1
+          const max = entry.quantity[1] ?? min
+          qty = Math.floor(min + Math.random() * (max - min + 1))
+        }
+        else if (typeof entry.quantity === 'number') {
+          qty = entry.quantity
+        }
+        await spawnItemEntity(entry.id, { containerId: instanceId, quantity: qty })
+      }
+    }
+
     return instanceId
   }
 
@@ -183,11 +313,11 @@ export const useGameStore = defineStore('game', () => {
       throw new Error(`Scene not found: ${sceneId}`)
     }
 
-    // Clear only NON-party entities
-    for (const [id] of entities.value) {
-      if (!party.members.includes(id)) {
-        entities.value.delete(id)
-      }
+    // Clear only NON-party entities — but keep items owned by party members
+    for (const [id, entity] of entities.value) {
+      if (party.members.includes(id)) continue
+      if (entity.type === 'item' && entity.containerId && party.members.includes(entity.containerId)) continue
+      entities.value.delete(id)
     }
 
     currentScene.value = sceneId
@@ -267,29 +397,6 @@ export const useGameStore = defineStore('game', () => {
     selectedEntityId.value = entityId
   }
 
-  function addToInventory(item: Item) {
-    const existing = party.inventory.find(i => i.templateId === item.templateId)
-    if (existing) {
-      existing.quantity += item.quantity
-    }
-    else {
-      party.inventory.push(item)
-    }
-  }
-
-  function removeFromInventory(templateId: string, quantity = 1) {
-    const idx = party.inventory.findIndex(i => i.templateId === templateId)
-    if (idx > -1) {
-      const item = party.inventory[idx]
-      if (item) {
-        item.quantity -= quantity
-        if (item.quantity <= 0) {
-          party.inventory.splice(idx, 1)
-        }
-      }
-    }
-  }
-
   // --- Flag Actions ---
 
   function setFlag(key: string, value: boolean | number) {
@@ -302,22 +409,6 @@ export const useGameStore = defineStore('game', () => {
 
   function hasFlag(key: string): boolean {
     return worldFlags.value[key] === true
-  }
-
-  // --- Equipment Actions ---
-
-  function equipWeapon(entityId: string, weaponTemplateId: string, slot: 'mainHand' | 'offHand') {
-    const entity = entities.value.get(entityId)
-    if (entity) {
-      entity.equipment = { ...entity.equipment, [slot]: weaponTemplateId }
-    }
-  }
-
-  function unequipWeapon(entityId: string, slot: 'mainHand' | 'offHand') {
-    const entity = entities.value.get(entityId)
-    if (entity) {
-      entity.equipment = { ...entity.equipment, [slot]: undefined }
-    }
   }
 
   function learnAbility(entityId: string, abilityId: string) {
@@ -394,6 +485,224 @@ export const useGameStore = defineStore('game', () => {
     selectedEntityId.value ? entities.value.get(selectedEntityId.value) : null,
   )
 
+  const worldItems = computed(() =>
+    [...entities.value.values()].filter(
+      e => e.type === 'item' && (e.containerId === null || e.containerId === undefined) && !!e.model,
+    ),
+  )
+
+  // --- Inventory queries ---
+
+  function itemsIn(containerId: string, opts?: { includeEquipped?: boolean }): EntityState[] {
+    const includeEquipped = opts?.includeEquipped ?? false
+    return [...entities.value.values()].filter((e) => {
+      if (e.type !== 'item') return false
+      if (e.containerId !== containerId) return false
+      if (!includeEquipped && e.slot) return false
+      return true
+    })
+  }
+
+  function equippedAt(characterId: string, slot: EquipmentSlotKey): EntityState | null {
+    for (const e of entities.value.values()) {
+      if (e.type === 'item' && e.containerId === characterId && e.slot === slot) {
+        return e
+      }
+    }
+    return null
+  }
+
+  function weightOf(characterId: string): number {
+    let total = 0
+    for (const e of entities.value.values()) {
+      if (e.type === 'item' && e.containerId === characterId) {
+        total += (e.weight ?? 0) * (e.quantity ?? 1)
+      }
+    }
+    return total
+  }
+
+  function capacityOf(characterId: string): number {
+    const entity = entities.value.get(characterId)
+    const str = entity?.stats?.strength ?? 10
+    return 50 + str * 5
+  }
+
+  function encumbranceOf(characterId: string): number {
+    return weightOf(characterId) / capacityOf(characterId)
+  }
+
+  function derivedEquipment(entityId: string): Equipment {
+    const main = equippedAt(entityId, 'mainHand')
+    const off = equippedAt(entityId, 'offHand')
+    return {
+      mainHand: main?.templateId,
+      offHand: off?.templateId,
+    }
+  }
+
+  // --- Inventory actions ---
+
+  function isItemTypeForSlot(item: EntityState, slot: EquipmentSlotKey): boolean {
+    switch (slot) {
+      case 'mainHand':
+      case 'offHand':
+        return item.subtype === 'weapon'
+      case 'helmet':
+        return item.subtype === 'helmet'
+      case 'armor':
+        return item.subtype === 'armor'
+      case 'gauntlets':
+        return item.subtype === 'gauntlets'
+      case 'boots':
+        return item.subtype === 'boots'
+      case 'amulet':
+        return item.subtype === 'amulet'
+      case 'ring1':
+      case 'ring2':
+        return item.subtype === 'ring'
+      default:
+        return false
+    }
+  }
+
+  function moveItem(
+    itemId: string,
+    target: {
+      containerId: string | null
+      slot?: EquipmentSlotKey
+      position?: Position
+      quantity?: number
+    },
+  ): MoveResult {
+    const item = entities.value.get(itemId)
+    if (!item || item.type !== 'item') return { ok: false, reason: 'not-found' }
+
+    const prevContainerId = item.containerId
+
+    // Validate target
+    let targetContainer: EntityState | null = null
+    if (target.containerId !== null) {
+      targetContainer = entities.value.get(target.containerId) ?? null
+      if (!targetContainer) return { ok: false, reason: 'not-found' }
+    }
+    else {
+      if (!target.position) return { ok: false, reason: 'invalid-target' }
+    }
+
+    // Slot validation
+    if (target.slot) {
+      if (!targetContainer) return { ok: false, reason: 'invalid-target' }
+      if (!targetContainer.equipmentSlots?.includes(target.slot)) {
+        return { ok: false, reason: 'no-slot' }
+      }
+      if (!isItemTypeForSlot(item, target.slot)) {
+        return { ok: false, reason: 'wrong-type' }
+      }
+      // Swap: if the slot is occupied by a different item, unequip the occupant first
+      const occupant = equippedAt(targetContainer.id, target.slot)
+      if (occupant && occupant.id !== itemId) {
+        updateEntity(occupant.id, { slot: undefined })
+      }
+    }
+
+    const moveQty = target.quantity ?? item.quantity ?? 1
+    const isPartial = moveQty < (item.quantity ?? 1)
+
+    // Try to merge into an existing stack at the target (only for non-slot moves)
+    if (target.containerId && !target.slot && item.stackable) {
+      const existing = itemsIn(target.containerId).find(e =>
+        e.templateId === item.templateId && (e.quantity ?? 1) < (e.maxStack ?? 1),
+      )
+      if (existing) {
+        const room = (existing.maxStack ?? 1) - (existing.quantity ?? 1)
+        const merged = Math.min(room, moveQty)
+        updateEntity(existing.id, { quantity: (existing.quantity ?? 1) + merged })
+        if (merged === (item.quantity ?? 1)) {
+          // Whole stack absorbed; remove the moved entity
+          removeEntity(item.id)
+        }
+        else {
+          // Target stack filled to maxStack; leftover units stay on the source container
+          updateEntity(item.id, { quantity: (item.quantity ?? 1) - merged })
+        }
+        syncEncumbrance(prevContainerId)
+        syncEncumbrance(target.containerId)
+        return { ok: true }
+      }
+    }
+
+    // Partial move: split into a new entity
+    if (isPartial) {
+      const newId = `${item.templateId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+      const split: EntityState = {
+        ...item,
+        id: newId,
+        quantity: moveQty,
+        containerId: target.containerId,
+        slot: target.slot,
+        position: target.containerId === null ? target.position! : item.position,
+      }
+      spawnEntity(newId, split)
+      updateEntity(item.id, { quantity: (item.quantity ?? 1) - moveQty })
+      syncEncumbrance(prevContainerId)
+      syncEncumbrance(target.containerId)
+      return { ok: true }
+    }
+
+    // Whole-entity reparent
+    updateEntity(item.id, {
+      containerId: target.containerId,
+      slot: target.slot,
+      position: target.containerId === null ? target.position! : item.position,
+    })
+
+    syncEncumbrance(prevContainerId)
+    syncEncumbrance(target.containerId)
+    return { ok: true }
+  }
+
+  function syncEncumbrance(characterId: string | null | undefined) {
+    if (!characterId) return
+    const character = entities.value.get(characterId)
+    if (!character || character.type !== 'character') return
+    const ratio = encumbranceOf(characterId)
+    const hasEffect = character.statusEffects?.some(e => e.id === 'encumbered') ?? false
+    if (ratio >= 1 && !hasEffect) {
+      addStatusEffect(characterId, 'encumbered')
+    }
+    else if (ratio < 1 && hasEffect) {
+      removeStatusEffect(characterId, 'encumbered')
+    }
+  }
+
+  function equipItem(itemId: string, slot: EquipmentSlotKey): MoveResult {
+    const item = entities.value.get(itemId)
+    if (!item) return { ok: false, reason: 'not-found' }
+    const ownerId = item.containerId
+    if (!ownerId) return { ok: false, reason: 'invalid-target' }
+    return moveItem(itemId, { containerId: ownerId, slot })
+  }
+
+  function unequipItem(itemId: string): MoveResult {
+    const item = entities.value.get(itemId)
+    if (!item) return { ok: false, reason: 'not-found' }
+    if (!item.slot || !item.containerId) return { ok: false, reason: 'invalid-target' }
+    return moveItem(itemId, { containerId: item.containerId, slot: undefined })
+  }
+
+  function dropItem(itemId: string, position: Position): MoveResult {
+    return moveItem(itemId, { containerId: null, position })
+  }
+
+  function pickupItem(itemId: string, characterId: string): MoveResult {
+    return moveItem(itemId, { containerId: characterId })
+  }
+
+  function transferItem(itemId: string, toCharacterId: string): MoveResult {
+    return moveItem(itemId, { containerId: toCharacterId })
+  }
+
   return {
     // State
     currentScene,
@@ -407,6 +716,7 @@ export const useGameStore = defineStore('game', () => {
     removeEntity,
     getEntity,
     spawnFromTemplate,
+    spawnItemEntity,
 
     // Scene actions
     loadScene,
@@ -417,8 +727,6 @@ export const useGameStore = defineStore('game', () => {
     recruitEntity,
     dismissEntity,
     setPartyLeader,
-    addToInventory,
-    removeFromInventory,
 
     // Selection actions
     selectEntity,
@@ -427,10 +735,6 @@ export const useGameStore = defineStore('game', () => {
     setFlag,
     getFlag,
     hasFlag,
-
-    // Equipment actions
-    equipWeapon,
-    unequipWeapon,
 
     // Ability actions
     learnAbility,
@@ -448,6 +752,25 @@ export const useGameStore = defineStore('game', () => {
     recruitableEntities,
     dismissableEntities,
     selectedEntity,
+    worldItems,
+
+    // Inventory queries
+    itemsIn,
+    equippedAt,
+    weightOf,
+    capacityOf,
+    encumbranceOf,
+    derivedEquipment,
+
+    // Inventory actions
+    isItemTypeForSlot,
+    moveItem,
+    equipItem,
+    unequipItem,
+    dropItem,
+    pickupItem,
+    transferItem,
+    syncEncumbrance,
 
     // Debug actions
     debugBvh,

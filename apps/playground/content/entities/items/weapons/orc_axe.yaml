@@ -2,6 +2,7 @@ templateId: orc_axe
 type: item
 subtype: weapon
 name: Orc Axe
+icon: /img/items/orc_axe.png
 model: /models/items/weapons/Orc_Axe.glb
 damage:
   dice: "1d8"

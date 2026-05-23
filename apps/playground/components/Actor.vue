@@ -23,7 +23,7 @@ const rig = computed(() => nodes.value?.Rig_Medium)
 
 const { play } = useCharacterAnimations(rig)
 
-const equipment = computed(() => entity.value?.equipment)
+const equipment = computed(() => gameStore.derivedEquipment(entity.value?.id ?? ''))
 useEquipment(rig, equipment)
 useStatusEffectOverlay(rig, computed(() => props.entityId))
 useStatusEffectParticles(rig, computed(() => props.entityId))

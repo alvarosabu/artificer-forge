@@ -2,6 +2,7 @@ templateId: shortsword
 type: item
 subtype: weapon
 name: Shortsword
+icon: /img/items/shortsword.png
 model: /models/items/weapons/Sword_1Handed.glb
 damage:
   dice: "1d8"

@@ -29,6 +29,7 @@ const categories: DemoCategory[] = [
     icon: 'i-heroicons-cube',
     links: [
       { label: 'Chest', to: '/interactable/chest' },
+      { label: 'Corpse', to: '/interactable/corpse' },
     ],
   },
   {

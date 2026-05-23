@@ -2,6 +2,7 @@ templateId: bow
 type: item
 subtype: weapon
 name: Bow
+icon: /img/items/bow.png
 model: /models/items/weapons/Bow.glb
 damage:
   dice: "1d8"

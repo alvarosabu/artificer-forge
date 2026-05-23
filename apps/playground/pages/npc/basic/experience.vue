@@ -44,7 +44,6 @@ onMounted(async () => {
     z: spawnPoint.z,
   })
   gameStore.addStatusEffect(companionId, 'poisoned')
-  gameStore.equipWeapon(companionId, 'dagger', 'mainHand')
 })
 
 const characterEntities = computed(() => gameStore.partyEntities)

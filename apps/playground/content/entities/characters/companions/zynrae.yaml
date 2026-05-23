@@ -35,6 +35,17 @@ animations:
   run: Run
   attack: Attack
 
+equipmentSlots:
+  - mainHand
+  - offHand
+  - helmet
+  - armor
+  - gauntlets
+  - boots
+  - amulet
+  - ring1
+  - ring2
+
 equipment:
   mainHand: dagger
   offHand: dagger

@@ -11,7 +11,6 @@ onMounted(async () => {
   const heroId = await gameStore.spawnFromTemplate('hero', { x: -1.5, y: 0, z: 0 })
   gameStore.addToParty(heroId)
   gameStore.selectEntity(heroId)
-  gameStore.equipWeapon(heroId, 'shortsword', 'mainHand')
 
   await gameStore.spawnFromTemplate('orc_scout', { x: 1.5, y: 0, z: 0 })
 

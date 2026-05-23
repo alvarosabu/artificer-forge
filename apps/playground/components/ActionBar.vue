@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const gameStore = useGameStore()
 const { playerEntity, playerClassId, slots, activeCategory, setCategory, activateSlot, activeWeaponSlot, setActiveWeaponSlot } = useActionBar()
 
 // Resolve class metadata from content collection
@@ -28,8 +29,8 @@ const { data: playerClass } = await useAsyncData(
 
       <!-- Weapon slots — outside the card -->
       <ActionBarWeapon
-        :main-hand="playerEntity?.equipment?.mainHand"
-        :off-hand="playerEntity?.equipment?.offHand"
+        :main-hand="playerEntity ? gameStore.equippedAt(playerEntity.id, 'mainHand')?.templateId : undefined"
+        :off-hand="playerEntity ? gameStore.equippedAt(playerEntity.id, 'offHand')?.templateId : undefined"
         :active-slot="activeWeaponSlot"
         @select-slot="setActiveWeaponSlot"
       />

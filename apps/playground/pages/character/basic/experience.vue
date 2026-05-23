@@ -11,7 +11,6 @@ onMounted(async () => {
   const playerId = await gameStore.spawnFromTemplate('hero', { x: 0, y: 0, z: 0 })
   gameStore.addToParty(playerId)
   gameStore.selectEntity(playerId)
-  gameStore.equipWeapon(playerId, 'shortsword', 'mainHand')
 
   const { spawnPoint } = await gameStore.loadScene('character_scene')
   gameStore.updateEntity(playerId, { position: spawnPoint })
@@ -20,6 +19,8 @@ onMounted(async () => {
 const characterEntities = computed(() => {
   return [...gameStore.entities.values()].filter(e => e.type === 'character')
 })
+
+const { worldItems } = storeToRefs(gameStore)
 
 </script>
 
@@ -38,6 +39,12 @@ const characterEntities = computed(() => {
     :key="entity.id"
     :entity-id="entity.id"
   />
+  <Suspense
+    v-for="worldItem in worldItems"
+    :key="worldItem.id"
+  >
+    <InventoryWorldItem :item="worldItem" />
+  </Suspense>
   <TresAxesHelper />
   <Floor />
 </template>

@@ -1,0 +1,13 @@
+templateId: healing_potion
+type: item
+subtype: consumable
+name: Healing Potion
+icon: /img/items/potion_health_medium.png
+effect:
+  type: heal
+  dice: 2d4
+weight: 0.5
+value: 50
+usable: true
+stackable: true
+maxStack: 10

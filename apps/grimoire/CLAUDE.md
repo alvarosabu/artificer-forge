@@ -26,9 +26,16 @@ content/
 │   ├── 1.model-loading.md        # useGLTF, primitive
 │   ├── 2.animations.md           # Animation system
 │   └── 4.equipment.md            # Bone attachment with useEquipment
-└── 8.environment/
-    ├── 1.overview.md             # Environment systems overview
-    └── 2.foliage.md              # Procedural billboard foliage
+├── 8.environment/
+│   ├── 1.overview.md             # Environment systems overview
+│   └── 2.foliage.md              # Procedural billboard foliage
+└── 9.inventory/
+    ├── 1.overview.md             # Item-entity model, containerId/slot
+    ├── 2.store-api.md            # moveItem primitive, queries, MoveResult
+    ├── 3.ui-components.md        # Modal, bag grid, doll, slots, cells
+    ├── 4.interactions.md         # Hotkey, drag-and-drop, context menu
+    ├── 5.stackables-and-weight.md # Stack merging, encumbrance, capacity
+    └── 6.loot.md                 # Chests, corpses, world drops, popover
 ```
 
 ## Page Format

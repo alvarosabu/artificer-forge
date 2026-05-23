@@ -11,7 +11,8 @@ const {
   getInteractableRef,
 } = useSceneRefs()
 
-const { onAction } = useContextMenu()
+const { onAction, state: ctxState } = useContextMenu()
+const loot = useLoot()
 
 onAction((action, entityId) => {
   const entity = gameStore.getEntity(entityId)
@@ -28,6 +29,11 @@ onAction((action, entityId) => {
     case 'lockpick':
       console.log('Lockpick:', entityId)
       break
+    case 'pickup': {
+      const recipient = gameStore.selectedEntityId ?? gameStore.party.leader
+      if (recipient) gameStore.pickupItem(entityId, recipient)
+      break
+    }
   }
 })
 
@@ -41,7 +47,6 @@ onMounted(async () => {
   const playerId = await gameStore.spawnFromTemplate('hero', { x: 0, y: 0, z: 0 })
   gameStore.addToParty(playerId)
   gameStore.selectEntity(playerId)
-  gameStore.equipWeapon(playerId, 'shortsword', 'mainHand')
 
   const { spawnPoint } = await gameStore.loadScene('interactable_scene')
   gameStore.updateEntity(playerId, { position: spawnPoint })
@@ -55,6 +60,8 @@ const interactableEntities = computed(() => {
   return [...gameStore.entities.values()].filter(e => e.type === 'interactable')
 })
 
+const { worldItems } = storeToRefs(gameStore)
+
 
 const INTERACTION_DISTANCE = 1.5
 const activeInteractableId = ref<string | null>(null)
@@ -66,6 +73,7 @@ function closeActiveInteractable() {
   if (ref && entity?.opened) {
     ref.toggle()
   }
+  loot.close()
   activeInteractableId.value = null
 }
 
@@ -97,6 +105,15 @@ function handleInteractableClick(entityId: string) {
   const { off } = selectedCharacterRef.value.onArrive(() => {
     interactableRef?.toggle()
     activeInteractableId.value = entityId
+    const updated = gameStore.getEntity(entityId)
+    if (updated?.subtype === 'container' && !updated.locked) {
+      if (updated.opened) {
+        loot.open(entityId, ctxState.x || window.innerWidth - 320, ctxState.y || 120)
+      }
+      else {
+        loot.close()
+      }
+    }
     off()
   })
 
@@ -127,6 +144,12 @@ function handleInteractableClick(entityId: string) {
     :entity-id="entity.id"
     @interact="handleInteractableClick"
   />
+  <Suspense
+    v-for="worldItem in worldItems"
+    :key="worldItem.id"
+  >
+    <InventoryWorldItem :item="worldItem" />
+  </Suspense>
   <TresAxesHelper />
   <Floor />
 </template>

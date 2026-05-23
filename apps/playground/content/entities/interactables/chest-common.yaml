@@ -22,10 +22,6 @@ animations:
       rotation: { x: -0.6, y: 0, z: 0 }  # -0.6π ≈ -108°
 
 lootTable:
-  - id: gold
-    quantity: [5, 20]
-    chance: 0.9
   - id: healing_potion
-    chance: 0.3
-  - id: longsword
-    chance: 0.1
+    quantity: 1
+    chance: 1.0

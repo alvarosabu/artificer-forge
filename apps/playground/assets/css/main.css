@@ -30,4 +30,17 @@
   --color-gold-800: #634D2D;
   --color-gold-900: #4E3B21;
   --color-gold-950: #2A1F10;  /* Darkest - Almost black with gold tint */
+
+  /* Marine – dark navy, base #4a6390 at 500 */
+  --color-marine-50: #f0f3f8;
+  --color-marine-100: #dde4ee;
+  --color-marine-200: #bcc9dd;
+  --color-marine-300: #92a5c4;
+  --color-marine-400: #6781a8;
+  --color-marine-500: #4a6390;  /* Base color */
+  --color-marine-600: #3a4e74;
+  --color-marine-700: #2f3f5d;
+  --color-marine-800: #29354c;
+  --color-marine-900: #1a2238;
+  --color-marine-950: #0c1020;  /* Darkest - near-black navy */
 }

@@ -38,3 +38,17 @@ abilities:
   - arrow-shot
   - magic-missile
   - fireball
+
+equipmentSlots:
+  - mainHand
+  - offHand
+  - helmet
+  - armor
+  - gauntlets
+  - boots
+  - amulet
+  - ring1
+  - ring2
+
+equipment:
+  mainHand: shortsword

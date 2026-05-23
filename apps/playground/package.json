@@ -26,6 +26,7 @@
     "@tresjs/cientos": "catalog:three",
     "@tresjs/leches": "catalog:three",
     "@tresjs/nuxt": "catalog:three",
+    "@vueuse/core": "catalog:vue",
     "eslint": "catalog:eslint",
     "nuxt": "catalog:nuxt",
     "pinia": "catalog:vue",

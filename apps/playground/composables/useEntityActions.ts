@@ -16,16 +16,22 @@ const interactableActions: EntityAction[] = [
     icon: 'i-heroicons-magnifying-glass',
   },
   {
+    id: 'loot',
+    label: 'Loot',
+    icon: 'i-heroicons-hand-raised',
+    condition: entity => entity.subtype === 'corpse',
+  },
+  {
     id: 'use',
     label: 'Open',
     icon: 'i-heroicons-lock-open',
-    condition: entity => !entity.locked && !entity.opened,
+    condition: entity => entity.subtype !== 'corpse' && !entity.locked && !entity.opened,
   },
   {
     id: 'close',
     label: 'Close',
     icon: 'i-heroicons-lock-closed',
-    condition: entity => !entity.locked && !!entity.opened,
+    condition: entity => entity.subtype !== 'corpse' && !entity.locked && !!entity.opened,
   },
   {
     id: 'lockpick',
@@ -42,6 +48,10 @@ const interactableActions: EntityAction[] = [
   },
 ]
 
+function isDeadCharacter(e: EntityState): boolean {
+  return e.type === 'character' && ((e.hp ?? 1) <= 0 || !!e.dead)
+}
+
 const characterActions: EntityAction[] = [
   {
     id: 'examine',
@@ -49,23 +59,29 @@ const characterActions: EntityAction[] = [
     icon: 'i-heroicons-magnifying-glass',
   },
   {
+    id: 'loot',
+    label: 'Loot',
+    icon: 'i-heroicons-hand-raised',
+    condition: entity => isDeadCharacter(entity),
+  },
+  {
     id: 'talk',
     label: 'Talk',
     icon: 'i-heroicons-chat-bubble-left-right',
-    condition: entity => !entity.hostile,
+    condition: entity => !isDeadCharacter(entity) && !entity.hostile,
   },
   {
     id: 'attack',
     label: 'Attack',
     icon: 'i-heroicons-fire',
     color: 'error',
-    condition: entity => !!entity.hostile || entity.faction !== 'player',
+    condition: entity => !isDeadCharacter(entity) && (!!entity.hostile || entity.faction !== 'player'),
   },
   {
     id: 'follow',
     label: 'Follow',
     icon: 'i-heroicons-arrow-right',
-    condition: entity => !entity.hostile && entity.faction === 'player',
+    condition: entity => !isDeadCharacter(entity) && !entity.hostile && entity.faction === 'player',
   },
 ]
 
