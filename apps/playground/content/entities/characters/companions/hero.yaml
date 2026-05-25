@@ -52,3 +52,5 @@ equipmentSlots:
 
 equipment:
   mainHand: shortsword
+  armor: breastplate
+  ring1: ring-of-warding

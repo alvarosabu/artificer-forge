@@ -3,11 +3,16 @@
 import type { EntityState, EquipmentSlotKey } from '~/stores/game'
 
 const { isOpen, focusedCharacter } = useInventory()
+const gameStore = useGameStore()
 
 const character = computed(() => focusedCharacter.value)
 const slots = computed(() => character.value?.equipmentSlots ?? [])
 const slotSet = computed(() => new Set(slots.value))
 const hasSlot = (k: EquipmentSlotKey) => slotSet.value.has(k)
+
+const maxArmor = computed(() =>
+  character.value ? gameStore.derivedMaxArmor(character.value.id) : { physical: 0, magical: 0 },
+)
 
 const itemMenu = useItemContextMenu()
 
@@ -31,7 +36,9 @@ function onItemClick(_item: EntityState) {}
     }"
   >
     <template #body>
-      <div v-if="character" class="grid grid-cols-[320px_1fr] gap-4 min-h-[420px]">
+      <div v-if="character" class="flex flex-col gap-3">
+        
+        <div class="grid grid-cols-[320px_1fr] gap-4 min-h-[420px]">
         <!-- LEFT: doll + equipment -->
         <div class="flex flex-col gap-3">
           <!-- Helmet top row -->
@@ -95,7 +102,20 @@ function onItemClick(_item: EntityState) {}
               />
             </div>
           </div>
-
+          <div class="flex items-center gap-2 pb-3">
+            <div class="flex items-center gap-1.5 bg-black/40 rounded-full px-2 py-1">
+              <UIcon name="ph:heart-fill" class="size-4 text-red-400" />
+              <span class="text-sm font-bold text-red-300 font-serif">{{ character.hp }} / {{ character.maxHp }}</span>
+            </div>
+            <div v-if="maxArmor.physical > 0" class="flex items-center gap-1.5 bg-black/40 rounded-full px-2 py-1">
+              <UIcon name="ph:shield-fill" class="size-4 text-white" />
+              <span class="text-sm font-bold text-white font-serif">{{ character.physicalArmor ?? 0 }} / {{ maxArmor.physical }}</span>
+            </div>
+            <div v-if="maxArmor.magical > 0" class="flex items-center gap-1.5 bg-black/40 rounded-full px-2 py-1">
+              <UIcon name="ph:shield-star-fill" class="size-4 text-blue-400" />
+              <span class="text-sm font-bold text-blue-400 font-serif">{{ character.magicalArmor ?? 0 }} / {{ maxArmor.magical }}</span>
+            </div>
+          </div>
           <!-- Weapons row -->
           <div class="flex justify-center gap-4 pt-2 border-t border-gold-600/30">
             <InventoryEquipmentSlot
@@ -120,6 +140,7 @@ function onItemClick(_item: EntityState) {}
             @item-click="onItemClick"
             @item-context="onItemContext"
           />
+        </div>
         </div>
       </div>
     </template>

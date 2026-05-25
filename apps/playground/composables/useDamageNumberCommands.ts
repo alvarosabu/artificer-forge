@@ -2,68 +2,79 @@ import type { CommandGroup } from './useCommandPalette'
 import type { DamageType } from '@artificer-forge/vfx'
 import type { CharacterRef } from '@artificer-forge/composables'
 
-const DAMAGE_TYPES: DamageType[] = ['physical', 'magical', 'fire', 'ice', 'lightning', 'poison']
-
-const TYPE_ICONS: Record<DamageType, string> = {
-  physical:  'i-lucide-sword',
-  magical:   'i-lucide-wand',
-  fire:      'i-lucide-flame',
-  ice:       'i-lucide-snowflake',
-  lightning: 'i-lucide-zap',
-  poison:    'i-lucide-flask-conical',
-  healing:   'i-lucide-heart',
-}
-
 export function useDamageNumberCommands(
   getCharacterRef: (entityId: string) => CharacterRef | null,
 ) {
   const gameStore = useGameStore()
+  const damageTypeStore = useDamageTypeStore()
   const { registerGroup, unregisterGroup, pushPage, close } = useCommandPalette()
 
   function randomAmount() {
-    return Math.floor(Math.random() * 80) + 5
+    return Math.floor(Math.random() * 10) + 3
   }
 
-  function buildCritPickerPage(entityId: string, type: DamageType): CommandGroup[] {
+  function applyAndShow(entityId: string, damageTypeId: string, critical: boolean) {
+    const amount = randomAmount()
+    gameStore.applyDamage(entityId, amount, damageTypeId)
+    getCharacterRef(entityId)?.showDamage(amount, damageTypeId as DamageType, critical)
+    close()
+  }
+
+  function buildCritPickerPage(entityId: string, damageTypeId: string, label: string): CommandGroup[] {
     return [{
-      id: `damage-crit-pick-${entityId}-${type}`,
+      id: `damage-crit-pick-${entityId}-${damageTypeId}`,
       label: 'Normal or Critical?',
       items: [
         {
-          id: `damage-normal-${entityId}-${type}`,
+          id: `damage-normal-${entityId}-${damageTypeId}`,
           label: 'Normal',
           icon: 'i-lucide-minus',
           onSelect: () => {
-            getCharacterRef(entityId)?.showDamage(randomAmount(), type, false)
-            close()
+            if (damageTypeId === 'healing') {
+              const amount = randomAmount()
+              const entity = gameStore.getEntity(entityId)
+              if (entity) gameStore.updateEntity(entityId, { hp: Math.min(entity.maxHp ?? amount, (entity.hp ?? 0) + amount) })
+              getCharacterRef(entityId)?.showDamage(amount, 'healing', false)
+              close()
+              return
+            }
+            applyAndShow(entityId, damageTypeId, false)
           },
         },
         {
-          id: `damage-crit-${entityId}-${type}`,
+          id: `damage-crit-${entityId}-${damageTypeId}`,
           label: 'Critical!',
           icon: 'i-lucide-star',
           onSelect: () => {
-            getCharacterRef(entityId)?.showDamage(randomAmount(), type, true)
-            close()
+            if (damageTypeId === 'healing') {
+              const amount = randomAmount()
+              const entity = gameStore.getEntity(entityId)
+              if (entity) gameStore.updateEntity(entityId, { hp: Math.min(entity.maxHp ?? amount, (entity.hp ?? 0) + amount) })
+              getCharacterRef(entityId)?.showDamage(amount, 'healing', true)
+              close()
+              return
+            }
+            applyAndShow(entityId, damageTypeId, true)
           },
         },
       ],
     }]
   }
 
-  function buildTypePickerPage(entityId: string, types: DamageType[]): CommandGroup[] {
+  function buildTypePickerPage(entityId: string): CommandGroup[] {
+    const types = [...damageTypeStore.types.values()]
     return [{
       id: `damage-type-pick-${entityId}`,
       label: 'Select Damage Type',
       items: types.map(type => ({
-        id: `damage-type-${entityId}-${type}`,
-        label: type.charAt(0).toUpperCase() + type.slice(1),
-        icon: TYPE_ICONS[type],
+        id: `damage-type-${entityId}-${type.damageTypeId}`,
+        label: `${type.label} (vs ${type.armorType})`,
+        icon: type.icon,
         onSelect: () => {
           pushPage({
-            id: `damage-crit-pick-${entityId}-${type}`,
-            label: type,
-            groups: buildCritPickerPage(entityId, type),
+            id: `damage-crit-pick-${entityId}-${type.damageTypeId}`,
+            label: type.label,
+            groups: buildCritPickerPage(entityId, type.damageTypeId, type.label),
           })
         },
       })),
@@ -84,14 +95,14 @@ export function useDamageNumberCommands(
             pushPage({
               id: `damage-heal-crit-${entity.id}`,
               label: entity.name,
-              groups: buildCritPickerPage(entity.id, 'healing'),
+              groups: buildCritPickerPage(entity.id, 'healing', 'Healing'),
             })
           }
           else {
             pushPage({
               id: `damage-type-pick-${entity.id}`,
               label: entity.name,
-              groups: buildTypePickerPage(entity.id, DAMAGE_TYPES),
+              groups: buildTypePickerPage(entity.id),
             })
           }
         },
