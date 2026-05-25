@@ -94,6 +94,10 @@ export default defineContentConfig({
           dice: z.string().optional(),
           bonus: z.number().optional(),
         }).optional(),
+        armor: z.object({
+          physical: z.number().optional(),
+          magical: z.number().optional(),
+        }).optional(),
         weight: z.number().optional(),
         value: z.number().optional(),
         usable: z.boolean().optional(),

@@ -1,0 +1,9 @@
+templateId: ring-of-warding
+type: item
+subtype: ring
+name: Ring of Warding
+armor:
+  physical: 2
+  magical: 15
+weight: 0.1
+value: 200

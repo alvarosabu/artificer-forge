@@ -258,10 +258,9 @@ export const useAbilitySystem = createSharedComposable(() => {
 
           const statValue = attackerEntity.stats?.[ability.damage.stat] ?? 10
           const { total, critical } = rollDice(ability.damage.dice, statValue)
-          const newHp = Math.max(0, (targetEntity.hp ?? 0) - total)
-
-          gameStore.updateEntity(targetId, { hp: newHp })
+          gameStore.applyDamage(targetId, total, ability.damage.type)
           targetRef.showDamage(total, ability.damage.type, critical)
+          const newHp = gameStore.getEntity(targetId)?.hp ?? 0
 
           if (newHp <= 0) {
             targetRef.play(AnimationName.DEATH_A, { fadeTime: 0.2, once: true })
@@ -344,9 +343,9 @@ export const useAbilitySystem = createSharedComposable(() => {
         if (ability.damage) {
           const statValue = attackerEntity.stats?.[ability.damage.stat] ?? 10
           const { total, critical } = rollDice(ability.damage.dice, statValue)
-          const newHp = Math.max(0, (targetEntity.hp ?? 0) - total)
-          gameStore.updateEntity(targetId, { hp: newHp })
+          gameStore.applyDamage(targetId, total, ability.damage.type)
           targetRef.showDamage(total, ability.damage.type, critical)
+          const newHp = gameStore.getEntity(targetId)?.hp ?? 0
 
           if (newHp <= 0) {
             targetRef.play(AnimationName.DEATH_A, { fadeTime: 0.2, once: true })
@@ -392,9 +391,9 @@ export const useAbilitySystem = createSharedComposable(() => {
       if (ability.damage) {
         const statValue = attackerEntity.stats?.[ability.damage.stat] ?? 10
         const { total, critical } = rollDice(ability.damage.dice, statValue)
-        const newHp = Math.max(0, (targetEntity.hp ?? 0) - total)
-        gameStore.updateEntity(targetId, { hp: newHp })
+        gameStore.applyDamage(targetId, total, ability.damage.type)
         targetRef.showDamage(total, ability.damage.type, critical)
+        const newHp = gameStore.getEntity(targetId)?.hp ?? 0
 
         if (newHp <= 0) {
           targetRef.play(AnimationName.DEATH_A, { fadeTime: 0.2, once: true })

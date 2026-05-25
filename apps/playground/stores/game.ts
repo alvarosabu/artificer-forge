@@ -75,6 +75,9 @@ export interface EntityState {
   recruitable?: boolean
   hp?: number
   maxHp?: number
+  // Current armor pools (depleting). Max is derived from equipped items via derivedMaxArmor.
+  physicalArmor?: number
+  magicalArmor?: number
   stats?: Record<string, number>
   ai?: {
     behavior: string
@@ -109,6 +112,7 @@ export interface EntityState {
 
   // Item template metadata copied from YAML at spawn
   damage?: { dice: string, type: string }
+  armor?: { physical?: number, magical?: number }
   properties?: string[]
   range?: { normal: number, long: number }
   effect?: { type: string, dice?: string, bonus?: number }
@@ -216,6 +220,7 @@ export const useGameStore = defineStore('game', () => {
       maxStack: template.maxStack ?? 1,
       weight: template.weight ?? 0,
       damage: template.damage,
+      armor: template.armor,
       properties: template.properties,
       range: template.range,
       effect: template.effect,
@@ -279,6 +284,8 @@ export const useGameStore = defineStore('game', () => {
         if (!itemTemplateId) continue
         await spawnItemEntity(itemTemplateId, { containerId: instanceId, slot })
       }
+      // Fill armor pools to the max derived from the freshly equipped gear.
+      refreshArmor(instanceId)
     }
 
     // Spawn loot table items as item entities reparented to this interactable.
@@ -541,6 +548,56 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  // --- Armor (derived from equipped items) ---
+
+  // Max armor pools = sum of `armor` from every equipped item on this character.
+  function derivedMaxArmor(entityId: string): { physical: number, magical: number } {
+    let physical = 0
+    let magical = 0
+    for (const e of entities.value.values()) {
+      if (e.type !== 'item' || e.containerId !== entityId || !e.slot) continue
+      physical += e.armor?.physical ?? 0
+      magical += e.armor?.magical ?? 0
+    }
+    return { physical, magical }
+  }
+
+  // Refill current armor pools to their derived max (called on (re)equip — no passive regen).
+  function refreshArmor(entityId: string) {
+    const entity = entities.value.get(entityId)
+    if (!entity || entity.type !== 'character') return
+    const max = derivedMaxArmor(entityId)
+    updateEntity(entityId, { physicalArmor: max.physical, magicalArmor: max.magical })
+  }
+
+  // Apply damage of a given type: deplete the matching armor pool first, overflow hits HP.
+  function applyDamage(
+    targetId: string,
+    amount: number,
+    damageTypeId: string,
+  ): { armorAbsorbed: number, hpDamage: number } {
+    const entity = entities.value.get(targetId)
+    if (!entity) return { armorAbsorbed: 0, hpDamage: 0 }
+
+    const armorType = useDamageTypeStore().get(damageTypeId)?.armorType
+    const partial: Partial<EntityState> = {}
+    let remaining = amount
+    let armorAbsorbed = 0
+
+    if (armorType === 'physical' || armorType === 'magical') {
+      const key = armorType === 'physical' ? 'physicalArmor' : 'magicalArmor'
+      const current = entity[key] ?? 0
+      armorAbsorbed = Math.min(current, remaining)
+      partial[key] = current - armorAbsorbed
+      remaining -= armorAbsorbed
+    }
+
+    const hpDamage = remaining
+    partial.hp = Math.max(0, (entity.hp ?? 0) - hpDamage)
+    updateEntity(targetId, partial)
+    return { armorAbsorbed, hpDamage }
+  }
+
   // --- Inventory actions ---
 
   function isItemTypeForSlot(item: EntityState, slot: EquipmentSlotKey): boolean {
@@ -579,6 +636,7 @@ export const useGameStore = defineStore('game', () => {
     if (!item || item.type !== 'item') return { ok: false, reason: 'not-found' }
 
     const prevContainerId = item.containerId
+    const wasEquipped = !!item.slot
 
     // Validate target
     let targetContainer: EntityState | null = null
@@ -659,6 +717,12 @@ export const useGameStore = defineStore('game', () => {
 
     syncEncumbrance(prevContainerId)
     syncEncumbrance(target.containerId)
+
+    // An equip or unequip changed armor totals → refill affected characters' pools.
+    if (target.slot || wasEquipped) {
+      if (target.containerId) refreshArmor(target.containerId)
+      if (prevContainerId && prevContainerId !== target.containerId) refreshArmor(prevContainerId)
+    }
     return { ok: true }
   }
 
@@ -743,6 +807,11 @@ export const useGameStore = defineStore('game', () => {
     // Status effect actions
     addStatusEffect,
     removeStatusEffect,
+
+    // Combat / armor
+    applyDamage,
+    derivedMaxArmor,
+    refreshArmor,
 
     // Getters
     partyEntities,
