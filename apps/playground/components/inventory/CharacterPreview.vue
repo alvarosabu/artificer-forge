@@ -23,8 +23,8 @@ const rigKey = computed(() => entity.value?.rig ?? 'Rig_Medium')
       :antialias="true"
     >
       <TresPerspectiveCamera
-        :position="[2, 1.3,5 ]"
-        :look-at="[0, 1, 0]"
+        :position="[2, 1.3,8 ]"
+        :look-at="[0, 1.2, 0]"
         :fov="35"
       />
       <TresAmbientLight :intensity="0.9" />
