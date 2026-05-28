@@ -27,58 +27,54 @@ function handleClick() {
 
 <template>
   <div class="flex flex-row gap-2">
-    <InventoryPortraitDropZone :character-id="member.id">
-      <button
-        class="w-20 h-28 relative rounded border-2 bg-gold-600 flex flex-col items-center justify-between transition-colors cursor-pointer"
-        :class="isSelected
-          ? 'border-white shadow-[0_0_8px_#ffffff]'
-          : 'border-gold-400/30 hover:border-gold-400/60'"
-        @click="handleClick"
+    <button
+      class="w-20 h-28 relative rounded border-2 bg-gold-600 flex flex-col items-center justify-between transition-colors cursor-pointer"
+      :class="isSelected
+        ? 'border-white shadow-[0_0_8px_#ffffff]'
+        : 'border-gold-400/30 hover:border-gold-400/60'"
+      @click="handleClick"
+    >
+      <img
+        v-if="member.portrait"
+        :src="member.portrait"
+        :alt="member.name"
+        class="w-full h-full object-cover rounded"
       >
-        <img
-          v-if="member.portrait"
-          :src="member.portrait"
-          :alt="member.name"
-          class="w-full h-full object-cover rounded"
-        >
-        <div
-          class="absolute bottom-0 left-0 right-0 pointer-events-none transition-all duration-700 ease-out rounded"
-          :style="{
-            height: `${bloodFillPercent}%`,
-            background: 'linear-gradient(to top, rgba(140, 8, 8, 0.9) 0%, rgba(180, 20, 20, 0.7) 90%, rgba(200, 30, 30, 0) 100%)',
-          }"
+      <div
+        class="absolute bottom-0 left-0 right-0 pointer-events-none transition-all duration-700 ease-out rounded"
+        :style="{
+          height: `${bloodFillPercent}%`,
+          background: 'linear-gradient(to top, rgba(140, 8, 8, 0.9) 0%, rgba(180, 20, 20, 0.7) 90%, rgba(200, 30, 30, 0) 100%)',
+        }"
+      />
+      <div class="absolute bottom-0 left-0 right-0 flex flex-col items-center w-full px-0.5 pb-0.5">
+        <span class="text-xs text-shadow-lg/30 font-bold font-serif rounded-full px-1 text-white/70">
+          {{ member.hp }} / {{ member.maxHp }}
+        </span>
+        <UProgress
+          size="sm"
+          :ui="{ base: 'bg-black border h-1.5 border-black rounded-none' }"
+          color="error"
+          :model-value="member.hp"
+          :max="member.maxHp"
         />
-        <div class="absolute bottom-0 left-0 right-0 flex flex-col items-center w-full px-0.5 pb-0.5">
-          <span class="text-xs text-shadow-lg/30 font-bold font-serif rounded-full px-1 text-white/70">
-            {{ member.hp }} / {{ member.maxHp }}
-          </span>
+        <div v-if="!isDead && hasArmor" class="flex items-center w-full bg-black rounded-full overflow-hidden">
+          <UProgress
+            size="sm"
+            :ui="{ base: 'bg-black border h-1.5 border-black rounded-none', indicator: 'bg-white' }"
+            :model-value="member.physicalArmor"
+            :max="maxArmor.physical"
+          />
           <UProgress
             size="sm"
             :ui="{ base: 'bg-black border h-1.5 border-black rounded-none' }"
-            color="error"
-            :model-value="member.hp"
-            :max="member.maxHp"
+            color="secondary"
+            :model-value="member.magicalArmor"
+            :max="maxArmor.magical"
           />
-          <div v-if="!isDead && hasArmor" class="flex items-center w-full bg-black rounded-full overflow-hidden">
-            <UProgress
-              size="sm"
-              :ui="{ base: 'bg-black border h-1.5 border-black rounded-none', indicator: 'bg-white' }"
-              :model-value="member.physicalArmor"
-              :max="maxArmor.physical"
-            />
-            <UProgress
-              size="sm"
-              :ui="{ base: 'bg-black border h-1.5 border-black rounded-none' }"
-              color="secondary"
-              :model-value="member.magicalArmor"
-              :max="maxArmor.magical"
-            />
-          </div>
-
-     
         </div>
-      </button>
-    </InventoryPortraitDropZone>
+      </div>
+    </button>
     <StatusEffectBadges
       v-if="member.statusEffects?.length"
       :status-effects="member.statusEffects"
