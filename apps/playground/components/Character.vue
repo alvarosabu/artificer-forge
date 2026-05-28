@@ -38,6 +38,7 @@ function lookAtPoint(point: Vector3) {
 }
 
 const equipment = computed(() => gameStore.derivedEquipment(entity.value?.id ?? ''))
+const maxArmor = computed(() => gameStore.derivedMaxArmor(props.entityId))
 const { activeWeaponSlot } = useActionBar()
 const isLeader = computed(() => gameStore.party.leader === props.entityId)
 const effectiveWeaponSlot = computed<'mainHand' | 'offHand' | 'none' | undefined>(() => isLeader.value ? activeWeaponSlot.value : undefined)
@@ -128,9 +129,10 @@ watch(
 function handlePointerEnter() {
   if (combatStore.isTargeting) {
     combatStore.hoverTarget(props.entityId)
-    if (rig.value) {
-      const entity = gameStore.getEntity(props.entityId)
-      if (entity?.team === 'hostile') addToSelection(rig.value, 'hostile')
+    const entity = gameStore.getEntity(props.entityId)
+    if (entity?.team === 'hostile') {
+      isHovering.value = true
+      if (rig.value) addToSelection(rig.value, 'hostile')
     }
     return
   }
@@ -143,6 +145,7 @@ function handlePointerEnter() {
 function handlePointerLeave() {
   if (combatStore.isTargeting) {
     combatStore.hoverTarget(null)
+    isHovering.value = false
     if (rig.value) removeFromSelection(rig.value, 'hostile')
     return
   }
@@ -241,6 +244,10 @@ defineExpose({
             :race="entity.race"
             :hp="entity.hp"
             :max-hp="entity.maxHp"
+            :physical-armor="entity.physicalArmor"
+            :max-physical-armor="maxArmor.physical"
+            :magical-armor="entity.magicalArmor"
+            :max-magical-armor="maxArmor.magical"
             :status-effects="entity.statusEffects"
           />
         </UApp>

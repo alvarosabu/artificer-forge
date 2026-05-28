@@ -6,8 +6,8 @@ level: 1
 race: Orc
 
 stats:
-  hp: 12
-  maxHp: 12
+  hp: 24
+  maxHp: 24
   ac: 13
   strength: 8
   dexterity: 14
@@ -34,8 +34,15 @@ animations:
   run: Run
   attack: Slash
 
+equipmentSlots:
+  - mainHand
+  - armor
+  - ring1
+
 equipment:
   mainHand: orc_axe
+  armor: breastplate
+  ring1: ring-of-warding
 
 drops:
   - id: gold

@@ -1,0 +1,9 @@
+templateId: breastplate
+type: item
+subtype: armor
+name: Steel Breastplate
+armor:
+  physical: 20
+  magical: 3
+weight: 20
+value: 120

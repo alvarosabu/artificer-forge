@@ -24,6 +24,7 @@ const rig = computed(() => nodes.value?.Rig_Medium)
 const { play } = useCharacterAnimations(rig)
 
 const equipment = computed(() => gameStore.derivedEquipment(entity.value?.id ?? ''))
+const maxArmor = computed(() => gameStore.derivedMaxArmor(props.entityId))
 useEquipment(rig, equipment)
 useStatusEffectOverlay(rig, computed(() => props.entityId))
 useStatusEffectParticles(rig, computed(() => props.entityId))
@@ -88,6 +89,10 @@ function handlePointerLeave() {
             :race="entity.race"
             :hp="entity.hp"
             :max-hp="entity.maxHp"
+            :physical-armor="entity.physicalArmor"
+            :max-physical-armor="maxArmor.physical"
+            :magical-armor="entity.magicalArmor"
+            :max-magical-armor="maxArmor.magical"
             :status-effects="entity.statusEffects"
           />
         </UApp>

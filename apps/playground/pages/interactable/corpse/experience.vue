@@ -44,11 +44,16 @@ onMounted(async () => {
 
   const { spawnPoint } = await gameStore.loadScene('corpse_scene')
   gameStore.updateEntity(playerId, { position: spawnPoint })
+
+  const zynraeId = await gameStore.spawnFromTemplate('zynrae', {
+    x: spawnPoint.x + 2,
+    y: spawnPoint.y,
+    z: spawnPoint.z,
+  })
+  if (zynraeId) gameStore.addToParty(zynraeId)
 })
 
-const characterEntities = computed(() => {
-  return [...gameStore.entities.values()].filter(e => e.type === 'character' && e.subtype !== 'npc')
-})
+const characterEntities = computed(() => gameStore.partyEntities)
 
 const { worldItems } = storeToRefs(gameStore)
 

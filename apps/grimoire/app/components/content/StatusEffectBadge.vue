@@ -1,5 +1,5 @@
 <script setup lang="ts">
-type StatusEffectId = 'poisoned' | 'stunned' | 'burning' | 'blessed' | 'hasted' | 'frozen'
+type StatusEffectId = 'poisoned' | 'stunned' | 'burning' | 'blessed' | 'hasted' | 'frozen' | 'encumbered'
 
 const STATUS_DEFINITIONS: Record<StatusEffectId, { label: string; icon: string; color: string; bgColor: string }> = {
   poisoned: { label: 'Poisoned', icon: 'i-lucide-skull', color: 'text-green-400', bgColor: 'bg-green-900' },
@@ -8,6 +8,7 @@ const STATUS_DEFINITIONS: Record<StatusEffectId, { label: string; icon: string; 
   blessed: { label: 'Blessed', icon: 'i-lucide-sparkles', color: 'text-amber-300', bgColor: 'bg-amber-800' },
   hasted: { label: 'Hasted', icon: 'i-lucide-zap', color: 'text-blue-400', bgColor: 'bg-blue-900' },
   frozen: { label: 'Frozen', icon: 'i-lucide-snowflake', color: 'text-cyan-300', bgColor: 'bg-cyan-900' },
+  encumbered: { label: 'Encumbered', icon: 'i-lucide-weight', color: 'text-red-400', bgColor: 'bg-red-900' },
 }
 
 const props = defineProps<{

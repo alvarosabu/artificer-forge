@@ -62,9 +62,6 @@ export const STATUS_DEFINITIONS: Record<StatusEffectId, StatusDefinition> = {
     bgColor: 'bg-stone-800',
   },
 }
-// Re-export types so consumers that imported them from here don't need to update their import path
-export type { StatusEffectId, StatusEffectDefinition }
-
 export function useStatusEffects() {
   const store = useStatusEffectStore()
   return {
