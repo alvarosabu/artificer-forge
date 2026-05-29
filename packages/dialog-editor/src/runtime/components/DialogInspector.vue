@@ -167,7 +167,7 @@ function ensureBranch(which: 'onSuccess' | 'onFailure') {
 </template>
 
 <style scoped>
-.insp { width:280px; flex:none; border-left:1px solid #353b4d; background:#1b1f2a; color:#e6e9f0; overflow-y:auto; padding:12px; font-size:12px; }
+.insp { width:100%; height:100%; box-sizing:border-box; border-left:1px solid #353b4d; background:#1b1f2a; color:#e6e9f0; overflow-y:auto; padding:12px; font-size:12px; }
 .insp-empty { color:#8b93a7; padding:20px 4px; text-align:center; }
 .insp-hd { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
 .insp-hd h4 { margin:0; font-size:13px; }
