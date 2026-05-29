@@ -25,6 +25,7 @@ ai:
   behavior: companion
   followDistance: 3
 
+portrait: /img/portraits/fenrath_portrait.png
 model: /models/characters/fenrath.glb
 portraitBackground: /img/portraits/bgs/fire-ink.png
 rig: Rig_Large

@@ -23,6 +23,8 @@ controllable: false
 recruitable: true
 subtype: npc
 
+dialogId: zynrae_alley
+
 ai:
   behavior: idle
 

@@ -99,6 +99,9 @@ export interface EntityState {
   // Abilities
   abilities?: string[]
 
+  // Dialog
+  dialogId?: string
+
   // NEW — container annotation (characters, chests, corpses)
   container?: ContainerInfo
   equipmentSlots?: EquipmentSlotKey[]
@@ -158,6 +161,10 @@ export const useGameStore = defineStore('game', () => {
 
   // === SELECTION ===
   const selectedEntityId = ref<string | null>(null)
+
+  // === INPUT ===
+  // Set by modal/dialog systems to suspend world input (movement, OrbitControls).
+  const inputBlocked = ref(false)
 
   // --- Entity Actions ---
 
@@ -274,6 +281,7 @@ export const useGameStore = defineStore('game', () => {
       equipmentSlots: template.equipmentSlots,
       abilities: [...DEFAULT_ABILITIES, ...(template.abilities ?? [])],
       statusEffects: [],
+      dialogId: template.dialogId,
       ...overrides,
     }
 
@@ -780,6 +788,7 @@ export const useGameStore = defineStore('game', () => {
     entities,
     party,
     selectedEntityId,
+    inputBlocked,
     // Entity actions
     spawnEntity,
     updateEntity,

@@ -140,6 +140,7 @@ export default defineContentConfig({
           'ring2',
         ])).optional(),
         abilities: z.array(z.string()).optional(),
+        dialogId: z.string().optional(),
       }),
     }),
     classes: defineCollection({
@@ -203,6 +204,46 @@ export default defineContentConfig({
         armorType: z.enum(['physical', 'magical']),
         color: z.string(),
         icon: z.string(),
+      }),
+    }),
+    dialogs: defineCollection({
+      type: 'data',
+      source: 'dialogs/*.yaml',
+      schema: z.object({
+        dialogId: z.string(),
+        startNode: z.string(),
+        nodes: z.record(z.object({
+          speaker: z.string().optional(),          // entity templateId of speaker (omit = narrator)
+          text: z.string(),
+          textVariants: z.array(z.object({
+            if: z.record(z.any()),                 // condition object — same shape as choice.conditions[i]
+            text: z.string(),
+          })).optional(),
+          cameraShot: z.enum(['three-quarter', 'over-shoulder', 'closeup', 'wide', 'two-shot']).optional(),
+          cameraTarget: z.string().optional(),     // entityId override (default = speaker)
+          choices: z.array(z.object({
+            text: z.string(),
+            tagPrefix: z.string().optional(),      // e.g. SCHOLAR, PERSUASION — rendered as "[TAG] ..."
+            conditions: z.array(z.record(z.any())).optional(),  // AND across array; each entry is one predicate
+            check: z.object({
+              skill: z.string(),
+              dc: z.number(),
+              advantage: z.boolean().optional(),
+            }).optional(),
+            next: z.string().optional(),
+            onSuccess: z.object({
+              next: z.string().optional(),
+              effects: z.array(z.record(z.any())).optional(),
+            }).optional(),
+            onFailure: z.object({
+              next: z.string().optional(),
+              effects: z.array(z.record(z.any())).optional(),
+            }).optional(),
+            effects: z.array(z.record(z.any())).optional(),
+            lockedDisplay: z.enum(['hide', 'lock']).optional(),
+          })).optional(),
+          effects: z.array(z.record(z.any())).optional(),  // run on node entry
+        })),
       }),
     }),
     statusEffect: defineCollection({
