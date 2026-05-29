@@ -4,6 +4,7 @@ packages:
 
 catalog:
   '@nuxt/icon': ^2.2.1
+  vitest: ^4.1.7
 
 catalogMode: prefer
 

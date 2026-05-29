@@ -10,7 +10,9 @@
     "lint:fix": "eslint  --fix",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@artificer-forge/components": "workspace:*",
@@ -39,6 +41,7 @@
   "devDependencies": {
     "@tresjs/eslint-config": "catalog:three",
     "@types/three": "catalog:three",
-    "typescript": "catalog:typescript"
+    "typescript": "catalog:typescript",
+    "vitest": "catalog:"
   }
 }
