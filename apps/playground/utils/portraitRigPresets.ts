@@ -9,7 +9,7 @@ export interface PortraitFraming {
 // Head/bust framing per rig type. Tuned by eye later.
 export const PORTRAIT_FRAMING: Record<RigSize, PortraitFraming> = {
   Medium: { cameraPosition: [0, 1.62, 1.15], lookAt: [0, 1.5, 0], fov: 28 },
-  Large: { cameraPosition: [0, 2.2, 1.7], lookAt: [0, 2.0, 0], fov: 30 },
+  Large: { cameraPosition: [0, 1.32, 1.15], lookAt: [0, 1.24, 0], fov: 30 },
 }
 
 export function framingForRig(rig?: string): PortraitFraming {

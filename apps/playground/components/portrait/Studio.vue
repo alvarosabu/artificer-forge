@@ -8,21 +8,14 @@ import { framingForRig } from '~/utils/portraitRigPresets'
 const { active, captured, failed } = usePortraitStudio()
 const framing = computed(() => framingForRig(active.value?.rig))
 
-const armed = ref(false)
 const captureKey = ref(0) // forces a fresh <PortraitSubject> mount per bake
 
-function onReady() {
-  armed.value = true
-}
-
 function onCaptured(url: string) {
-  armed.value = false
   captureKey.value++
   captured(url)
 }
 
 function onFailed(err: unknown) {
-  armed.value = false
   captureKey.value++
   failed(err)
 }
@@ -68,15 +61,10 @@ onErrorCaptured((err) => {
           v-if="active"
           :key="captureKey"
           :descriptor="active"
-          @ready="onReady"
+          @captured="onCaptured"
+          @failed="onFailed"
         />
       </Suspense>
-
-      <PortraitCapture
-        :armed="armed"
-        @captured="onCaptured"
-        @failed="onFailed"
-      />
     </TresCanvas>
   </div>
 </template>

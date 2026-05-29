@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { useGLTF } from '@tresjs/cientos'
-import type { TresObject3D } from '@tresjs/core'
+import { type TresObject3D, useTresContext } from '@tresjs/core'
 import { AnimationName, type RigSize, useCharacterAnimations } from '@artificer-forge/composables'
 import type { PortraitSubjectDescriptor } from '~/composables/usePortraitStudio'
 
 const props = defineProps<{ descriptor: PortraitSubjectDescriptor }>()
-const emit = defineEmits<{ ready: [] }>()
+const emit = defineEmits<{ captured: [string], failed: [unknown] }>()
+
+// Capture happens from inside this component (a child of <TresCanvas>, within the
+// <Suspense> boundary) because that is where the Tres context resolves. A sibling
+// of <Suspense> injects against the SLOT-OWNER scope and cannot see the provider.
+// Must be called synchronously, BEFORE the first await, for inject to resolve.
+const { renderer } = useTresContext()
 
 // Await load so the parent <Suspense> only resolves once the model is ready.
 const { nodes, execute } = useGLTF(props.descriptor.model, { draco: true })
@@ -19,25 +25,41 @@ useEquipment(rig, toRef(() => props.descriptor.equipment))
 const rigSize = props.descriptor.rig.replace('Rig_', '') as RigSize
 const { play, actions } = useCharacterAnimations(rig, rigSize)
 
-// Gate readiness on the IDLE_A action specifically, not on "any action loaded".
-// Animation packs load async OUTSIDE Suspense, so `actions` fills incrementally;
-// signalling on the first action risks playing before Idle_A's pack arrives,
-// which would no-op `play` and capture a bind/T-pose.
+function capture() {
+  // Two rAFs: the first lets the Tres render loop draw a frame with the freshly
+  // posed model; the second guarantees that frame is in the drawing buffer before
+  // we read it (preserveDrawingBuffer keeps it readable).
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      try {
+        const canvas = renderer.instance.domElement as HTMLCanvasElement
+        emit('captured', canvas.toDataURL('image/png'))
+      }
+      catch (err) {
+        emit('failed', err)
+      }
+    })
+  })
+}
+
+// Gate on the IDLE_A action specifically, not on "any action loaded": animation
+// packs load async OUTSIDE Suspense, so `actions` fills incrementally; signalling
+// on the first action risks play() no-op'ing and capturing a bind/T-pose.
 let signaled = false
-let readyTimer: ReturnType<typeof setTimeout> | undefined
+let settleTimer: ReturnType<typeof setTimeout> | undefined
 watch(
   () => actions[AnimationName.IDLE_A],
   (idle) => {
     if (signaled || !idle) return
     signaled = true
     play(AnimationName.IDLE_A)
-    // Let the idle pose settle a few frames before signalling the studio to capture.
-    readyTimer = setTimeout(() => emit('ready'), 200)
+    // Let the idle pose settle a few frames before capturing.
+    settleTimer = setTimeout(capture, 200)
   },
   { immediate: true },
 )
 
-onScopeDispose(() => clearTimeout(readyTimer))
+onScopeDispose(() => clearTimeout(settleTimer))
 </script>
 
 <template>

@@ -2,6 +2,10 @@
 const gameStore = useGameStore()
 const { playerEntity, playerClassId, slots, activeCategory, setCategory, activateSlot, activeWeaponSlot, setActiveWeaponSlot } = useActionBar()
 
+// Portrait rendered dynamically from the player's live model (falls back to the
+// entity's `portrait` field / icon when generation is unavailable).
+const { url: playerPortrait } = usePortraitRenderer(computed(() => playerEntity.value?.id ?? ''))
+
 // Resolve class metadata from content collection
 const { data: playerClass } = await useAsyncData(
   () => `class-${playerClassId.value}`,
@@ -22,7 +26,7 @@ const { data: playerClass } = await useAsyncData(
         :name="playerEntity.name"
         :hp="playerEntity.hp ?? 0"
         :max-hp="playerEntity.maxHp ?? 1"
-        :portrait="playerEntity.portrait"
+        :portrait="playerPortrait"
         :class-emblem="playerClass?.emblem"
         :class-color="playerClass?.color"
       />
