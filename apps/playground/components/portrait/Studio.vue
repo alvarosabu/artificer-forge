@@ -26,6 +26,14 @@ function onFailed(err: unknown) {
   captureKey.value++
   failed(err)
 }
+
+// A <Suspense> load failure (e.g. bad model URL, Draco error) would otherwise
+// propagate as an unhandled error: the bake promise never settles and the
+// serialized queue deadlocks for every subsequent bake. Route it to failed().
+onErrorCaptured((err) => {
+  onFailed(err)
+  return false
+})
 </script>
 
 <template>

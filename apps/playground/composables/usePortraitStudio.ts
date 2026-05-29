@@ -16,8 +16,16 @@ export function usePortraitStudio() {
   // Producer side: request a portrait; resolves with a PNG dataURL.
   function bake(key: string, subject: PortraitSubjectDescriptor): Promise<string> {
     return queue.request(key, () => new Promise<string>((resolve, reject) => {
-      current = { resolve, reject }
+      // Watchdog: a stuck render (backgrounded tab, dropped rAF, never-ready
+      // subject) must not hang the serialized queue forever. Cleared once settled.
+      let timer: ReturnType<typeof setTimeout>
+      const settle = <T>(fn: (v: T) => void) => (v: T) => {
+        clearTimeout(timer)
+        fn(v)
+      }
+      current = { resolve: settle(resolve), reject: settle(reject) }
       active.value = subject // tells <PortraitStudio> to render this subject
+      timer = setTimeout(() => failed(new Error(`portrait bake timed out: ${key}`)), 10_000)
     }))
   }
 

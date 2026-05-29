@@ -19,18 +19,25 @@ useEquipment(rig, toRef(() => props.descriptor.equipment))
 const rigSize = props.descriptor.rig.replace('Rig_', '') as RigSize
 const { play, actions } = useCharacterAnimations(rig, rigSize)
 
+// Gate readiness on the IDLE_A action specifically, not on "any action loaded".
+// Animation packs load async OUTSIDE Suspense, so `actions` fills incrementally;
+// signalling on the first action risks playing before Idle_A's pack arrives,
+// which would no-op `play` and capture a bind/T-pose.
 let signaled = false
+let readyTimer: ReturnType<typeof setTimeout> | undefined
 watch(
-  () => Object.keys(actions).length,
-  (len) => {
-    if (signaled || !len) return
+  () => actions[AnimationName.IDLE_A],
+  (idle) => {
+    if (signaled || !idle) return
     signaled = true
     play(AnimationName.IDLE_A)
     // Let the idle pose settle a few frames before signalling the studio to capture.
-    setTimeout(() => emit('ready'), 200)
+    readyTimer = setTimeout(() => emit('ready'), 200)
   },
   { immediate: true },
 )
+
+onScopeDispose(() => clearTimeout(readyTimer))
 </script>
 
 <template>
