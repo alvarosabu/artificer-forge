@@ -1,22 +1,28 @@
 <script setup lang="ts">
 import { TresCanvas } from '@tresjs/core'
-import { framingForRig } from '~/utils/portraitRigPresets'
+import { framingForRig, type PortraitFraming } from '~/utils/portraitRigPresets'
 
 // `active` is a shallowRef. usePortraitStudio() returns a PLAIN object, so nested
 // refs are NOT auto-unwrapped when accessed as `studio.active` in a template.
 // Destructure it so the template can reference `active` directly (auto-unwrapped).
 const { active, captured, failed } = usePortraitStudio()
-const framing = computed(() => framingForRig(active.value?.rig))
+
+// The subject emits an auto-framed camera (computed from its bounding box) just
+// before capture. Until then, use the per-rig preset as a sensible initial frame.
+const liveFrame = ref<PortraitFraming | null>(null)
+const framing = computed(() => liveFrame.value ?? framingForRig(active.value?.rig))
 
 const captureKey = ref(0) // forces a fresh <PortraitSubject> mount per bake
 
 function onCaptured(url: string) {
   captureKey.value++
+  liveFrame.value = null
   captured(url)
 }
 
 function onFailed(err: unknown) {
   captureKey.value++
+  liveFrame.value = null
   failed(err)
 }
 
@@ -61,6 +67,7 @@ onErrorCaptured((err) => {
           v-if="active"
           :key="captureKey"
           :descriptor="active"
+          @framed="liveFrame = $event"
           @captured="onCaptured"
           @failed="onFailed"
         />

@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import { Box3 } from 'three'
 import { useGLTF } from '@tresjs/cientos'
 import { type TresObject3D, useTresContext } from '@tresjs/core'
 import { AnimationName, type RigSize, useCharacterAnimations } from '@artificer-forge/composables'
+import type { PortraitFraming } from '~/utils/portraitRigPresets'
 import type { PortraitSubjectDescriptor } from '~/composables/usePortraitStudio'
 
 const props = defineProps<{ descriptor: PortraitSubjectDescriptor }>()
-const emit = defineEmits<{ captured: [string], failed: [unknown] }>()
+const emit = defineEmits<{ captured: [string], failed: [unknown], framed: [PortraitFraming] }>()
 
 // Capture happens from inside this component (a child of <TresCanvas>, within the
 // <Suspense> boundary) because that is where the Tres context resolves. A sibling
@@ -25,10 +27,10 @@ useEquipment(rig, toRef(() => props.descriptor.equipment))
 const rigSize = props.descriptor.rig.replace('Rig_', '') as RigSize
 const { play, actions } = useCharacterAnimations(rig, rigSize)
 
-function capture() {
+function captureFrame() {
   // Two rAFs: the first lets the Tres render loop draw a frame with the freshly
-  // posed model; the second guarantees that frame is in the drawing buffer before
-  // we read it (preserveDrawingBuffer keeps it readable).
+  // framed camera; the second guarantees that frame is in the drawing buffer
+  // before we read it (preserveDrawingBuffer keeps it readable).
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       try {
@@ -53,8 +55,16 @@ watch(
     if (signaled || !idle) return
     signaled = true
     play(AnimationName.IDLE_A)
-    // Let the idle pose settle a few frames before capturing.
-    settleTimer = setTimeout(capture, 200)
+    settleTimer = setTimeout(() => {
+      // After a few frames the idle pose has settled and world matrices are valid,
+      // so the bounding box (hence auto-framing) is accurate.
+      if (rig.value) {
+        const box = new Box3().setFromObject(rig.value)
+        emit('framed', frameFromBounds(box.min.toArray(), box.max.toArray()))
+      }
+      // Let the new camera apply + render, then capture.
+      captureFrame()
+    }, 200)
   },
   { immediate: true },
 )
