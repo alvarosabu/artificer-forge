@@ -78,5 +78,15 @@ export default defineNuxtModule<ModuleOptions>({
       method: 'get',
       handler: resolver.resolve('./runtime/server/api/dialogs/[id].get'),
     })
+    addServerHandler({
+      route: '/api/__dialog-editor/dialogs/:id',
+      method: 'put',
+      handler: resolver.resolve('./runtime/server/api/dialogs/[id].put'),
+    })
+    addServerHandler({
+      route: '/api/__dialog-editor/dialogs/:id/layout',
+      method: 'put',
+      handler: resolver.resolve('./runtime/server/api/dialogs/[id]/layout.put'),
+    })
   },
 })
