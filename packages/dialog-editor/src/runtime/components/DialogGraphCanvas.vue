@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Handle, Position, VueFlow } from '@vue-flow/core'
+import { Handle, Position, VueFlow, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
 import type { GraphEdge, GraphNode } from '../utils/graph'
+import type { LayoutMap } from '../../types'
 import { useNodeExpansion } from '../composables/useNodeExpansion'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
@@ -15,9 +16,14 @@ const props = defineProps<{
   nodes: GraphNode[]
   edges: GraphEdge[]
 }>()
-const emit = defineEmits<{ (e: 'select', id: string): void }>()
+const emit = defineEmits<{
+  (e: 'select', id: string): void
+  (e: 'layout-change', map: LayoutMap): void
+  (e: 'rewire', payload: { source: string, handle: string, target: string }): void
+}>()
 
 const { isExpanded } = useNodeExpansion()
+const { onNodeDragStop, onConnect, getNodes } = useVueFlow()
 
 const EDGE_CLASS: Record<string, string> = { plain: 'e-plain', success: 'e-ok', failure: 'e-fail', end: 'e-end' }
 
@@ -29,6 +35,17 @@ const flowEdges = computed(() => props.edges.map(e => ({
   class: EDGE_CLASS[e.data.kind],
   animated: false,
 })))
+
+onNodeDragStop(() => {
+  const map: LayoutMap = {}
+  for (const n of getNodes.value) map[n.id] = { x: n.position.x, y: n.position.y }
+  emit('layout-change', map)
+})
+
+onConnect((conn: { source: string, sourceHandle?: string | null, target: string }) => {
+  if (!conn.sourceHandle || conn.sourceHandle === 'bundle') return
+  emit('rewire', { source: conn.source, handle: conn.sourceHandle, target: conn.target })
+})
 
 function onNodeClick(payload: { node: { id: string } }) {
   emit('select', payload.node.id)
