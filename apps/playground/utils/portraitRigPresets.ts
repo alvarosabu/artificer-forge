@@ -8,8 +8,8 @@ export interface PortraitFraming {
 
 // Head/bust framing per rig type. Tuned by eye later.
 export const PORTRAIT_FRAMING: Record<RigSize, PortraitFraming> = {
-  Medium: { cameraPosition: [0, 1.62, 1.15], lookAt: [0, 1.5, 0], fov: 28 },
-  Large: { cameraPosition: [0, 4.0, 3.2], lookAt: [0, 3.8, -0.3], fov: 30 },
+  Medium: { cameraPosition: [1, 1.62, 1.15], lookAt: [0, 1.5, 0], fov: 28 },
+  Large: { cameraPosition: [1, 4.0, 3.2], lookAt: [0, 3.8, -0.3], fov: 30 },
 }
 
 export function framingForRig(rig?: string): PortraitFraming {
@@ -24,7 +24,7 @@ export type Vec3 = [number, number, number]
 // height, so they hold across any model scale. Changes apply on next bake —
 // during dev, also bump PORTRAIT_CACHE_VERSION in portraitSignature.ts (or clear
 // localStorage 'af:portraits') so cached portraits re-bake.
-const PORTRAIT_CAMERA = {
+export const PORTRAIT_CAMERA = {
   // How far below the model's top to aim, as a fraction of height.
   // Smaller = look higher (toward crown); larger = look lower (more chest).
   anchorFromTop: 0.14,
@@ -39,21 +39,29 @@ const PORTRAIT_CAMERA = {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+export type FrameOptions = Partial<typeof PORTRAIT_CAMERA>
+
 // Auto-frame a head/bust portrait from the subject's world-space bounding box.
 // Robust to any model scale/height (these character rigs are ~4.4 units tall),
 // so it works for arbitrary / custom characters without per-rig tuning.
 // Assumes the model faces +Z (Three/GLB convention) — camera is placed in front.
-export function frameFromBounds(min: Vec3, max: Vec3, fov = PORTRAIT_CAMERA.fov): PortraitFraming {
+// Pass `opts` to override the PORTRAIT_CAMERA defaults (used by the portrait lab).
+export function frameFromBounds(min: Vec3, max: Vec3, opts: FrameOptions = {}): PortraitFraming {
+  const fov = opts.fov ?? PORTRAIT_CAMERA.fov
+  const anchorFromTop = opts.anchorFromTop ?? PORTRAIT_CAMERA.anchorFromTop
+  const viewHeightFraction = opts.viewHeightFraction ?? PORTRAIT_CAMERA.viewHeightFraction
+  const cameraHeightOffset = opts.cameraHeightOffset ?? PORTRAIT_CAMERA.cameraHeightOffset
+
   const sizeY = max[1] - min[1]
   const centerX = (min[0] + max[0]) / 2
   const centerZ = (min[2] + max[2]) / 2
 
-  const anchorY = max[1] - sizeY * PORTRAIT_CAMERA.anchorFromTop
-  const viewHeight = sizeY * PORTRAIT_CAMERA.viewHeightFraction
+  const anchorY = max[1] - sizeY * anchorFromTop
+  const viewHeight = sizeY * viewHeightFraction
   const dist = (viewHeight / 2) / Math.tan((fov * Math.PI) / 360)
 
   return {
-    cameraPosition: [centerX, anchorY + PORTRAIT_CAMERA.cameraHeightOffset, max[2] + dist],
+    cameraPosition: [centerX, anchorY + cameraHeightOffset, max[2] + dist],
     lookAt: [centerX, anchorY, centerZ],
     fov,
   }

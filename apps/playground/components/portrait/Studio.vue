@@ -47,20 +47,7 @@ onErrorCaptured((err) => {
         :look-at="framing.lookAt"
         :fov="framing.fov"
       />
-      <!-- 3-point rig: key / fill / rim -->
-      <TresAmbientLight :intensity="0.6" />
-      <TresDirectionalLight
-        :position="[2, 3, 3]"
-        :intensity="2.2"
-      />
-      <TresDirectionalLight
-        :position="[-3, 1, 2]"
-        :intensity="0.8"
-      />
-      <TresDirectionalLight
-        :position="[0, 2, -4]"
-        :intensity="1.4"
-      />
+      <PortraitLights />
 
       <Suspense>
         <PortraitSubject

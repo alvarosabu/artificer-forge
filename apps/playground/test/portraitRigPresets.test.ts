@@ -49,6 +49,13 @@ describe('frameFromBounds', () => {
   })
 
   it('passes the fov through', () => {
-    expect(frameFromBounds(min, max, 42).fov).toBe(42)
+    expect(frameFromBounds(min, max, { fov: 42 }).fov).toBe(42)
+  })
+
+  it('respects framing overrides', () => {
+    const tighter = frameFromBounds(min, max, { viewHeightFraction: 0.2 })
+    const wider = frameFromBounds(min, max, { viewHeightFraction: 0.8 })
+    // A smaller view fraction means a closer camera (tighter crop).
+    expect(tighter.cameraPosition[2]).toBeLessThan(wider.cameraPosition[2])
   })
 })

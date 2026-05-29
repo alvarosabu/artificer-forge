@@ -8,7 +8,7 @@ export interface PortraitAppearance {
 
 // Bump when the render pipeline (framing, lighting, resolution) changes so that
 // persisted portraits baked by older logic are invalidated and re-baked.
-const PORTRAIT_CACHE_VERSION = 'v2'
+const PORTRAIT_CACHE_VERSION = 'v3'
 
 // Stable string identifying everything that affects how a portrait looks.
 // Same appearance -> same signature -> cache hit. Changed gear/model -> new signature -> re-bake.

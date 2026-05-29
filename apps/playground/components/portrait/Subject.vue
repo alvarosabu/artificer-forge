@@ -3,11 +3,20 @@ import { Box3 } from 'three'
 import { useGLTF } from '@tresjs/cientos'
 import { type TresObject3D, useTresContext } from '@tresjs/core'
 import { AnimationName, type RigSize, useCharacterAnimations } from '@artificer-forge/composables'
-import type { PortraitFraming } from '~/utils/portraitRigPresets'
+import type { PortraitFraming, Vec3 } from '~/utils/portraitRigPresets'
 import type { PortraitSubjectDescriptor } from '~/composables/usePortraitStudio'
 
-const props = defineProps<{ descriptor: PortraitSubjectDescriptor }>()
-const emit = defineEmits<{ captured: [string], failed: [unknown], framed: [PortraitFraming] }>()
+const props = withDefaults(defineProps<{
+  descriptor: PortraitSubjectDescriptor
+  // When false, render only (no toDataURL bake) — used by the portrait lab.
+  autoCapture?: boolean
+}>(), { autoCapture: true })
+const emit = defineEmits<{
+  captured: [string]
+  failed: [unknown]
+  framed: [PortraitFraming]
+  bounds: [Vec3, Vec3]
+}>()
 
 // Capture happens from inside this component (a child of <TresCanvas>, within the
 // <Suspense> boundary) because that is where the Tres context resolves. A sibling
@@ -60,10 +69,13 @@ watch(
       // so the bounding box (hence auto-framing) is accurate.
       if (rig.value) {
         const box = new Box3().setFromObject(rig.value)
-        emit('framed', frameFromBounds(box.min.toArray(), box.max.toArray()))
+        const min = box.min.toArray() as Vec3
+        const max = box.max.toArray() as Vec3
+        emit('bounds', min, max)
+        emit('framed', frameFromBounds(min, max))
       }
-      // Let the new camera apply + render, then capture.
-      captureFrame()
+      // Let the new camera apply + render, then capture (skipped in lab preview).
+      if (props.autoCapture) captureFrame()
     }, 200)
   },
   { immediate: true },
