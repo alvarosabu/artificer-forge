@@ -14,20 +14,25 @@ watch(
   () => props.armed,
   (armed) => {
     if (!armed) return
-    // One rAF ensures at least one frame with the model has been rendered.
+    // Two rAFs: the first lets the Tres render loop run a frame with the freshly
+    // posed model; the second guarantees that frame is in the drawing buffer before
+    // we read it. One rAF alone is order-dependent and can capture a stale frame.
     requestAnimationFrame(() => {
-      try {
-        const canvas = renderer.instance.domElement as HTMLCanvasElement
-        emit('captured', canvas.toDataURL('image/png'))
-      }
-      catch (err) {
-        emit('failed', err)
-      }
+      requestAnimationFrame(() => {
+        try {
+          const canvas = renderer.instance.domElement as HTMLCanvasElement
+          emit('captured', canvas.toDataURL('image/png'))
+        }
+        catch (err) {
+          emit('failed', err)
+        }
+      })
     })
   },
 )
 </script>
 
 <template>
+  <!-- Renderless: exists only to live inside <TresCanvas> so it can read the renderer context. -->
   <TresGroup />
 </template>
