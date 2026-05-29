@@ -20,16 +20,14 @@ watch(() => editor.list.value, (list) => {
       :active-id="editor.activeId.value"
       :diagnostics="editor.diagnostics.value"
       @select="editor.loadDialog"
-      @expand-all="editor.setExpandedAll(true)"
-      @collapse-all="editor.setExpandedAll(false)"
+      @expand-all="editor.expandAll"
+      @collapse-all="editor.collapseAll"
     />
     <div class="de-body">
       <ClientOnly>
         <DeDialogGraphCanvas
           :nodes="editor.graph.value.nodes"
           :edges="editor.graph.value.edges"
-          :expanded="editor.expanded.value"
-          @toggle="editor.toggleExpanded"
           @select="(id: string) => (editor.selection.value = { nodeId: id, choiceIndex: null })"
         />
       </ClientOnly>
