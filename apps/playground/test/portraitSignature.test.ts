@@ -20,7 +20,13 @@ describe('portraitSignature', () => {
     expect(portraitSignature(a)).not.toBe(portraitSignature(b))
   })
 
+  it('changes when the backdrop changes', () => {
+    const base = { model: '/m/hero.glb', rig: 'Rig_Medium', equipment: {} }
+    const withBg = { ...base, background: '/img/portraits/bgs/blue-storm.png' }
+    expect(portraitSignature(base)).not.toBe(portraitSignature(withBg))
+  })
+
   it('treats missing fields as empty without throwing', () => {
-    expect(portraitSignature({ equipment: {} })).toBe('v3||||')
+    expect(portraitSignature({ equipment: {} })).toBe('v5|||||')
   })
 })

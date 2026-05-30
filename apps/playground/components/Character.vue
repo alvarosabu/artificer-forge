@@ -111,6 +111,7 @@ function handleContextMenu(event: TresPointerEvent) {
 }
 
 const isPlayable = computed(() => gameStore.selectedEntityId === props.entityId)
+const { url: portrait } = usePortraitRenderer(() => props.entityId)
 const isDead = computed(() => (entity.value?.hp ?? 1) <= 0 || !!entity.value?.dead)
 const isHovering = ref(false)
 
@@ -239,6 +240,7 @@ defineExpose({
           <Nameplate
             v-if="isDead || (isHovering && !isPlayable)"
             :name="entity.name"
+            :portrait="portrait"
             :team="entity.team"
             :level="entity.level"
             :race="entity.race"

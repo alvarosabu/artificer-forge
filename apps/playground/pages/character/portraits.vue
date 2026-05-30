@@ -2,48 +2,78 @@
 import { TresCanvas } from '@tresjs/core'
 import { OrbitControls } from '@tresjs/cientos'
 import { useControls } from '@tresjs/leches'
-import { frameFromBounds, PORTRAIT_CAMERA, type Vec3 } from '~/utils/portraitRigPresets'
+import { frameFromHead, PORTRAIT_CAMERA, type Vec3 } from '~/utils/portraitRigPresets'
+import { resolvePortraitBackground } from '~/utils/portraitBackgrounds'
 import type { Equipment } from '~/stores/game'
+import type { PerspectiveCamera } from 'three'
 
 useHead({ title: 'Character Portraits — Lab' })
 
+// `background` mirrors each character's authored YAML `portraitBackground`; an
+// undefined one falls back to the shared default, same as the bake.
 const CHARACTERS = [
-  { label: 'Fenrath (Large)', model: '/models/characters/fenrath.glb', rig: 'Rig_Large' },
-  { label: 'Hero (Medium)', model: '/models/characters/hero.glb', rig: 'Rig_Medium' },
-  { label: 'Zynrae (Medium)', model: '/models/characters/zynrae.glb', rig: 'Rig_Medium' },
-  { label: 'Orc Scout (Medium)', model: '/models/characters/orc.glb', rig: 'Rig_Medium' },
+  { label: 'Fenrath (Large)', model: '/models/characters/fenrath.glb', rig: 'Rig_Large', background: undefined },
+  { label: 'Hero (Medium)', model: '/models/characters/hero.glb', rig: 'Rig_Medium', background: '/img/portraits/bgs/blue-storm.png' },
+  { label: 'Zynrae (Medium)', model: '/models/characters/zynrae.glb', rig: 'Rig_Medium', background: undefined },
+  { label: 'Orc Scout (Medium)', model: '/models/characters/orc.glb', rig: 'Rig_Medium', background: undefined },
 ]
 const selected = ref(CHARACTERS[0]!)
 const equipment: Equipment = {}
 
-// Live camera knobs (seeded from the committed defaults). Tune these, then copy
-// the readout below into PORTRAIT_CAMERA in utils/portraitRigPresets.ts.
-const { anchorFromTop, viewHeightFraction, fov, cameraHeightOffset } = useControls('portrait', {
-  anchorFromTop: { value: PORTRAIT_CAMERA.anchorFromTop, min: 0, max: 0.6, step: 0.01, type: 'range' },
-  viewHeightFraction: { value: PORTRAIT_CAMERA.viewHeightFraction, min: 0.15, max: 1.2, step: 0.01, type: 'range' },
+// Same per-character backdrop the bake uses, so the preview is WYSIWYG.
+const bgSrc = computed(() => resolvePortraitBackground(selected.value.background))
+
+// Live camera knobs. Tune these in the Leches panel, then copy the readout below
+// into PORTRAIT_CAMERA in utils/portraitRigPresets.ts.
+// NOTE: no folder name — a named folder renders COLLAPSED by default, which hides
+// every control and makes the panel look empty/broken. Top-level = always visible.
+const { headLift, viewHeight, fov, cameraHeightOffset, yaw } = useControls({
+  yaw: { value: PORTRAIT_CAMERA.yaw, min: -90, max: 90, step: 1, type: 'range' },
+  headLift: { value: PORTRAIT_CAMERA.headLift, min: -0.5, max: 1, step: 0.01, type: 'range' },
+  viewHeight: { value: PORTRAIT_CAMERA.viewHeight, min: 0.5, max: 3, step: 0.01, type: 'range' },
   fov: { value: PORTRAIT_CAMERA.fov, min: 10, max: 70, step: 1, type: 'range' },
-  cameraHeightOffset: { value: PORTRAIT_CAMERA.cameraHeightOffset, min: -1.5, max: 1.5, step: 0.05, type: 'range' },
+  cameraHeightOffset: { value: PORTRAIT_CAMERA.cameraHeightOffset, min: -1, max: 1, step: 0.01, type: 'range' },
 })
 
 // useControls refs are typed as possibly-undefined; fall back to the defaults.
 const knobs = computed(() => ({
-  anchorFromTop: Number(anchorFromTop?.value ?? PORTRAIT_CAMERA.anchorFromTop),
-  viewHeightFraction: Number(viewHeightFraction?.value ?? PORTRAIT_CAMERA.viewHeightFraction),
+  headLift: Number(headLift?.value ?? PORTRAIT_CAMERA.headLift),
+  viewHeight: Number(viewHeight?.value ?? PORTRAIT_CAMERA.viewHeight),
   fov: Number(fov?.value ?? PORTRAIT_CAMERA.fov),
   cameraHeightOffset: Number(cameraHeightOffset?.value ?? PORTRAIT_CAMERA.cameraHeightOffset),
+  yaw: Number(yaw?.value ?? PORTRAIT_CAMERA.yaw),
 }))
 
 const bounds = ref<{ min: Vec3, max: Vec3 } | null>(null)
 function onBounds(min: Vec3, max: Vec3) {
   bounds.value = { min, max }
 }
-watch(selected, () => { bounds.value = null })
+
+const head = ref<{ pos: Vec3, scale: number } | null>(null)
+function onHead(pos: Vec3, scale: number) {
+  head.value = { pos, scale }
+}
+watch(selected, () => { bounds.value = null; head.value = null })
 
 const portraitCam = computed(() => {
-  if (!bounds.value) {
+  if (!head.value) {
     return { cameraPosition: [0, 3, 6] as Vec3, lookAt: [0, 3, 0] as Vec3, fov: knobs.value.fov }
   }
-  return frameFromBounds(bounds.value.min, bounds.value.max, knobs.value)
+  return frameFromHead(head.value.pos, head.value.scale, knobs.value)
+})
+
+// Drive the portrait camera imperatively. Tres does NOT re-apply `:look-at` when
+// only `:position` changes reactively, so an orbited camera would keep facing
+// dead-front. Setting position + lookAt together every time keeps it oriented.
+const portraitCamRef = shallowRef<PerspectiveCamera>()
+watchEffect(() => {
+  const cam = portraitCamRef.value
+  if (!cam) return
+  const f = portraitCam.value
+  cam.position.set(f.cameraPosition[0], f.cameraPosition[1], f.cameraPosition[2])
+  cam.fov = f.fov
+  cam.updateProjectionMatrix()
+  cam.lookAt(f.lookAt[0], f.lookAt[1], f.lookAt[2])
 })
 
 const sceneTarget = computed<Vec3>(() => {
@@ -56,10 +86,11 @@ const sceneTarget = computed<Vec3>(() => {
 })
 
 const snippet = computed(() => `const PORTRAIT_CAMERA = {
-  anchorFromTop: ${knobs.value.anchorFromTop},
-  viewHeightFraction: ${knobs.value.viewHeightFraction},
+  headLift: ${knobs.value.headLift},
+  viewHeight: ${knobs.value.viewHeight},
   fov: ${knobs.value.fov},
   cameraHeightOffset: ${knobs.value.cameraHeightOffset},
+  yaw: ${knobs.value.yaw},
 }`)
 
 const copied = ref(false)
@@ -108,11 +139,13 @@ async function copySnippet() {
       <section class="view portrait">
         <span class="tag">Portrait (bake preview)</span>
         <TresCanvas clear-color="#10131c" :alpha="false">
-          <TresPerspectiveCamera
-            :position="portraitCam.cameraPosition"
-            :look-at="portraitCam.lookAt"
-            :fov="portraitCam.fov"
-          />
+          <TresPerspectiveCamera ref="portraitCamRef">
+            <PortraitBackground
+              v-if="bgSrc"
+              :framing="portraitCam"
+              :src="bgSrc"
+            />
+          </TresPerspectiveCamera>
           <PortraitLights />
           <Suspense>
             <PortraitSubject
@@ -120,6 +153,7 @@ async function copySnippet() {
               :descriptor="{ model: selected.model, rig: selected.rig, equipment }"
               :auto-capture="false"
               @bounds="onBounds"
+              @head="onHead"
             />
           </Suspense>
         </TresCanvas>

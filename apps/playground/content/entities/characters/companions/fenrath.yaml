@@ -26,6 +26,7 @@ ai:
   followDistance: 3
 
 model: /models/characters/fenrath.glb
+portraitBackground: /img/portraits/bgs/fire-ink.png
 rig: Rig_Large
 animations:
   idle: Idle

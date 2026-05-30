@@ -25,6 +25,7 @@ const { play } = useCharacterAnimations(rig)
 
 const equipment = computed(() => gameStore.derivedEquipment(entity.value?.id ?? ''))
 const maxArmor = computed(() => gameStore.derivedMaxArmor(props.entityId))
+const { url: portrait } = usePortraitRenderer(() => props.entityId)
 useEquipment(rig, equipment)
 useStatusEffectOverlay(rig, computed(() => props.entityId))
 useStatusEffectParticles(rig, computed(() => props.entityId))
@@ -84,6 +85,7 @@ function handlePointerLeave() {
           <Nameplate
             v-if="isDead || isHovering"
             :name="entity.name"
+            :portrait="portrait"
             :team="entity.team"
             :level="entity.level"
             :race="entity.race"

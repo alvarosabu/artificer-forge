@@ -26,6 +26,7 @@ ai:
   followDistance: 3
 
 portrait: /img/portraits/hero_portrait.png
+portraitBackground: /img/portraits/bgs/blue-storm.png
 model: /models/characters/hero.glb
 rig: Rig_Medium
 animations:

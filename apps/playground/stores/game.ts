@@ -60,6 +60,7 @@ export interface EntityState {
   
   // Rendering
   portrait?: string
+  portraitBackground?: string
   icon?: string
   model?: string
   rig?: string
@@ -253,6 +254,7 @@ export const useGameStore = defineStore('game', () => {
       name: template.name,
       position,
       portrait: template.portrait,
+      portraitBackground: template.portraitBackground,
       model: template.model,
       rig: template.rig,
       animations: template.animations,
@@ -402,6 +404,10 @@ export const useGameStore = defineStore('game', () => {
 
   function selectEntity(entityId: string | null) {
     selectedEntityId.value = entityId
+    // Selecting a party member also makes them the active leader so the action
+    // bar and ability system (both keyed off party.leader) follow the character
+    // the user just took control of. setPartyLeader no-ops for non-party ids.
+    if (entityId) setPartyLeader(entityId)
   }
 
   // --- Flag Actions ---

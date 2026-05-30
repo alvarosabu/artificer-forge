@@ -59,6 +59,8 @@ export default defineContentConfig({
           behavior: z.string(),
         }).passthrough().optional(),
         portrait: z.string().optional(),
+        // Backdrop texture behind the character in its generated portrait.
+        portraitBackground: z.string().optional(),
         icon: z.string().optional(),
         model: z.string().optional(),
         rig: z.string().optional(),

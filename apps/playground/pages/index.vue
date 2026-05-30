@@ -22,6 +22,7 @@ const categories: DemoCategory[] = [
     links: [
       { label: 'Basic', to: '/character/basic' },
       { label: 'Large', to: '/character/large' },
+      { label: 'Party', to: '/character/party' },
       { label: 'Character Portrait', to: '/character/portraits' },
     ],
   },

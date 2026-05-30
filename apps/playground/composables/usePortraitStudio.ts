@@ -5,6 +5,8 @@ export interface PortraitSubjectDescriptor {
   model: string
   rig: string
   equipment: Equipment
+  // Optional backdrop texture URL (per-character). Undefined = transparent canvas.
+  background?: string
 }
 
 // Singleton state (module scope): one studio, shared by all callers.

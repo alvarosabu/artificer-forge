@@ -51,9 +51,18 @@ onMounted(async () => {
     z: spawnPoint.z,
   })
   if (zynraeId) gameStore.addToParty(zynraeId)
+
+  await gameStore.spawnFromTemplate('orc_scout', {
+    x: spawnPoint.x + 4,
+    y: spawnPoint.y,
+    z: spawnPoint.z + 4,
+  }, { dead: true, hp: 0 })
+
 })
 
 const characterEntities = computed(() => gameStore.partyEntities)
+
+const actorEntities = computed(() => gameStore.actorEntities)
 
 const { worldItems } = storeToRefs(gameStore)
 
@@ -92,6 +101,11 @@ function walkToAndLoot(entityId: string) {
   <Character
     v-for="entity in characterEntities"
     :ref="(el: any) => setCharacterRef(entity.id, el)"
+    :key="entity.id"
+    :entity-id="entity.id"
+  />
+  <Character
+    v-for="entity in actorEntities"
     :key="entity.id"
     :entity-id="entity.id"
   />

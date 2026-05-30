@@ -8,6 +8,10 @@ const props = defineProps<{
 const gameStore = useGameStore()
 const inventory = useInventory()
 
+// Live-baked render (same source as the ActionBar portrait), falling back to the
+// authored template portrait while it renders or if the bake fails.
+const { url: portrait } = usePortraitRenderer(() => props.member.id)
+
 const isSelected = computed(() => gameStore.selectedEntityId === props.member.id)
 const isDead = computed(() => (props.member.hp ?? 1) <= 0)
 const maxArmor = computed(() => gameStore.derivedMaxArmor(props.member.id))
@@ -35,8 +39,8 @@ function handleClick() {
       @click="handleClick"
     >
       <img
-        v-if="member.portrait"
-        :src="member.portrait"
+        v-if="portrait"
+        :src="portrait"
         :alt="member.name"
         class="w-full h-full object-cover rounded"
       >

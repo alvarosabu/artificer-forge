@@ -27,6 +27,7 @@ ai:
   behavior: idle
 
 portrait: /img/portraits/zynrae_portrait.png
+portraitBackground: /img/portraits/bgs/dark-forest.png
 model: /models/characters/zynrae.glb
 rig: Rig_Medium
 animations:
