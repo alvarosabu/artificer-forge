@@ -1,0 +1,34 @@
+{
+  "greeting": {
+    "x": 79.67684852605925,
+    "y": -323.2891237142821
+  },
+  "pass_through": {
+    "x": 1800,
+    "y": 210
+  },
+  "fighter_offer": {
+    "x": 1440,
+    "y": 210
+  },
+  "intimidated": {
+    "x": 1080,
+    "y": 210
+  },
+  "intimidation_failed": {
+    "x": 720,
+    "y": 210
+  },
+  "persuaded": {
+    "x": 360,
+    "y": 210
+  },
+  "persuasion_failed": {
+    "x": 0,
+    "y": 210
+  },
+  "__end": {
+    "x": 720,
+    "y": 420
+  }
+}
