@@ -62,9 +62,9 @@ function onKey(e: KeyboardEvent) {
   }
 }
 
-function onAddNode() {
-  const id = window.prompt('New node id:')?.trim()
-  if (id && !editor.addNode(id)) window.alert(`Node "${id}" already exists (or invalid).`)
+function onAddNode(id: string) {
+  // Toolbar already validates id (non-empty, unique, charset); addNode is the safety net.
+  if (!editor.addNode(id)) console.warn('[de] addNode rejected', id)
 }
 function onNewDialog() {
   const id = window.prompt('New dialogId:')?.trim()
@@ -74,6 +74,18 @@ function onNewDialog() {
 }
 function onRewire(p: { source: string, handle: string, target: string }) {
   editor.setChoiceTargetFromHandle(p.source, p.handle, p.target)
+}
+function onDisconnect(p: { source: string, handle: string }) {
+  editor.clearChoiceTargetFromHandle(p.source, p.handle)
+}
+function onReconnect(p: { oldSource: string, oldHandle: string, newSource: string, newHandle: string, target: string }) {
+  editor.reconnectEdge(p)
+}
+function onCreateNode(p: { nodeId: string, handleId: string | null, handleType: 'source' | 'target', position: { x: number, y: number } }) {
+  editor.createConnectedNode({ nodeId: p.nodeId, handleId: p.handleId, handleType: p.handleType }, p.position)
+}
+function onSplice(p: { source: string, handle: string, target: string, nodeId: string }) {
+  editor.spliceNodeOnEdge(p)
 }
 </script>
 
@@ -85,6 +97,7 @@ function onRewire(p: { source: string, handle: string, target: string }) {
       :diagnostics="editor.diagnostics.value"
       :dirty="editor.dirty.value"
       :saving="editor.saving.value"
+      :node-ids="Object.keys(editor.tree.value?.nodes ?? {})"
       @select="editor.loadDialog"
       @expand-all="editor.expandAll"
       @collapse-all="editor.collapseAll"
@@ -101,6 +114,11 @@ function onRewire(p: { source: string, handle: string, target: string }) {
             @select="editor.select"
             @layout-change="editor.saveLayout"
             @rewire="onRewire"
+            @disconnect="onDisconnect"
+            @reconnect="onReconnect"
+            @delete-node="editor.deleteNode"
+            @create-node="onCreateNode"
+            @splice="onSplice"
           />
         </ClientOnly>
       </div>

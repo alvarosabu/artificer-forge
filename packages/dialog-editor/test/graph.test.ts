@@ -19,6 +19,11 @@ describe('buildGraph', () => {
     expect(nodes.find(n => n.id === 'a')!.type).toBe('dialog')
   })
 
+  it('always renders __end even when no choice targets it', () => {
+    const { nodes } = buildGraph({ nodes: { a: { text: 'hi', choices: [{ text: 'noop' }] } } })
+    expect(nodes.find(n => n.id === '__end')?.type).toBe('dialogEnd')
+  })
+
   it('passes node + choice data through node.data', () => {
     const { nodes } = buildGraph(tree)
     const a = nodes.find(n => n.id === 'a')!

@@ -93,6 +93,7 @@ function setSetFlag(row: Row, name: string, val: string) {
 </template>
 
 <style scoped>
+.eb { margin-bottom:8px; }
 .eb-row { display:flex; align-items:center; gap:5px; margin-bottom:5px; }
 .eb-key, .eb-sm { background:#11141c; border:1px solid #3a4055; border-radius:5px; color:#dfe3ec; font-size:11px; padding:3px 4px; }
 .eb-in { flex:1; min-width:0; background:#11141c; border:1px solid #3a4055; border-radius:5px; color:#dfe3ec; font-size:11px; padding:3px 6px; }

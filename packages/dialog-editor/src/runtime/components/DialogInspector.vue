@@ -125,20 +125,25 @@ function ensureBranch(which: 'onSuccess' | 'onFailure') {
             <label class="fld sm"><span>DC</span><input v-model.number="choice.check.dc" class="in" type="number"></label>
             <label class="fld chk2"><input v-model="choice.check.advantage" type="checkbox"> adv</label>
           </div>
-          <label class="fld"><span>On success → node</span>
-            <select :value="choice.onSuccess?.next ?? '__end'" class="in" @change="(ensureBranch('onSuccess')).next = ($event.target as HTMLSelectElement).value">
-              <option v-for="id in nodeIds" :key="id" :value="id">{{ id }}</option>
-            </select>
-          </label>
-          <div class="sec-hd sub">Success effects</div>
-          <DeEffectBuilder :owner="ensureBranch('onSuccess')" field="effects" :flags="flags" :abilities="abilities" :status-effects="statusEffects" :items="items" />
-          <label class="fld"><span>On failure → node</span>
-            <select :value="choice.onFailure?.next ?? '__end'" class="in" @change="(ensureBranch('onFailure')).next = ($event.target as HTMLSelectElement).value">
-              <option v-for="id in nodeIds" :key="id" :value="id">{{ id }}</option>
-            </select>
-          </label>
-          <div class="sec-hd sub">Failure effects</div>
-          <DeEffectBuilder :owner="ensureBranch('onFailure')" field="effects" :flags="flags" :abilities="abilities" :status-effects="statusEffects" :items="items" />
+          <div class="branch branch--ok">
+            <label class="fld"><span>On success → node</span>
+              <select :value="choice.onSuccess?.next ?? '__end'" class="in" @change="(ensureBranch('onSuccess')).next = ($event.target as HTMLSelectElement).value">
+                <option v-for="id in nodeIds" :key="id" :value="id">{{ id }}</option>
+              </select>
+            </label>
+            <div class="sec-hd sub">Success effects</div>
+            <DeEffectBuilder :owner="ensureBranch('onSuccess')" field="effects" :flags="flags" :abilities="abilities" :status-effects="statusEffects" :items="items" />
+          </div>
+          <div class="branch branch--fail">
+            <label class="fld"><span>On failure → node</span>
+              <select :value="choice.onFailure?.next ?? '__end'" class="in" @change="(ensureBranch('onFailure')).next = ($event.target as HTMLSelectElement).value">
+                <option v-for="id in nodeIds" :key="id" :value="id">{{ id }}</option>
+              </select>
+            </label>
+            <div class="sec-hd sub">Failure effects</div>
+            <DeEffectBuilder :owner="ensureBranch('onFailure')" field="effects" :flags="flags" :abilities="abilities" :status-effects="statusEffects" :items="items" />
+          </div>
+          <hr class="branch-end">
         </template>
         <template v-else>
           <label class="fld"><span>Next node</span>
@@ -181,6 +186,13 @@ function ensureBranch(which: 'onSuccess' | 'onFailure') {
 .row3 .sm { width:64px; flex:none; }
 .sec-hd { font-size:9.5px; text-transform:uppercase; letter-spacing:1px; color:#8b93a7; margin:12px 0 6px; border-top:1px solid #2a3040; padding-top:8px; }
 .sec-hd.sub { margin-top:8px; border-top:none; padding-top:4px; }
+/* Success/failure branch blocks, demarcated with their edge colors
+   (e-ok #3fbf6f / e-fail #e0556b). */
+.branch { margin-top:12px; padding-top:8px; border-top:1px solid; }
+.branch .sec-hd.sub { margin-top:8px; }
+.branch--ok { border-top-color:#3fbf6f; }
+.branch--fail { border-top-color:#e0556b; }
+.branch-end { border:none; border-top:1px solid #353b4d; margin:12px 0 0; }
 .sec-hd.row { display:flex; align-items:center; justify-content:space-between; }
 .choice-list { list-style:none; margin:0 0 8px; padding:0; }
 .choice-item { display:flex; align-items:center; gap:6px; padding:5px 6px; border:1px solid #2a3040; border-radius:5px; margin-bottom:4px; cursor:pointer; }

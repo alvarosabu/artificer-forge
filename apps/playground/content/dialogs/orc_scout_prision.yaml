@@ -1,0 +1,10 @@
+dialogId: orc_scout_prision
+startNode: greeting
+nodes:
+  greeting:
+    text: Ugh? What do we have here... A little piece of fresh meat?
+    choices:
+      - text: What is it with your kind, that so simple minded
+        next: __end
+    cameraShot: three-quarter
+    speaker: orc_scout

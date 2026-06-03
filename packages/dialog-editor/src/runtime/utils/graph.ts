@@ -26,10 +26,8 @@ function kindFor(target: string, base: 'plain' | 'success' | 'failure'): EdgeKin
 export function buildGraph(tree: { nodes: Record<string, DialogNode> }): { nodes: GraphNode[], edges: GraphEdge[] } {
   const nodes: GraphNode[] = []
   const edges: GraphEdge[] = []
-  let hasEnd = false
 
   function addEdge(source: string, target: string, handle: string, base: 'plain' | 'success' | 'failure', label: string) {
-    if (target === END) hasEnd = true
     edges.push({ id: `${source}:${handle}->${target}`, source, target, sourceHandle: handle, data: { kind: kindFor(target, base), label } })
   }
 
@@ -47,9 +45,9 @@ export function buildGraph(tree: { nodes: Record<string, DialogNode> }): { nodes
     })
   }
 
-  if (hasEnd) {
-    nodes.push({ id: END, type: 'dialogEnd', position: { x: 0, y: 0 }, data: { nodeId: END, node: { text: '' } } })
-  }
+  // Always render __end as a fixed terminal so it stays available as a reconnect
+  // target even when no choice currently points at it.
+  nodes.push({ id: END, type: 'dialogEnd', position: { x: 0, y: 0 }, data: { nodeId: END, node: { text: '' } } })
 
   return { nodes, edges }
 }
