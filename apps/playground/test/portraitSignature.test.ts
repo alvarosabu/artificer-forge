@@ -27,6 +27,6 @@ describe('portraitSignature', () => {
   })
 
   it('treats missing fields as empty without throwing', () => {
-    expect(portraitSignature({ equipment: {} })).toBe('v5|||||')
+    expect(portraitSignature({ equipment: {} })).toBe('v7|||||')
   })
 })
