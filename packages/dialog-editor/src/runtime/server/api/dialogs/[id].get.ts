@@ -7,6 +7,9 @@ import type { LayoutMap } from '../../../../types'
 import { parseDialog } from '../../../utils/parse'
 
 export default defineEventHandler(async (event: unknown) => {
+  // @ts-expect-error - import.meta.dev injected by Nitro
+  if (!import.meta.dev) throw createError({ statusCode: 403, statusMessage: 'dialog editor is dev-only' })
+
   const id = getRouterParam(event, 'id')
   const { dialogsDir, layoutDir } = useRuntimeConfig().dialogEditor as { dialogsDir: string, layoutDir: string }
   const dir = resolve(process.cwd(), dialogsDir)

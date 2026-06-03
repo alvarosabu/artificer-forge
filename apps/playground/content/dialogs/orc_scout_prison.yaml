@@ -1,4 +1,4 @@
-dialogId: orc_scout_prision
+dialogId: orc_scout_prison
 startNode: greeting
 nodes:
   greeting:
