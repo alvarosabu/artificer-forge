@@ -113,6 +113,13 @@ export const useDialogStore = defineStore('dialog', () => {
     const last = history.value[history.value.length - 1]
     if (last) last.choiceText = choice.text
 
+    // On-choose effects fire for every choice (pre-roll costs/triggers), so apply
+    // them before branching — the skill-check path returns early below.
+    if (choice.effects) {
+      const { endDialog } = engine.applyEffects(choice.effects, context.value)
+      if (endDialog) return close()
+    }
+
     // Skill check path.
     if (choice.check) {
       const roll = engine.rollCheck(choice.check, context.value)
@@ -129,10 +136,6 @@ export const useDialogStore = defineStore('dialog', () => {
     }
 
     // Plain branch path.
-    if (choice.effects) {
-      const { endDialog } = engine.applyEffects(choice.effects, context.value)
-      if (endDialog) return close()
-    }
     if (choice.next) return enterNode(choice.next)
     close()
   }
