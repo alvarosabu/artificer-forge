@@ -39,6 +39,7 @@ const categories: DemoCategory[] = [
     icon: 'i-heroicons-user-group',
     links: [
       { label: 'Basic', to: '/npc/basic' },
+      { label: 'Dialog', to: '/npc/dialog' },
     ],
   },
   {

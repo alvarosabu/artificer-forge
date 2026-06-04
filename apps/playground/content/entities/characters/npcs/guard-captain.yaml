@@ -24,5 +24,8 @@ ai:
   behavior: idle
   idleAnimation: Idle_B
 
+dialogId: guard_captain_gate
+
+portrait: /img/portraits/knight_portrait.png
 model: /models/characters/Knight.glb
 rig: Rig_Medium

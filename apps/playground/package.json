@@ -30,6 +30,7 @@
     "@tresjs/nuxt": "catalog:three",
     "@vueuse/core": "catalog:vue",
     "eslint": "catalog:eslint",
+    "gsap": "catalog:",
     "nuxt": "catalog:nuxt",
     "pinia": "catalog:vue",
     "three": "catalog:three",

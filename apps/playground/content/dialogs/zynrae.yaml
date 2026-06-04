@@ -1,0 +1,115 @@
+dialogId: zynrae_alley
+startNode: greeting
+
+# Camera test dialog — deliberately exercises the presets the guard-captain tree
+# never touches: two-shot, over-shoulder, wide. Compare against guard-captain.yaml
+# (three-quarter / closeup) to see the DialogCameraDirector swap framings per node.
+
+nodes:
+  greeting:
+    speaker: zynrae
+    text: "You walk loud for someone sneaking through my alley. State your name before I decide you're a problem."
+    textVariants:
+      - if: { flag: zynrae_recruited }
+        text: "Back already? The blades are still sharp, if that's what you're asking."
+    cameraShot: two-shot
+    choices:
+      - text: "I'm no threat. I'm looking for someone with your... talents."
+        next: pitch
+      - text: "[Study her] You're a long way from the Underdark, drow."
+        tagPrefix: INSIGHT
+        check: { skill: insight, dc: 12 }
+        onSuccess: { next: read_her }
+        onFailure: { next: read_failed }
+      - text: "Step aside before you regret it."
+        tagPrefix: INTIMIDATION
+        check: { skill: intimidation, dc: 16 }
+        onSuccess: { next: backed_down }
+        onFailure:
+          next: laughed_off
+          effects:
+            - setFlag: { zynrae_annoyed: true }
+      - text: "Wrong alley. Goodbye."
+        next: __end
+
+  pitch:
+    speaker: zynrae
+    text: "Talents. Cute. Talk fast — what's the work, and what's it pay?"
+    cameraShot: over-shoulder
+    choices:
+      - text: "Coin now, more when it's done. Discretion guaranteed."
+        tagPrefix: PERSUASION
+        check: { skill: persuasion, dc: 13 }
+        onSuccess:
+          next: recruited
+          effects:
+            - setFlag: { zynrae_recruited: true }
+        onFailure: { next: not_convinced }
+      - text: "The kind that pays in enemies of the same people who exiled you."
+        next: shared_enemy
+      - text: "Forget it."
+        next: __end
+
+  read_her:
+    speaker: zynrae
+    text: "...Sharp eyes. Exiled, yes. That's my business, not yours. But you've got my attention now."
+    cameraShot: closeup
+    choices:
+      - text: "Then let's talk about work."
+        next: pitch
+      - text: "That's all I needed. Goodbye."
+        next: __end
+
+  read_failed:
+    speaker: zynrae
+    text: "Bold guess. Wrong one. Try again when you actually know something."
+    cameraShot: closeup
+    choices:
+      - text: "Fair. Let's start over — I have work."
+        next: pitch
+      - text: "Never mind."
+        next: __end
+
+  shared_enemy:
+    speaker: zynrae
+    text: "Now THAT is a language I speak. A wide world of people I'd love to inconvenience."
+    cameraShot: wide
+    choices:
+      - text: "Then we're aligned. Join me."
+        next: recruited
+        effects:
+          - setFlag: { zynrae_recruited: true }
+      - text: "Think on it. I'll be back."
+        next: __end
+
+  recruited:
+    speaker: zynrae
+    text: "Then I'm yours — for now. Don't make me regret it, and don't get between me and a clean exit."
+    cameraShot: two-shot
+    choices:
+      - text: "Welcome aboard."
+        next: __end
+
+  not_convinced:
+    speaker: zynrae
+    text: "Vague promises and a tight purse. Come back when one of those changes."
+    cameraShot: over-shoulder
+    choices:
+      - text: "I'll be back with better terms."
+        next: __end
+
+  backed_down:
+    speaker: zynrae
+    text: "...Easy. No need for theatrics. I'm moving. See? Moving."
+    cameraShot: closeup
+    choices:
+      - text: "Smart."
+        next: __end
+
+  laughed_off:
+    speaker: zynrae
+    text: "Threats? In MY alley? You're either brave or stupid. I haven't decided which is funnier."
+    cameraShot: wide
+    choices:
+      - text: "[Leave before she does.]"
+        next: __end

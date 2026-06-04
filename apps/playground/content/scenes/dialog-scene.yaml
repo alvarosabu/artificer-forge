@@ -1,0 +1,15 @@
+sceneId: dialog_scene
+name: Dialog Scene
+
+spawnPoints:
+  default: { x: 0, y: 0, z: 0 }
+
+exits: []
+
+entities:
+  - templateId: guard_captain
+    position: { x: 0, y: 0, z: -4 }
+    rotation: { x: 0, y: 3.14, z: 0 }
+  - templateId: zynrae
+    position: { x: 5, y: 0, z: -2 }
+    rotation: { x: 0, y: 2.0, z: 0 }
