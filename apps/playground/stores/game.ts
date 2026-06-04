@@ -429,7 +429,13 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function hasFlag(key: string): boolean {
-    return worldFlags.value[key] === true
+    // Truthy check — a flag set to a positive number counts as "set", matching
+    // the `{ flag: 'name' }` (truthy) contract documented in the dialog engine.
+    return !!worldFlags.value[key]
+  }
+
+  function clearFlag(key: string) {
+    delete worldFlags.value[key]
   }
 
   function learnAbility(entityId: string, abilityId: string) {
@@ -814,6 +820,7 @@ export const useGameStore = defineStore('game', () => {
     setFlag,
     getFlag,
     hasFlag,
+    clearFlag,
 
     // Ability actions
     learnAbility,

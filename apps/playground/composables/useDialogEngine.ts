@@ -277,8 +277,8 @@ export function applyEffects(
         }
         case 'clearFlag': {
           const name = String(payload)
-          // setFlag with false approximates "clear" for boolean flags
-          ctx.gameStore.setFlag(name, false)
+          // Unset the flag entirely so getFlag returns undefined (not false).
+          ctx.gameStore.clearFlag(name)
           break
         }
         case 'addStatusEffect': {

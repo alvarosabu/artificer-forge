@@ -23,6 +23,20 @@ export const useDialogStore = defineStore('dialog', () => {
   const history = ref<DialogHistoryEntry[]>([])
   // Most recent skill-check result — used by the panel for a brief flash.
   const lastCheck = ref<CheckRoll | null>(null)
+  let checkFlashTimer: ReturnType<typeof setTimeout> | null = null
+
+  function flashCheck(roll: CheckRoll) {
+    lastCheck.value = roll
+    if (checkFlashTimer) clearTimeout(checkFlashTimer)
+    // Auto-clear the flash so it doesn't linger across nodes. Client-only —
+    // the dialog flow never runs during SSR.
+    if (import.meta.client) {
+      checkFlashTimer = setTimeout(() => {
+        lastCheck.value = null
+        checkFlashTimer = null
+      }, 2500)
+    }
+  }
 
   const isOpen = computed(() => activeTree.value !== null && currentNodeId.value !== null)
 
@@ -60,6 +74,9 @@ export const useDialogStore = defineStore('dialog', () => {
   })
 
   async function open(dialogId: string, speakerId: string | null) {
+    // Ignore re-entry while a dialog is already active — prevents clobbering
+    // live state (tree/history/leftover timers) on a repeated interaction.
+    if (isOpen.value) return
     const tree = await queryCollection('dialogs')
       .where('dialogId', '=', dialogId)
       .first()
@@ -123,7 +140,7 @@ export const useDialogStore = defineStore('dialog', () => {
     // Skill check path.
     if (choice.check) {
       const roll = engine.rollCheck(choice.check, context.value)
-      lastCheck.value = roll
+      flashCheck(roll)
       const branch = roll.success ? choice.onSuccess : choice.onFailure
       if (branch?.effects) {
         const { endDialog } = engine.applyEffects(branch.effects, context.value)
@@ -141,6 +158,10 @@ export const useDialogStore = defineStore('dialog', () => {
   }
 
   function close() {
+    if (checkFlashTimer) {
+      clearTimeout(checkFlashTimer)
+      checkFlashTimer = null
+    }
     activeTree.value = null
     currentNodeId.value = null
     speakerEntityId.value = null

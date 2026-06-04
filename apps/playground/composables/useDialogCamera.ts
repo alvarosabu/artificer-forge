@@ -63,6 +63,10 @@ export function useDialogCamera() {
 
   function findSpeaker(node: DialogNode | null): EntityState | null {
     if (!node?.speaker) return null
+    // Prefer the exact entity the dialog store resolved — avoids picking a
+    // different instance when two share the same templateId.
+    const resolved = dialogStore.currentSpeakerEntity
+    if (resolved && resolved.templateId === node.speaker) return resolved
     for (const e of gameStore.entities.values()) {
       if (e.templateId === node.speaker) return e
     }
@@ -153,22 +157,20 @@ export function useDialogCamera() {
   function tweenTo(framing: Framing, duration = 0.8) {
     if (!camera.activeCamera.value) return
     activeTween?.kill()
-    liveTarget.copy(framing.target)
     const cam = camera.activeCamera.value
-    activeTween = gsap.to({}, {
+    // Capture start state BEFORE mutating liveTarget so rapid node changes
+    // interpolate from the current in-flight transform, not the destination.
+    const startPos = cam.position.clone()
+    const startTarget = liveTarget.clone()
+    const proxy = { t: 0 }
+    activeTween = gsap.to(proxy, {
+      t: 1,
       duration,
       ease: 'power2.inOut',
-      onStart: () => {
-        // Capture starting target so we can interpolate it too.
-        const startTarget = liveTarget.clone()
-        const startPos = cam.position.clone()
-        activeTween!.eventCallback('onUpdate', () => {
-          const t = activeTween!.progress()
-          // Easing already applied via gsap progress mapping; manual lerp keeps target/position synced.
-          cam.position.lerpVectors(startPos, framing.position, t)
-          liveTarget.lerpVectors(startTarget, framing.target, t)
-          cam.lookAt(liveTarget)
-        })
+      onUpdate: () => {
+        cam.position.lerpVectors(startPos, framing.position, proxy.t)
+        liveTarget.lerpVectors(startTarget, framing.target, proxy.t)
+        cam.lookAt(liveTarget)
       },
     })
   }
@@ -176,7 +178,12 @@ export function useDialogCamera() {
   function focusNode(node: DialogNode | null) {
     const framing = computeFraming(node)
     if (!framing) return
-    if (!snapshot.taken) takeSnapshot()
+    if (!snapshot.taken) {
+      takeSnapshot()
+      // Seed liveTarget so the first tween interpolates look-at from the
+      // real camera orientation rather than the origin.
+      liveTarget.copy(snapshot.target)
+    }
     tweenTo(framing)
   }
 
