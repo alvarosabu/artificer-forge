@@ -9,7 +9,16 @@ export default defineNuxtConfig({
     '@nuxt/devtools',
     '@nuxt/ui',
     '@pinia/nuxt',
+    '@artificer-forge/dialog-editor',
   ],
+  dialogEditor: {
+    autocomplete: {
+      items: { collection: 'entities', field: 'templateId', where: { type: 'item' } },
+      abilities: { collection: 'abilities', field: 'abilityId' },
+      statusEffects: { collection: 'statusEffect', field: 'statusEffectId' },
+      classes: { collection: 'classes', field: 'classId' },
+    },
+  },
   css: ['~/assets/css/main.css'],
   compatibilityDate: '2025-01-01',
   ui: {

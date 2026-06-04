@@ -1,98 +1,109 @@
 dialogId: guard_captain_gate
 startNode: greeting
-
 nodes:
   greeting:
     speaker: guard_captain
-    text: "Halt. State your business, traveler."
+    text: Halt. State your business, traveler. This is a guarded zone.
     textVariants:
-      - if: { flag: met_guard_captain }
-        text: "Back again, are you? Keep moving."
+      - if:
+          flag: met_guard_captain
+        text: Back again, are you? Keep moving.
     cameraShot: three-quarter
     choices:
-      - text: "Just passing through."
+      - text: Just passing through.
         next: pass_through
-      - text: "I'm here looking for work."
+      - text: I'm here looking for work.
         tagPrefix: FIGHTER
         conditions:
           - class: fighter
         next: fighter_offer
-      - text: "Step aside. You don't want trouble."
+      - text: Step aside. You don't want trouble.
         tagPrefix: INTIMIDATION
-        check: { skill: intimidation, dc: 14 }
-        onSuccess: { next: intimidated }
+        check:
+          skill: intimidation
+          dc: 14
+        onSuccess:
+          next: intimidated
         onFailure:
           next: intimidation_failed
           effects:
-            - setFlag: { guard_hostile: true }
-      - text: "Perhaps we can come to an arrangement."
+            - setFlag:
+                guard_hostile: true
+      - text: Perhaps we can come to an arrangement.
         tagPrefix: PERSUASION
-        check: { skill: persuasion, dc: 12 }
+        check:
+          skill: persuasion
+          dc: 12
         onSuccess:
           next: persuaded
           effects:
-            - setFlag: { gold_paid: 10 }
-        onFailure: { next: persuasion_failed }
-      - text: "Never mind. Goodbye."
+            - setFlag:
+                gold_paid: 10
+        onFailure:
+          next: persuasion_failed
+      - text: Never mind. Goodbye.
         next: __end
         effects:
-          - setFlag: { met_guard_captain: true }
-
+          - setFlag:
+              met_guard_captain: true
   pass_through:
     speaker: guard_captain
-    text: "Keep your nose clean and we won't have a problem."
+    text: Keep your nose clean and we won't have a problem.
     cameraShot: closeup
     choices:
-      - text: "Understood."
+      - text: Understood.
         next: __end
         effects:
-          - setFlag: { met_guard_captain: true }
-
+          - setFlag:
+              met_guard_captain: true
   fighter_offer:
     speaker: guard_captain
-    text: "A fighter, eh? The captain of the watch is always short on swords. Speak to him at the barracks."
+    text: A fighter, eh? The captain of the watch is always short on swords. Speak to him at the barracks.
     choices:
-      - text: "I'll do that. Thank you."
+      - text: I'll do that. Thank you.
         next: __end
         effects:
-          - setFlag: { met_guard_captain: true }
-          - setFlag: { fighter_referral: true }
-
+          - setFlag:
+              met_guard_captain: true
+          - setFlag:
+              fighter_referral: true
   intimidated:
     speaker: guard_captain
-    text: "...Fine. Just... move along. I don't want trouble either."
+    text: ...Fine. Just... move along. I don't want trouble either.
     cameraShot: closeup
     choices:
-      - text: "Smart choice."
+      - text: Smart choice.
         next: __end
         effects:
-          - setFlag: { met_guard_captain: true }
-          - setFlag: { intimidated_captain: true }
-
+          - setFlag:
+              met_guard_captain: true
+          - setFlag:
+              intimidated_captain: true
   intimidation_failed:
     speaker: guard_captain
-    text: "Is that a threat?! Guards! GUARDS!"
+    text: Is that a threat?! Guards! GUARDS!
     cameraShot: closeup
     choices:
       - text: "[Run.]"
         next: __end
-
   persuaded:
     speaker: guard_captain
-    text: "...A donation to the watch fund? Most generous. On your way, friend."
+    text: ...A donation to the watch fund? Most generous. On your way, friend.
     cameraShot: closeup
     choices:
-      - text: "A pleasure doing business."
+      - text: A pleasure doing business.
         next: __end
         effects:
-          - setFlag: { met_guard_captain: true }
-          - setFlag: { bribed_captain: true }
-
+          - setFlag:
+              met_guard_captain: true
+          - setFlag:
+              bribed_captain: true
   persuasion_failed:
     speaker: guard_captain
-    text: "I'm not interested in your arrangements. Move along."
+    text: I'm not interested in your arrangements. Move along.
     choices:
-      - text: "Apologies. Goodbye."
+      - text: Apologies. Goodbye.
         next: __end
         effects:
-          - setFlag: { met_guard_captain: true }
+          - setFlag:
+              met_guard_captain: true

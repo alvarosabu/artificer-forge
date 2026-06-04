@@ -6,11 +6,23 @@ const dialogStore = useDialogStore()
 const visibleChoices = computed(() => dialogStore.currentChoices)
 
 const speakerName = computed(() => dialogStore.currentSpeakerEntity?.name ?? 'Narrator')
-const speakerPortrait = computed(() => dialogStore.currentSpeakerEntity?.portrait)
+
+// Live-baked render (same source as the ActionBar/CharacterPanel portraits),
+// falling back to the authored template portrait while it renders or if the
+// speaker has no model (e.g. Narrator).
+const { url: speakerPortrait } = usePortraitRenderer(() => dialogStore.currentSpeakerEntity?.id ?? '')
 
 const checkFlash = computed(() => dialogStore.lastCheck)
 
 const isCheckChoice = (raw: { check?: unknown }) => !!raw.check
+
+// Hide tagPrefix when it just repeats the check's skill (e.g. INTIMIDATION tag
+// next to an INTIMIDATION 14 check badge) — the check badge already names it.
+const showTagPrefix = (raw: { tagPrefix?: string, check?: { skill: string } }) => {
+  if (!raw.tagPrefix) return false
+  if (raw.check && raw.tagPrefix.toLowerCase() === raw.check.skill.toLowerCase()) return false
+  return true
+}
 
 const checkLabel = (raw: { check?: { skill: string, dc: number } }) => {
   if (!raw.check) return ''
@@ -117,7 +129,7 @@ onKeyStroke('Escape', (e) => {
                   {{ idx + 1 }}.
                 </span>
                 <span
-                  v-if="choice.raw.tagPrefix"
+                  v-if="showTagPrefix(choice.raw)"
                   class="text-xs font-semibold tracking-wider"
                   :class="choice.available ? 'text-marine-300' : 'text-marine-300/40'"
                 >
