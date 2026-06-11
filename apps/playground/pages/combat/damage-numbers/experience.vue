@@ -34,8 +34,6 @@ onKeyDown('d', () => {
 </script>
 
 <template>
-  <TresPerspectiveCamera :position="[0, 5, 8]" :look-at="[0, 1, 0]" />
-  <OrbitControls />
   <TresAmbientLight :intensity="0.8" />
   <TresDirectionalLight :position="[5, 5, 5]" :intensity="1.5" cast-shadow />
   <Character
