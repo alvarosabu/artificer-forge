@@ -21,10 +21,10 @@ const { surfaceKind } = useControls('surface', {
   kind: {
     value: 'water' as SurfaceKind,
     options: [
-      { text: 'Water', value: 'water' },
-      { text: 'Poison', value: 'poison' },
-      { text: 'Blood', value: 'blood' },
-      { text: 'Oil', value: 'oil'}
+      { text: '💧 Water', value: 'water' },
+      { text: '☠️ Poison', value: 'poison' },
+      { text: '🩸 Blood', value: 'blood' },
+      { text: '🛢️ Oil', value: 'oil'}
     ],
   },
 }, { uuid })
