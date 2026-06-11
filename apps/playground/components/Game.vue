@@ -7,6 +7,18 @@ import { useOutlinePassProvider, EffectComposer } from '@artificer-forge/post-pr
 
 // Debugger
 
+interface CameraProps {
+  position?: [number, number, number]
+  lookAt?: [number, number, number]
+  target?: [number, number, number]
+  near?: number
+  far?: number
+  controls?: boolean
+}
+
+// Per-scene camera override forwarded to CameraController; omit to inherit the default.
+defineProps<{ camera?: CameraProps }>()
+
 const { uuid } = useSharedLechesControls()
 
 const { state, close, emitAction } = useContextMenuProvider()
@@ -87,6 +99,7 @@ const { postprocessingBloomStrength, postprocessingBloomThreshold, postprocessin
     shadows
     @pointer-missed="handlePointerMissed"
   >
+    <CameraController v-bind="camera" />
     <slot />
     <CombatSystem />
     <EffectComposer

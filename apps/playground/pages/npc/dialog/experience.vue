@@ -67,8 +67,6 @@ const actorEntities = computed(() => gameStore.actorEntities)
 
 <template>
   <TresFog :args="['#020420', 12, 32]" />
-  <TresPerspectiveCamera :position="[6, 5, 6]" :look-at="[0, 1, 0]" :near="0.1" :far="100" />
-  <OrbitControls :enabled="!gameStore.inputBlocked" />
   <TresAmbientLight :intensity="0.7" />
   <TresDirectionalLight
     :position="[5, 6, 4]"
