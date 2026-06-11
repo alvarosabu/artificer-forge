@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { Object3D, Vector3 } from 'three'
 import { Floor, Foliage } from '@artificer-forge/components/tres'
-import { OrbitControls } from '@tresjs/cientos'
 import { useSceneRefs } from '@artificer-forge/composables'
 
 const references = [
@@ -64,8 +63,6 @@ onMounted(async () => {
 </script>
 
 <template>
-  <TresPerspectiveCamera :position="[8, 6, 8]" :look-at="[0, 0, 0]" />
-  <OrbitControls />
   <TresAmbientLight :intensity="0.8" />
   <TresDirectionalLight :position="[lightX, lightY, lightZ]" :intensity="1.5" cast-shadow />
   <Character

@@ -25,8 +25,6 @@ const { worldItems } = storeToRefs(gameStore)
 </script>
 
 <template>
-  <TresPerspectiveCamera :position="[5, 5, 5]" :near="0.1" :far="100" />
-  <OrbitControls />
   <TresAmbientLight :intensity="0.8" />
   <TresDirectionalLight
     :position="[5, 5, 5]"

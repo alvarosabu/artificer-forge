@@ -37,8 +37,6 @@ const characterEntities = computed(() =>
 </script>
 
 <template>
-  <TresPerspectiveCamera :position="[0, 4, 11]" :near="0.1" :far="100" />
-  <OrbitControls :target="[0, 1.5, 0]" />
   <TresAmbientLight :intensity="0.8" />
   <TresDirectionalLight
     :position="[5, 8, 5]"
