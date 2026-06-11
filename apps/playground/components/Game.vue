@@ -78,7 +78,9 @@ const { postprocessingBloomStrength, postprocessingBloomThreshold, postprocessin
 </script>
 
 <template>
-  <TresLeches :uuid="uuid" collapsed />
+  <slot name="controls" :uuid="uuid">
+    <TresLeches :uuid="uuid" collapsed />
+  </slot>
   <TresCanvas
     clear-color="#020420"
     window-size
