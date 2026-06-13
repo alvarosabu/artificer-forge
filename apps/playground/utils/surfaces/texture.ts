@@ -12,3 +12,14 @@ export function packCells(cells: SurfaceCell[], data: Float32Array): void {
     data[o + 3] = c.kind === 'blood' ? c.amount : 0
   }
 }
+
+/** Fire amount in R; G/B/A unused. Separate texture because liquid RGBA is full. */
+export function packFire(cells: SurfaceCell[], data: Float32Array): void {
+  for (let i = 0; i < cells.length; i++) {
+    const c = cells[i]!
+    data[i * 4] = c.kind === 'fire' ? c.amount : 0
+    data[i * 4 + 1] = 0
+    data[i * 4 + 2] = 0
+    data[i * 4 + 3] = 0
+  }
+}

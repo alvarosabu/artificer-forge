@@ -4,30 +4,15 @@ import {
   add, color, cos, dot, float, max, mix, mul, mx_fractal_noise_float, normalView,
   positionViewDirection, positionWorld, smoothstep, texture as textureNode, time, uv, vec2, vec3,
 } from 'three/tsl'
-import { OrbitControls } from '@tresjs/cientos'
 import { DataTexture, FloatType, LinearFilter, RGBAFormat } from 'three'
 import { Floor } from '@artificer-forge/components/tres'
-import type { TresPointerEvent } from '@tresjs/core'
 import { useLoop } from '@tresjs/core'
+import { useSceneRefs } from '@artificer-forge/composables'
 import { createSurfaceGrid } from '~/utils/surfaces/grid'
 import type { SurfaceKind } from '~/utils/surfaces/types'
 import { step } from '~/utils/surfaces/sim'
-import { packCells, packFire } from '~/utils/surfaces/texture'
-
-const uuid = inject('unique-uuid')
-
-const { surfaceKind } = useControls('surface', {
-  kind: {
-    value: 'water' as SurfaceKind,
-    options: [
-      { text: '💧 Water', value: 'water' },
-      { text: '☠️ Poison', value: 'poison' },
-      { text: '🩸 Blood', value: 'blood' },
-      { text: '🛢️Oil', value: 'oil'},
-      { text: '🔥 Fire', value: 'fire'}
-    ],
-  },
-}, { uuid })
+import { packCells } from '~/utils/surfaces/texture'
+import { statusForCell } from '~/utils/surfaces/matrix'
 
 // --- grid config ---
 const COLS = 32
@@ -36,9 +21,19 @@ const CELL = 0.5
 const WIDTH = COLS * CELL // 16m
 const DEPTH = ROWS * CELL
 
-// The grid is the source of truth now. Its default origin is centred on the
-// world origin — same as the spike's ORIGIN_X/Z, so the texture mapping holds.
 const grid = createSurfaceGrid(COLS, ROWS, CELL)
+
+// Pre-placed pools: stamped at full radius with infinite lifetime — no growth,
+// no decay (decay skips non-finite lifetimes), so the field stays put while
+// you walk through it. seed() would give growing-then-fading pools instead.
+function placePool(x: number, z: number, kind: SurfaceKind, radius: number) {
+  const { col, row } = grid.worldToCell(x, z)
+  grid.stampDisc(col, row, kind, radius, 1, Number.POSITIVE_INFINITY)
+}
+placePool(-4, -4, 'water', 4)
+placePool(4, -4, 'oil', 3)
+placePool(-4, 4, 'poison', 3)
+placePool(4, 4, 'blood', 3)
 
 const data = new Float32Array(COLS * ROWS * 4)
 const texture = new DataTexture(data, COLS, ROWS, RGBAFormat, FloatType)
@@ -46,20 +41,15 @@ texture.minFilter = LinearFilter // bilinear smoothing between cells — de-bloc
 texture.magFilter = LinearFilter
 texture.needsUpdate = true
 
-const fireData = new Float32Array(COLS * ROWS * 4)
-const fireTexture = new DataTexture(fireData, COLS, ROWS, RGBAFormat, FloatType)
-fireTexture.minFilter = LinearFilter
-fireTexture.magFilter = LinearFilter
-fireTexture.needsUpdate = true
-
-function buildMaterial(liquidTex: DataTexture, fireTex: DataTexture): MeshStandardNodeMaterial {
+// Same material as /environment/surface — second copy is the cue to extract
+// SurfaceField.vue (roadmap: fire milestone).
+function buildMaterial(tex: DataTexture): MeshStandardNodeMaterial {
   const mat = new MeshStandardNodeMaterial()
   mat.transparent = true
   mat.roughness = 0.9
 
   const fieldUv = vec2(uv().x, uv().y.oneMinus()) // keep the spike's V flip — it's load-bearing
-  const amount = textureNode(liquidTex, fieldUv)
-  const fireAmount = textureNode(fireTex, fieldUv)
+  const amount = textureNode(tex, fieldUv)
   const water = amount.r
   const oil = amount.g
   const poison = amount.b
@@ -71,12 +61,6 @@ function buildMaterial(liquidTex: DataTexture, fireTex: DataTexture): MeshStanda
     3, 2.0, 0.5,
   ).mul(0.5).add(0.5)
 
-  // Fast flicker for fire.
-  const fireFlickerNoise = mx_fractal_noise_float(
-    add(mul(positionWorld.xz, 3.0), time.mul(1.2)), 3, 2.0, 0.5,
-  ).mul(0.5).add(0.5)
-
-
   const maskOf = (amount: ReturnType<typeof float>) =>
     smoothstep(float(0.15), float(0.6), amount.mul(edgeNoise.mul(0.6).add(0.7)))
 
@@ -84,10 +68,6 @@ function buildMaterial(liquidTex: DataTexture, fireTex: DataTexture): MeshStanda
   const oilMask = maskOf(oil)
   const poisonMask = maskOf(poison)
   const bloodMask = maskOf(blood)
-  const fireMask   = smoothstep(
-    float(0.05), float(0.4),
-    fireAmount.mul(fireFlickerNoise.mul(0.3).add(0.9)),
-  )
 
   const waterCol = mix(color('#0c3b66'), color('#2f7fd0'), edgeNoise)
 
@@ -105,8 +85,7 @@ function buildMaterial(liquidTex: DataTexture, fireTex: DataTexture): MeshStanda
   const oilCol = mix(mix(color('#14100c'), color('#3a2f1c'), edgeNoise), rainbow, sheen)
   const poisonCol = mix(color('#176022'), color('#37d24a'), edgeNoise)
   const bloodCol = mix(color('#3d060a'), color('#6e0f14'), edgeNoise)
-  const fireCol   = mix(color('#7a1500'), color('#ff4400'), fireFlickerNoise)
-  const fireGlow  = mix(color('#ff2200'), color('#ffbb00'), fireFlickerNoise)
+
   // Only one kind occupies a cell — overlap only exists in the bilinear blend
   // zone between pools, where later layers win.
   const base = color('#0e1118')
@@ -119,44 +98,81 @@ function buildMaterial(liquidTex: DataTexture, fireTex: DataTexture): MeshStanda
   // is active (seams briefly blend both, which reads fine).
   const opacity = max(
     waterMask.mul(0.15), // water: see the ground through it
-    max(oilMask.mul(0.95), max(poisonMask.mul(0.85), max(bloodMask.mul(0.9), fireMask.mul(0.9)))),
+    max(oilMask.mul(0.95), max(poisonMask.mul(0.85), bloodMask.mul(0.9))),
   )
 
   mat.colorNode = col
-  mat.emissiveNode = mul(fireGlow, mul(fireMask, float(2.0)))
-
   mat.opacityNode = opacity
   return mat
 }
 
-const material = buildMaterial(texture, fireTexture)
+const material = buildMaterial(texture)
+
+
+
 
 const { onBeforeRender } = useLoop()
 
-// The sim replaces the spike's manual fade loop: grow sources, run decay,
-// then project the cells into the texture.
+// Sim still runs (fire contagion / electrified decay later); the infinite
+// lifetimes just exempt the pre-placed pools from fading.
 onBeforeRender(({ delta }) => {
   step(grid, Math.min(delta, 0.1))
   packCells(grid.cells, data)
-  packFire(grid.cells, fireData)
   texture.needsUpdate = true
-  fireTexture.needsUpdate = true
+
+  // Statuses persist after leaving the surface — no removal here until the
+  // tick/duration system exists to expire them.
+  for (const entity of gameStore.entities.values()) {
+    if (entity.type !== 'character') continue
+    const cell = grid.sample(entity.position.x, entity.position.z)
+    const status = statusForCell(cell)
+    if (status) {
+      gameStore.addStatusEffect(entity.id, status) // dedupes — safe every frame
+    }
+  }
 })
 
-// Seeding the grid replaces painting the texture directly.
-function onPaint(e: TresPointerEvent) {
-  if (!e.point) return
-  grid.seed(e.point.x, e.point.z, surfaceKind.value!)
-}
+// --- character (same pattern as combat/attack) ---
+const gameStore = useGameStore()
+const { setCharacterRef } = useSceneRefs()
+const { register: registerEntities, unregister: unregisterEntities } = useEntityCommands()
+
+onMounted(async () => {
+  const heroId = await gameStore.spawnFromTemplate('hero', { x: 0, y: 0, z: 0 })
+  gameStore.addToParty(heroId)
+  gameStore.selectEntity(heroId)
+
+  registerEntities()
+})
+
+onUnmounted(() => {
+  unregisterEntities()
+})
+
+const characterEntities = computed(() =>
+  [...gameStore.entities.values()].filter(e => e.type === 'character'),
+)
 </script>
 
 <template>
-  <TresPerspectiveCamera :position="[8, 6, 8]" :look-at="[0, 0, 0]" />
-  <OrbitControls />
   <TresAmbientLight :intensity="0.8" />
-  
+  <TresDirectionalLight :position="[5, 5, 5]" :intensity="1.5" cast-shadow />
+
+  <Character
+    v-for="entity in characterEntities"
+    :ref="(el: any) => setCharacterRef(entity.id, el)"
+    :key="entity.id"
+    :entity-id="entity.id"
+  />
   <Floor />
-  <TresMesh name="surface-map" @click="onPaint" :material="material" :position="[0, 0.01, 0]">
-   <TresPlaneGeometry :args="[WIDTH, DEPTH]" :rotate-x="-Math.PI / 2" />
+  <!-- No pointer handlers on purpose: Tres's event system only intersects
+       objects with listeners, so clicks fall through to CombatSystem's
+       invisible plane (click-to-move). Adding @click here would block it. -->
+  <TresMesh
+    name="surface-map"
+    :material="material"
+    :position="[0, 0.01, 0]"
+  >
+    <TresPlaneGeometry :args="[WIDTH, DEPTH]" :rotate-x="-Math.PI / 2" />
   </TresMesh>
 </template>

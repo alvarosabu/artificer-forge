@@ -7,6 +7,8 @@ export const StatusEffectIdSchema = z.enum([
   'blessed',
   'hasted',
   'frozen',
+  'wet',
+  'slowed',
 ])
 
 export type StatusEffectId = z.infer<typeof StatusEffectIdSchema>

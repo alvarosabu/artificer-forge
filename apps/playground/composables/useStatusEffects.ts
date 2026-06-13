@@ -47,6 +47,20 @@ export const STATUS_DEFINITIONS: Record<StatusEffectId, StatusDefinition> = {
     color: 'text-blue-400',
     bgColor: 'bg-blue-900',
   },
+  wet: {
+    label: 'Wet',
+    type: 'debuff',
+    icon: 'i-lucide-droplets',
+    color: 'text-sky-300',
+    bgColor: 'bg-sky-900',
+  },
+  slowed: {
+    label: 'Slowed',
+    type: 'debuff',
+    icon: 'i-lucide-snail',
+    color: 'text-amber-400',
+    bgColor: 'bg-amber-900',
+  },
   frozen: {
     label: 'Frozen',
     type: 'cc',

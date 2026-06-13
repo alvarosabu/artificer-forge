@@ -66,6 +66,7 @@ const categories: DemoCategory[] = [
     links: [
       { label: 'Foliage', to: '/environment/foliage' },
       { label: 'Surface', to: '/environment/surface' },
+      { label: 'Surface Interactions', to: '/environment/surface-interactions' },
     ],
   },
 ]

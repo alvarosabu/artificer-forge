@@ -36,8 +36,7 @@ export function useStatusEffectAnimations(
         // store.get() is not tracked as a reactive dependency here.
         // This is intentional: the watch fires on entity changes (addStatusEffect → updateEntity),
         // which covers all cases. Definitions are loaded once at startup and never mutated.
-        const def = store.get(se.id)
-        return def?.type === 'debuff' || def?.type === 'dot'
+        return store.get(se.id)?.flinch ?? false
       }) ?? false
       if (hasFlinchEffect) startFlinchLoop()
       else stopFlinchLoop()

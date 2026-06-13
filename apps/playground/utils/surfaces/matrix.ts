@@ -23,5 +23,7 @@ export function statusForCell(cell: SurfaceCell): SurfaceStatusId | null {
   if (cell.kind === 'fire') return 'burning'
   if (cell.kind === 'poison') return 'poisoned'
   if (cell.electrified > 0 && (cell.kind === 'water' || cell.kind === 'blood')) return 'stunned'
+  if (cell.kind === 'water' || cell.kind === 'blood') return 'wet'
+  if (cell.kind === 'oil') return 'slowed'
   return null
 }

@@ -48,6 +48,7 @@ useStatusEffectParticles(rig, computed(() => props.entityId))
 useStatusEffectAnimations(computed(() => props.entityId), play)
 
 const { numbers, showDamage, removeNumber } = useDamageNumbers()
+const { texts: statusTexts, removeText: removeStatusText } = useStatusEffectTexts(computed(() => props.entityId))
 
 // Three.js Group ref - controller operates directly on this
 const characterRef = ref<Group>()
@@ -260,6 +261,12 @@ defineExpose({
         :key="entry.id"
         :entry="entry"
         @done="removeNumber(entry.id)"
+      />
+      <StatusEffectText
+        v-for="entry in statusTexts"
+        :key="entry.id"
+        :entry="entry"
+        @done="removeStatusText(entry.id)"
       />
     </primitive>
 

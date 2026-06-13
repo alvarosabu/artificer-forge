@@ -3,7 +3,7 @@ export type SurfaceKind = 'fire' | 'water' | 'oil' | 'poison' | 'blood'
 
 /** Statuses a surface can inflict — a subset of the game's StatusEffectId, kept local
  *  so this module stays free of the Nuxt `~` alias (unavailable in node vitest). */
-export type SurfaceStatusId = 'burning' | 'poisoned' | 'stunned'
+export type SurfaceStatusId = 'burning' | 'poisoned' | 'stunned' | 'wet' | 'slowed'
 
 export interface SurfaceCell {
   kind: SurfaceKind | null

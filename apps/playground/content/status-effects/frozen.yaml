@@ -5,3 +5,4 @@ armorGate: magical
 color: text-cyan-300
 bgColor: bg-cyan-900
 icon: i-lucide-snowflake
+flinch: false

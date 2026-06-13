@@ -1,0 +1,8 @@
+statusEffectId: wet
+label: Wet
+type: debuff
+armorGate: none
+color: text-sky-300
+bgColor: bg-sky-900
+icon: i-lucide-droplets
+flinch: false

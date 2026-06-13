@@ -256,6 +256,8 @@ export default defineContentConfig({
         label: z.string(),
         type: z.enum(['buff', 'debuff', 'dot', 'cc']),
         armorGate: z.enum(['physical', 'magical', 'none']),
+        // Painful effects trigger the periodic hurt animation while active
+        flinch: z.boolean(),
         color: z.string(),
         bgColor: z.string(),
         icon: z.string(),
