@@ -26,5 +26,12 @@ export {
   type EmberMeta,
 } from './particles/emberSystem'
 
+export { createInstancedEmberSystem } from './particles/instancedEmberSystem'
+export { createFireBillboards } from './particles/fireBillboards'
+
+// Surface materials
+export { buildFireSurfaceMaterial } from './materials/fireSurface'
+export { buildCharcoalSurfaceMaterial } from './materials/charcoalSurface'
+
 // Components
 export { default as TargetReticle } from './components/TargetReticle.vue'

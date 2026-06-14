@@ -74,6 +74,7 @@ function createGridMaterial(
   const material = new NodeMaterial()
   material.side = DoubleSide
   material.transparent = true
+  material.depthWrite = false // transparent ground: writing depth lets it occlude transparent objects above it (e.g. fire billboards) depending on draw order
 
   const scaleNode = uniform(globalScale)
   const fadeStartNode = uniform(fadeStart)

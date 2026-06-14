@@ -6,7 +6,9 @@ useHead({ title: 'Surface Interactions - Environment' })
 <template>
   <div>
     <Game :camera="{ position: [10, 8, 10], lookAt: [0, 0, 0] }">
-      <SurfaceInteractionsExperience />
+      <Suspense>
+        <SurfaceInteractionsExperience />
+      </Suspense>
     </Game>
     <GameCommandPalette />
     <PartyPanel />
