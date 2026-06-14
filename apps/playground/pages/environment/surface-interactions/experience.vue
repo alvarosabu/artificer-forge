@@ -200,7 +200,7 @@ const characterEntities = computed(() =>
     :key="entity.id"
     :entity-id="entity.id"
   />
-  
+  <Floor />
   <!-- No pointer handlers on purpose: Tres's event system only intersects
        objects with listeners, so clicks fall through to CombatSystem's
        invisible plane (click-to-move). Adding @click here would block it. -->

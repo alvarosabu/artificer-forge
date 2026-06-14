@@ -6,11 +6,13 @@ import {
 } from 'three/tsl'
 import type { DataTexture } from 'three'
 
-const HUMP_FREQ = 1.8 // low-freq lumps that get displaced into real relief
-const HUMP_HEIGHT = 0.22 // metres of vertical displacement at full fire coverage
+const HUMP_FREQ = 5.8 // low-freq lumps that get displaced into real relief
+const HUMP_HEIGHT = 0.15 // metres of vertical displacement at full fire coverage
 const GRAIN_FREQ = 22.0 // fine albedo grain so the humps don't read as smooth blobs
-const CRACK_FREQ = 7.0 // mid-freq vein noise that textures the glowing cracks
+const CRACK_FREQ = 16.0 // mid-freq vein noise that textures the glowing cracks
 const NORMAL_EPS = 0.12 // world-space step for the finite-difference normal
+const EDGE_WARP_FREQ = 7.0 // freq of the domain warp that ragged-ies the field contour
+const EDGE_WARP_AMP = 0.015 // UV-space warp magnitude — higher = more broken-up edge
 
 type Vec2Node = ReturnType<typeof vec2>
 
@@ -19,7 +21,7 @@ type Vec2Node = ReturnType<typeof vec2>
  * displaced vertically, so the lumps have real silhouette and catch light. The
  * shared surface-map plane can't do this: it's 1-segment and also carries the
  * water/oil/poison pools, which must stay flat.
- *
+ *π
  * Why displacement, not a normal/bump map: a bump only tilts lighting on a
  * surface you already perceive as flat — it can't add silhouette or parallax,
  * and on near-black charcoal albedo the lit signal is sub-perceptual anyway.
@@ -30,16 +32,28 @@ type Vec2Node = ReturnType<typeof vec2>
  */
 export function buildCharcoalSurfaceMaterial(fireTex: DataTexture): MeshStandardNodeMaterial {
   const mat = new MeshStandardNodeMaterial()
-  // Opaque bed via alphaTest, not blending: the charcoal is a solid surface, so it
-  // must write depth and sort against the fire billboards by geometry (flame behind
-  // a hump is occluded). A transparent bed has depthWrite off and only sorts by draw
-  // order, so it "competes" with the additive flames as the camera orbits. alphaTest
-  // discards the off-pool fringe (alpha < threshold) so it still never writes depth
-  // over — and occludes — the pools below.
-  mat.alphaTest = 0.5
+  // Transparent bed, but depthWrite stays ON so it still sorts against the fire
+  // billboards by geometry (flame behind a hump is occluded) — the reason it can't
+  // use plain blending-with-depthWrite-off, which only sorts by draw order and
+  // "competes" with the additive flames as the camera orbits. A tiny alphaTest
+  // discards only the near-empty fringe, so the gradient rim (opacityNode below)
+  // can fade out softly above it instead of being hard-clipped.
+  mat.transparent = true
+  mat.depthWrite = true
+  mat.alphaTest = 0.02
   mat.roughness = 0.95
 
   const fieldUv = vec2(uv().x, uv().y.oneMinus()) // V flip matches packFire orientation
+
+  // Domain warp that breaks the smooth bilinear disc into a ragged coal-bed contour
+  // (the raw field reads as a round liquid puddle). Same warp is used in the vertex
+  // and fragment stages so displacement stays aligned with the visible region.
+  const edgeWarp = (xz: Vec2Node) =>
+    vec2(
+      mx_fractal_noise_float(xz.mul(float(EDGE_WARP_FREQ)), 2, 2.0, 0.5),
+      mx_fractal_noise_float(xz.mul(float(EDGE_WARP_FREQ)).add(vec2(float(19.7), float(7.3))), 2, 2.0, 0.5),
+    ).mul(float(EDGE_WARP_AMP))
+  const warpedFieldUv = (xz: Vec2Node) => fieldUv.add(edgeWarp(xz))
 
   // The height field that becomes geometry. Same fn for vertex displacement and
   // the fragment-side normal so the lighting matches the actual surface.
@@ -48,13 +62,13 @@ export function buildCharcoalSurfaceMaterial(fireTex: DataTexture): MeshStandard
 
   // --- VERTEX: displace up by hump × fire coverage ---
   // texture() in the vertex stage resolves to LOD 0 (the DataTexture has no mips).
-  const fireMaskV = textureNode(fireTex, fieldUv).r
+  const fireMaskV = textureNode(fireTex, warpedFieldUv(positionLocal.xz)).r
   const dispV = humpAt(positionLocal.xz).mul(fireMaskV).mul(float(HUMP_HEIGHT))
   mat.positionNode = positionLocal.add(vec3(float(0), dispV, float(0)))
 
   // --- FRAGMENT ---
-  const fireAmt = textureNode(fireTex, fieldUv).r
   const p = positionWorld.xz
+  const fireAmt = textureNode(fireTex, warpedFieldUv(p)).r
   const hump = humpAt(p)
 
   // Three.js does NOT recompute normals after a vertex-shader displacement, so
@@ -70,20 +84,25 @@ export function buildCharcoalSurfaceMaterial(fireTex: DataTexture): MeshStandard
   // multiply is a pure direction transform (no translation).
   mat.normalNode = cameraViewMatrix.mul(vec4(worldN, float(0))).xyz.normalize()
 
-  // Albedo: ash-gray on the lit hump tops, warm-black down in the valleys.
+  // Albedo: a charcoal-gray ash crust on the lit hump tops, near-black in the
+  // valleys. The ash is a break-up ACCENT, not the dominant surface — too light or
+  // too warm and the whole bed reads as dirt. Mid gray, slightly cool.
   const ashRidge = smoothstep(float(0.2), float(0.85), hump)
   const grain = mx_fractal_noise_float(mul(p, float(GRAIN_FREQ)), 2, 2.0, 0.5).mul(0.5).add(0.5)
   const ash = ashRidge.mul(grain.mul(float(0.5)).add(float(0.5)))
-  mat.colorNode = mix(color('#070503'), color('#4a4038'), ash.mul(float(0.85)))
+  mat.colorNode = mix(color('#0a0807'), color('#726c66'), ash)
 
   // Glow lives in the VALLEYS between humps (real charcoal glows in the crevices,
   // not on the raised faces). Crack detail textures the molten cracks; the ember
   // pulse breathes the brightness without moving it.
   const valley = hump.oneMinus()
   const crackDetail = mx_fractal_noise_float(mul(p, float(CRACK_FREQ)), 4, 2.0, 0.65).mul(0.5).add(0.5)
+  // Glow pools broadly in the gaps between lumps (you see the incandescent interior
+  // there) and fades on the ash-covered tops. Broad enough to read as hot coals;
+  // the gray ash patches above are what break it up so it never floods like lava.
   const glowMask = smoothstep(
-    float(0.4), float(0.85),
-    valley.mul(crackDetail.mul(float(0.5)).add(float(0.5))),
+    float(0.4), float(0.82),
+    valley.mul(crackDetail.mul(float(0.55)).add(float(0.45))),
   )
   // Spatial phase offset so embers flicker out of sync across the bed instead of
   // breathing in unison. Two out-of-phase sines, range [0.4,1] — a deeper, livelier
@@ -93,12 +112,17 @@ export function buildCharcoalSurfaceMaterial(fireTex: DataTexture): MeshStandard
     sin(time.mul(float(1.6)).add(pulsePhase)).mul(float(0.5)).add(float(0.5)).mul(float(0.7)),
     sin(time.mul(float(3.1)).add(pulsePhase.mul(float(1.7)))).mul(float(0.5)).add(float(0.5)).mul(float(0.3)),
   ).mul(float(0.6)).add(float(0.4))
-  const heat = smoothstep(float(0.25), float(0.85), fireAmt)
-  const crackCol = mix(color('#5a0a00'), color('#ff6a1a'), heat)
-  mat.emissiveNode = mul(crackCol, mul(glowMask, mul(emberPulse, mul(float(3.0), fireAmt))))
+  const heat = smoothstep(float(0.22), float(0.85), fireAmt)
+  // Deep ember red rising to hot orange — kept off the pure-orange max so it reads
+  // as incandescent coal, not molten rock. Intensity high enough to dominate the
+  // ash, but broken up spatially by the glowMask + ash crust above.
+  const crackCol = mix(color('#4a0800'), color('#ee4d14'), heat)
+  mat.emissiveNode = mul(crackCol, mul(glowMask, mul(emberPulse, mul(float(2.4), fireAmt))))
 
-  // Only render inside the fire field — soft noisy edge from the coverage itself.
-  mat.opacityNode = smoothstep(float(0.05), float(0.4), fireAmt)
+  // Soft transparent gradient at the rim: opacity ramps over a wide coverage band
+  // so the bed fades out toward the edges instead of ending on a hard line. The
+  // warped fireAmt makes that fade follow the ragged contour, not a clean disc.
+  mat.opacityNode = smoothstep(float(0.04), float(0.6), fireAmt)
 
   return mat
 }

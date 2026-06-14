@@ -116,7 +116,7 @@ export function createFireBillboards(
     mix(color('#ffaa00'), color('#fffce0'), smoothstep(float(0.65), float(1.0), heat)),
     smoothstep(float(0.4), float(0.65), heat),
   )
-  const emissiveIntensity = mix(float(1.5), float(1.0), uv().y)
+  const emissiveIntensity = mix(float(2.5), float(1.5), uv().y)
 
   if (flipbookTex) {
     const frame = floor(time.mul(float(FLIP_FPS))).mod(float(FLIP_COLS * FLIP_ROWS))
@@ -130,7 +130,7 @@ export function createFireBillboards(
     const flipSample = textureNode(flipbookTex, frameUv)
     // Luminance-based opacity: dark backgrounds vanish under additive blending,
     // bright flame cores add their color — no reliance on alpha channel format.
-    const luma = flipSample.r.mul(float(0.2126))
+    const luma = flipSample.r.mul(float(0.1126))
       .add(flipSample.g.mul(float(0.7152)))
       .add(flipSample.b.mul(float(0.0722)))
     const flipAlpha = luma.mul(firePresence).mul(flicker)
