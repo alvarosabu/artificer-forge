@@ -104,6 +104,7 @@ const { postprocessingBloomStrength, postprocessingBloomThreshold, postprocessin
     <CameraController v-bind="camera" />
     <slot />
     <CombatSystem />
+    <SurfaceSystem />
     <EffectComposer
       :outline-presets="{
         party: { visibleEdgeColor: '#00e5ff', edgeThickness: 3 },

@@ -31,6 +31,25 @@ export interface SurfaceSource {
     growing: boolean
 }
 
+/** Declarative pre-placed surface, as authored in level data and held on the store.
+ *  Hydrated into grid cells by useSurface. `lifetime` omitted ⇒ infinite (static pool). */
+export interface SurfaceSourceDef {
+  kind: SurfaceKind
+  x: number
+  z: number
+  /** Disc radius in cells. */
+  radius: number
+  /** Seconds before decay; omit for a permanent pool. */
+  lifetime?: number
+}
+
+/** Grid dimensions for the surface field, part of level data. */
+export interface SurfaceGridConfig {
+  cols: number
+  rows: number
+  cell: number
+}
+
 export type SurfaceEvent = 'lightning' | 'cold'
 
 export interface KindConfig {

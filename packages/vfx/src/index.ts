@@ -32,6 +32,7 @@ export { createFireBillboards } from './particles/fireBillboards'
 // Surface materials
 export { buildFireSurfaceMaterial } from './materials/fireSurface'
 export { buildCharcoalSurfaceMaterial } from './materials/charcoalSurface'
+export { buildPoolSurfaceMaterial } from './materials/poolSurface'
 
 // Components
 export { default as TargetReticle } from './components/TargetReticle.vue'
