@@ -5,3 +5,4 @@ armorGate: none
 color: text-blue-400
 bgColor: bg-blue-900
 icon: i-lucide-zap
+flinch: false

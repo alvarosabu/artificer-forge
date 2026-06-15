@@ -5,6 +5,8 @@ export interface StatusEffectDefinition {
   label: string
   type: 'buff' | 'debuff' | 'dot' | 'cc'
   armorGate: 'physical' | 'magical' | 'none'
+  /** Painful effects trigger the periodic hurt animation while active. */
+  flinch: boolean
   color: string
   bgColor: string
   icon: string

@@ -1,0 +1,8 @@
+statusEffectId: warm
+label: Warm
+type: buff
+armorGate: none
+color: text-orange-300
+bgColor: bg-orange-950
+icon: i-lucide-thermometer-sun
+flinch: false

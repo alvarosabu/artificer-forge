@@ -1,0 +1,8 @@
+statusEffectId: slowed
+label: Slowed
+type: debuff
+armorGate: none
+color: text-amber-400
+bgColor: bg-amber-900
+icon: i-lucide-snail
+flinch: false

@@ -5,3 +5,4 @@ armorGate: magical
 color: text-orange-400
 bgColor: bg-orange-900
 icon: i-lucide-flame
+flinch: true

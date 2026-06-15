@@ -90,7 +90,9 @@ const { postprocessingBloomStrength, postprocessingBloomThreshold, postprocessin
 </script>
 
 <template>
-  <TresLeches :uuid="uuid" collapsed />
+  <slot name="controls" :uuid="uuid">
+    <TresLeches :uuid="uuid" collapsed />
+  </slot>
   <TresCanvas
     clear-color="#020420"
     window-size
@@ -102,6 +104,7 @@ const { postprocessingBloomStrength, postprocessingBloomThreshold, postprocessin
     <CameraController v-bind="camera" />
     <slot />
     <CombatSystem />
+    <SurfaceSystem />
     <EffectComposer
       :outline-presets="{
         party: { visibleEdgeColor: '#00e5ff', edgeThickness: 3 },
