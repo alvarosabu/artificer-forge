@@ -1,5 +1,5 @@
 // apps/playground/utils/surfaces/grid.ts
-import type { SurfaceCell, SurfaceKind, SurfaceSource } from './types'
+import type { ChargeSource, SurfaceCell, SurfaceKind, SurfaceSource } from './types'
 import { emptyCell, KIND_CONFIG } from './types'
 
 export interface SeedOpts {
@@ -20,12 +20,16 @@ export interface SurfaceGrid {
   readonly cells: SurfaceCell[]
   /** Active spreading liquid sources. Mutated in place by the sim. */
   readonly sources: SurfaceSource[]
+  /** Active lightning charges holding pools electrified. Mutated in place by the sim. */
+  readonly chargeSources: ChargeSource[]
   index: (col: number, row: number) => number
   inBounds: (col: number, row: number) => boolean
   cellAt: (col: number, row: number) => SurfaceCell | null
   cellToWorld: (col: number, row: number) => { x: number, z: number }
   worldToCell: (x: number, z: number) => { col: number, row: number }
   sample: (x: number, z: number) => SurfaceCell
+  /** Flat indices of in-bounds cells within `radius` cells of (col,row). */
+  cellsInDisc: (col: number, row: number, radius: number) => number[]
   stampDisc: (col: number, row: number, kind: SurfaceKind, radius: number, amount: number, lifetime: number) => void
   seed: (x: number, z: number, kind: SurfaceKind, opts?: SeedOpts) => void
   clear: () => void
@@ -41,6 +45,7 @@ export function createSurfaceGrid(
 ): SurfaceGrid {
   const cells: SurfaceCell[] = Array.from({ length: cols * rows }, emptyCell)
   const sources: SurfaceSource[] = []
+  const chargeSources: ChargeSource[] = []
 
   const index = (col: number, row: number) => row * cols + col
   const inBounds = (col: number, row: number) => col >= 0 && col < cols && row >= 0 && row < rows
@@ -62,18 +67,26 @@ export function createSurfaceGrid(
     return cellAt(col, row) ?? emptyCell()
   }
 
-  /** Stamp a filled disc of `kind` of `radius` cells around (col,row). Empty cells only. */
-  const stampDisc = (col: number, row: number, kind: SurfaceKind, radius: number, amount: number, lifetime: number) => {
+  const cellsInDisc = (col: number, row: number, radius: number): number[] => {
     const r = Math.max(0, Math.floor(radius))
+    const out: number[] = []
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
         if (dx * dx + dy * dy > r * r) continue
-        const cell = cellAt(col + dx, row + dy)
-        if (!cell || cell.kind !== null) continue
-        cell.kind = kind
-        cell.amount = amount
-        cell.lifetime = lifetime
+        if (inBounds(col + dx, row + dy)) out.push(index(col + dx, row + dy))
       }
+    }
+    return out
+  }
+
+  /** Stamp a filled disc of `kind` of `radius` cells around (col,row). Empty cells only. */
+  const stampDisc = (col: number, row: number, kind: SurfaceKind, radius: number, amount: number, lifetime: number) => {
+    for (const idx of cellsInDisc(col, row, radius)) {
+      const cell = cells[idx]!
+      if (cell.kind !== null) continue
+      cell.kind = kind
+      cell.amount = amount
+      cell.lifetime = lifetime
     }
   }
 
@@ -104,10 +117,11 @@ export function createSurfaceGrid(
       c.frozen = false
     }
     sources.length = 0
+    chargeSources.length = 0
   }
 
   return {
-    cols, rows, cellSize, originX, originZ, cells, sources,
-    index, inBounds, cellAt, cellToWorld, worldToCell, sample, stampDisc, seed, clear,
+    cols, rows, cellSize, originX, originZ, cells, sources, chargeSources,
+    index, inBounds, cellAt, cellToWorld, worldToCell, sample, cellsInDisc, stampDisc, seed, clear,
   }
 }

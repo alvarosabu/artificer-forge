@@ -1,0 +1,8 @@
+statusEffectId: shocked
+label: Shocked
+type: cc
+armorGate: magical
+color: text-cyan-400
+bgColor: bg-cyan-950
+icon: i-lucide-zap
+flinch: false

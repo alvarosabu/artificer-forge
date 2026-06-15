@@ -56,9 +56,11 @@ export function createInstancedEmberSystem(
   // Sample fire coverage — embers only appear above active fire cells
   const halfW = float(width / 2)
   const halfD = float(depth / 2)
+  // Map world XZ straight to texture UV — no V-flip (the surface planes need one
+  // only because their geometry is rotateX(-π/2); this sampler reads world Z
+  // directly, matching packFire's row order).
   const fireU = randX.add(driftX).add(halfW).div(float(width))
-  // V-flip matches the grid-to-texture orientation used by packFire
-  const fireV = float(1).sub(randZ.add(driftZ).add(halfD).div(float(depth)))
+  const fireV = randZ.add(driftZ).add(halfD).div(float(depth))
   const firePresence = textureNode(fireTex, vec2(fireU, fireV)).r
 
   // positionNode adds the per-instance world offset to each quad vertex.

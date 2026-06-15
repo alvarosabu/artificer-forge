@@ -1,5 +1,5 @@
 import type { SurfaceEvent } from './types'
-import { KIND_CONFIG } from './types'
+import { CHARGE_HOLD, KIND_CONFIG } from './types'
 import { fireInteraction, isFlammable } from './matrix'
 import type { SurfaceGrid } from './grid'
 
@@ -10,6 +10,10 @@ export function step(grid: SurfaceGrid, dt: number): void {
   growSources(grid, dt)
   fireContagion(grid)
   decay(grid, dt)
+  // After decay so a held charge reads exactly 1 (decay would otherwise nibble the
+  // re-armed value). Safe last: water/blood don't decay, so decay never nulls the
+  // charged cells out from under a source.
+  chargeSources(grid, dt)
 }
 
 function growSources(grid: SurfaceGrid, dt: number): void {
@@ -72,13 +76,28 @@ function fireContagion(grid: SurfaceGrid): void {
   }
 }
 
-/** Flood-fill the connected pool of the same liquid kind under (x,z) and convert it. */
+/** Re-arm lightning charges (hold electrified=1 on their cells), then expire them. */
+function chargeSources(grid: SurfaceGrid, dt: number): void {
+  for (const src of grid.chargeSources) {
+    for (const idx of src.cells) grid.cells[idx]!.electrified = 1
+    src.lifetime -= dt
+  }
+  // Drop expired charges so decay() can start fading their cells.
+  for (let i = grid.chargeSources.length - 1; i >= 0; i--) {
+    if (grid.chargeSources[i]!.lifetime <= 0) grid.chargeSources.splice(i, 1)
+  }
+}
+
+/** Flood-fill the connected pool of the same liquid kind under (x,z) and convert it.
+ *  `lightning` also registers a ChargeSource so the pool holds full charge for
+ *  CHARGE_HOLD seconds (re-armed each tick) before decay fades it. */
 export function applyEvent(grid: SurfaceGrid, x: number, z: number, event: SurfaceEvent): void {
   const start = grid.worldToCell(x, z)
   const origin = grid.cellAt(start.col, start.row)
   if (!origin || origin.kind === null || !KIND_CONFIG[origin.kind].liquid) return
   const kind = origin.kind
   const seen = new Set<number>()
+  const charged: number[] = []
   const stack = [[start.col, start.row] as const]
   while (stack.length) {
     const [col, row] = stack.pop()!
@@ -87,11 +106,19 @@ export function applyEvent(grid: SurfaceGrid, x: number, z: number, event: Surfa
     const cell = grid.cellAt(col, row)
     if (!cell || cell.kind !== kind) continue
     seen.add(idx)
-    if (event === 'lightning') cell.electrified = 1
-    else cell.frozen = true
+    if (event === 'lightning') {
+      cell.electrified = 1
+      charged.push(idx)
+    }
+    else {
+      cell.frozen = true
+    }
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
       if (grid.inBounds(col + dx, row + dy)) stack.push([col + dx, row + dy])
     }
+  }
+  if (event === 'lightning' && charged.length) {
+    grid.chargeSources.push({ cells: charged, lifetime: CHARGE_HOLD })
   }
 }
 
@@ -99,6 +126,7 @@ function decay(grid: SurfaceGrid, dt: number): void {
   for (const cell of grid.cells) {
     if (cell.kind === null) continue
     if (cell.electrified > 0) cell.electrified = Math.max(0, cell.electrified - ELECTRIFY_DECAY * dt)
+    if (cell.frozen) continue // freeze pauses decay (charge still drained above)
     if (!Number.isFinite(cell.lifetime)) continue // still growing
     cell.lifetime -= dt
     if (cell.lifetime <= 0) {

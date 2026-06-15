@@ -23,3 +23,15 @@ export function packFire(cells: SurfaceCell[], data: Float32Array): void {
     data[i * 4 + 3] = 0
   }
 }
+
+/** Pool variant state: R=electrified charge (0..1), G=frozen (0/1); B/A unused.
+ *  Drives the icy/electric branches in buildPoolSurfaceMaterial. */
+export function packState(cells: SurfaceCell[], data: Float32Array): void {
+  for (let i = 0; i < cells.length; i++) {
+    const c = cells[i]!
+    data[i * 4] = c.electrified
+    data[i * 4 + 1] = c.frozen ? 1 : 0
+    data[i * 4 + 2] = 0
+    data[i * 4 + 3] = 0
+  }
+}

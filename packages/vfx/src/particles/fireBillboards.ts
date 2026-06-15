@@ -77,8 +77,11 @@ export function createFireBillboards(
   // so this correctly samples the fire texture at the billboard's world XZ.
   const halfW = float(fieldWidth / 2)
   const halfD = float(fieldDepth / 2)
+  // Map world XZ straight to texture UV. No V-flip here: the surface planes need
+  // one because their geometry is rotateX(-π/2) (which inverts v), but this sampler
+  // reads world Z directly — same orientation as packFire's row order.
   const fireU = positionWorld.x.add(halfW).div(float(fieldWidth))
-  const fireV = float(1).sub(positionWorld.z.add(halfD).div(float(fieldDepth)))
+  const fireV = positionWorld.z.add(halfD).div(float(fieldDepth))
   const firePresence = textureNode(fireTex, vec2(fireU, fireV)).r
 
   // --- Two-pass flame shader (same pattern as buildFireSurfaceMaterial) ---

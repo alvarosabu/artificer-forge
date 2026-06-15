@@ -19,12 +19,12 @@ export const STATUS_DEFINITIONS: Record<StatusEffectId, StatusDefinition> = {
     color: 'text-green-400',
     bgColor: 'bg-green-900',
   },
-  stunned: {
-    label: 'Stunned',
+  shocked: {
+    label: 'Shocked',
     type: 'cc',
-    icon: 'i-lucide-star',
-    color: 'text-yellow-300',
-    bgColor: 'bg-yellow-800',
+    icon: 'i-lucide-zap',
+    color: 'text-cyan-400',
+    bgColor: 'bg-cyan-950',
   },
   burning: {
     label: 'Burning',
@@ -74,6 +74,13 @@ export const STATUS_DEFINITIONS: Record<StatusEffectId, StatusDefinition> = {
     icon: 'i-lucide-weight',
     color: 'text-stone-300',
     bgColor: 'bg-stone-800',
+  },
+  warm: {
+    label: 'Warm',
+    type: 'buff',
+    icon: 'i-lucide-thermometer-sun',
+    color: 'text-orange-300',
+    bgColor: 'bg-orange-950',
   },
 }
 export function useStatusEffects() {
