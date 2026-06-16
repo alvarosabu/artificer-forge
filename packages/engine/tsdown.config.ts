@@ -19,6 +19,9 @@ export default defineConfig({
     '@nuxt/ui',
     '@artificer-forge/vfx',
     '@artificer-forge/post-processing',
+    // self-subpaths: entries reference each other as externals (resolved at runtime
+    // via the package's own exports map), no cross-entry bundling duplication.
+    /^@artificer-forge\/engine\//,
   ],
   plugins: [vue()],
 })
