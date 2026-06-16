@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { portraitSignature } from '../utils/portraitSignature'
+import { portraitSignature } from './portraitSignature'
 
 describe('portraitSignature', () => {
   it('is stable for identical appearance', () => {

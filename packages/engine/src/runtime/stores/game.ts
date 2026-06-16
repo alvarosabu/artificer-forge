@@ -179,6 +179,11 @@ export const useGameStore = defineStore('game', () => {
     return content
   }
 
+  /** Public gateway to the injected content source, for other engine systems (e.g. useEquipment). */
+  function resolveTemplate(templateId: string): Promise<EntityTemplate | null> {
+    return requireContent().resolveTemplate(templateId)
+  }
+
   // === WORLD STATE ===
   const currentScene = ref<string>('main')
   const worldFlags = ref<Record<string, boolean | number>>({})
@@ -873,5 +878,6 @@ export const useGameStore = defineStore('game', () => {
 
     // Content source
     configureContent,
+    resolveTemplate,
   }
 })

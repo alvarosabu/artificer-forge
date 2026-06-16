@@ -1,4 +1,4 @@
-import type { Equipment } from '~/stores/game'
+import type { Equipment } from '../stores/game'
 
 export interface PortraitAppearance {
   model?: string

@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { computed, onScopeDispose, toRef, watch } from 'vue'
 import { Box3, type Mesh, Vector3 } from 'three'
 import { useGLTF } from '@tresjs/cientos'
 import { type TresObject3D, useTresContext } from '@tresjs/core'
-import { AnimationName, type RigSize, useCharacterAnimations } from '@artificer-forge/engine/runtime'
-import type { Vec3 } from '~/utils/portraitRigPresets'
-import type { PortraitSubjectDescriptor } from '~/composables/usePortraitStudio'
+import { AnimationName, type RigSize, useCharacterAnimations } from '../../useCharacterAnimations'
+import { useEquipment } from '../../useEquipment'
+import type { Vec3 } from '../../portrait/portraitRigPresets'
+import type { PortraitSubjectDescriptor } from '../../portrait/usePortraitStudio'
 
 const props = withDefaults(defineProps<{
   descriptor: PortraitSubjectDescriptor

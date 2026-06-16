@@ -1,5 +1,6 @@
-import type { Equipment } from '~/stores/game'
-import { createBakeQueue } from '~/utils/portraitBakeQueue'
+import { shallowRef } from 'vue'
+import type { Equipment } from '../stores/game'
+import { createBakeQueue } from './portraitBakeQueue'
 
 export interface PortraitSubjectDescriptor {
   model: string

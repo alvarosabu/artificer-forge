@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { usePortraitStore } from '@artificer-forge/engine/runtime'
+import { PortraitStudio, usePortraitStore } from '@artificer-forge/engine/runtime'
 
 const portraitStore = usePortraitStore()
 

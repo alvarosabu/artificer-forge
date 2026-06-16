@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { frameFromHead, type Vec3 } from '../utils/portraitRigPresets'
+import { frameFromHead, type Vec3 } from './portraitRigPresets'
 
 describe('frameFromHead', () => {
   // A Rig_Medium head mesh box: centre ~1.76, ~1.0 tall, on the X/Z centre line.

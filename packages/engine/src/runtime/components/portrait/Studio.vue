@@ -1,7 +1,12 @@
 <script setup lang="ts">
+import { computed, onErrorCaptured, ref, shallowRef, watchEffect } from 'vue'
 import { TresCanvas } from '@tresjs/core'
-import { frameFromHead, type PortraitFraming, type Vec3 } from '~/utils/portraitRigPresets'
 import type { PerspectiveCamera } from 'three'
+import { frameFromHead, type PortraitFraming, type Vec3 } from '../../portrait/portraitRigPresets'
+import { usePortraitStudio } from '../../portrait/usePortraitStudio'
+import PortraitBackground from './Background.vue'
+import PortraitLights from './Lights.vue'
+import PortraitSubject from './Subject.vue'
 
 // `active` is a shallowRef. usePortraitStudio() returns a PLAIN object, so nested
 // refs are NOT auto-unwrapped when accessed as `studio.active` in a template.
@@ -59,10 +64,22 @@ onErrorCaptured((err) => {
   onFailed(err)
   return false
 })
+
+// Off-screen (not display:none) so the canvas keeps rendering. Inlined (not a
+// scoped <style>) so the engine package builds without a CSS extraction step.
+const studioStyle = {
+  position: 'fixed',
+  top: '0',
+  left: '-9999px',
+  width: '512px',
+  height: '512px',
+  opacity: '0',
+  pointerEvents: 'none',
+} as const
 </script>
 
 <template>
-  <div class="portrait-studio">
+  <div :style="studioStyle">
     <TresCanvas
       :alpha="true"
       :antialias="true"
@@ -90,16 +107,3 @@ onErrorCaptured((err) => {
     </TresCanvas>
   </div>
 </template>
-
-<style scoped>
-/* Off-screen (not display:none) so the canvas keeps rendering. */
-.portrait-studio {
-  position: fixed;
-  top: 0;
-  left: -9999px;
-  width: 512px;
-  height: 512px;
-  opacity: 0;
-  pointer-events: none;
-}
-</style>

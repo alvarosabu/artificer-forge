@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { computed, onScopeDispose, shallowRef, watch } from 'vue'
 import { SRGBColorSpace, type Texture, TextureLoader } from 'three'
-import type { PortraitFraming } from '~/utils/portraitRigPresets'
+import type { PortraitFraming } from '../../portrait/portraitRigPresets'
 
 // A flat backdrop behind the subject. Rendered as a child of the portrait camera,
 // so its position is camera-local: a plane at -Z always faces the lens and fills

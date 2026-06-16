@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createBakeQueue } from '../utils/portraitBakeQueue'
+import { createBakeQueue } from './portraitBakeQueue'
 
 function deferred() {
   let resolve!: (v: string) => void
