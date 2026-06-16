@@ -27,7 +27,7 @@ const emit = defineEmits<{
 }>()
 
 const gameStore = useGameStore()
-const { debugBvh } = toRefs(gameStore)
+const { debugBvh } = useDebugControls()
 const entity = computed(() => gameStore.getEntity(props.entityId))
 const modelPath = computed(() => entity.value?.model!)
 const animations = computed(() => entity.value?.animations as AnimationsConfig | undefined)

@@ -141,13 +141,6 @@ export type MoveResult =
 const DEFAULT_ABILITIES = ['melee-attack', 'dash', 'throw']
 
 export const useGameStore = defineStore('game', () => {
-  // === LECHESS ===
-  const { addFolder } = useSharedLechesControls()
-
-  const { debugBvh } = addFolder('debug', {
-    bvh: false,
-  })
-
   // === WORLD STATE ===
   const currentScene = ref<string>('main')
   const worldFlags = ref<Record<string, boolean | number>>({})
@@ -843,8 +836,5 @@ export const useGameStore = defineStore('game', () => {
     pickupItem,
     transferItem,
     syncEncumbrance,
-
-    // Debug actions
-    debugBvh,
   }
 })
