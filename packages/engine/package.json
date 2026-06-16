@@ -14,10 +14,12 @@
     "./ui": {
       "types": "./dist/ui/index.d.mts",
       "import": "./dist/ui/index.mjs"
-    }
+    },
+    "./styles.css": "./styles.css"
   },
   "files": [
-    "dist"
+    "dist",
+    "styles.css"
   ],
   "scripts": {
     "build": "tsdown",

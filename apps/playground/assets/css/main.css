@@ -1,9 +1,7 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
-
-/* The HUD/scene components live in @artificer-forge/engine now; Tailwind ignores
-   node_modules by default, so scan the engine's built output for utility classes. */
-@source "../../node_modules/@artificer-forge/engine/dist/**/*.mjs";
+/* Registers the engine's HUD/scene component utility classes (self-contained @source). */
+@import "@artificer-forge/engine/styles.css";
 
 @theme {
   --font-sans: "Inter", sans-serif;

@@ -1,0 +1,13 @@
+/*
+ * Tailwind v4 content source for @artificer-forge/engine.
+ *
+ * The engine's HUD/scene components ship as built .mjs in node_modules, which
+ * Tailwind ignores by default. Consumers register their utility classes by
+ * importing this file in their main CSS:
+ *
+ *   @import "@artificer-forge/engine/styles.css";
+ *
+ * The @source path is resolved relative to THIS file, so it points at the
+ * engine's own dist regardless of where the consumer lives.
+ */
+@source "./dist/**/*.mjs";
