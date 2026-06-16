@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Character, Floor, useSceneRefs, useSurfaceStore } from '@artificer-forge/engine/runtime'
+import { Character, Floor, useGameStore, useSceneRefs, useSurfaceStore } from '@artificer-forge/engine/runtime'
 import type { SurfaceSourceDef } from '@artificer-forge/engine/core'
 
 // Demo surface layout. These pre-placed pools stand in for what a level loader

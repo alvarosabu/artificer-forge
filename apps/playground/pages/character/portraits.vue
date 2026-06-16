@@ -11,7 +11,7 @@ import {
   resolvePortraitBackground,
   type Vec3,
 } from '@artificer-forge/engine/runtime'
-import type { Equipment } from '~/stores/game'
+import type { Equipment } from '@artificer-forge/engine/runtime'
 import type { PerspectiveCamera } from 'three'
 
 useHead({ title: 'Character Portraits — Lab' })

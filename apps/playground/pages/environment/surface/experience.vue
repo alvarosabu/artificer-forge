@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { OrbitControls } from '@tresjs/cientos'
-import { Floor } from '@artificer-forge/engine/runtime'
+import { Floor, useSurface } from '@artificer-forge/engine/runtime'
 import type { TresPointerEvent } from '@tresjs/core'
 import type { SurfaceKind } from '@artificer-forge/engine/core'
 

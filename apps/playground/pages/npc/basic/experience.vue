@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Actor, Character, Floor, useSceneRefs } from '@artificer-forge/engine/runtime'
+import { Actor, Character, Floor, useContextMenu, useGameStore, useSceneRefs } from '@artificer-forge/engine/runtime'
 const gameStore = useGameStore()
 const { setCharacterRef } = useSceneRefs()
 

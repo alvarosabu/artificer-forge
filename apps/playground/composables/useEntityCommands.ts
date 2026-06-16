@@ -1,4 +1,5 @@
 import type { CommandGroup } from './useCommandPalette'
+import { useGameStore } from '@artificer-forge/engine/runtime'
 
 export function useEntityCommands(onDone?: () => void) {
   const gameStore = useGameStore()

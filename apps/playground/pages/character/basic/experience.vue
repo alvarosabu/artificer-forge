@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Character, Floor, useSceneRefs } from '@artificer-forge/engine/runtime'
+import { Character, Floor, useGameStore, useSceneRefs } from '@artificer-forge/engine/runtime'
 import { WorldItem as InventoryWorldItem } from '@artificer-forge/engine/ui'
 const gameStore = useGameStore()
 const { setCharacterRef } = useSceneRefs()

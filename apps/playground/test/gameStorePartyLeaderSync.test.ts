@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { useGameStore } from '../stores/game'
+import { useGameStore } from '@artificer-forge/engine/runtime'
 
 describe('game store: selecting a party member syncs the leader', () => {
   beforeEach(() => {
