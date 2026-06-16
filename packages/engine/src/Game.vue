@@ -1,18 +1,15 @@
 <script setup lang="ts">
+// Engine composition root — sits above the /core, /runtime and /ui layers.
+// Owns the canvas + renderer + camera + in-scene systems (runtime) and mounts
+// the HUD overlay (ui). Renderer and post-processing are engine policy; render
+// config (bloom, outline presets) comes from useGameConfig().
 import type { TresRendererSetupContext } from '@tresjs/core'
 import { toValue } from 'vue'
 import { NoToneMapping } from 'three'
 import { WebGPURenderer } from 'three/webgpu'
 import { EffectComposer, useOutlinePassProvider } from '@artificer-forge/post-processing'
-import { CameraController, CombatSystem, SurfaceSystem, useContextMenuProvider, useGameConfig } from '../../runtime'
-import {
-  ActionBar,
-  CharacterInventoryModal as InventoryCharacterInventoryModal,
-  DialogPanel,
-  EntityContextMenu,
-  ItemContextMenu as InventoryItemContextMenu,
-  LootPopover as InventoryLootPopover,
-} from '../index'
+import { CameraController, CombatSystem, SurfaceSystem, useContextMenuProvider, useGameConfig } from '@artificer-forge/engine/runtime'
+import { Hud } from '@artificer-forge/engine/ui'
 
 interface CameraProps {
   position?: [number, number, number]
@@ -26,19 +23,15 @@ interface CameraProps {
 // Per-scene camera override forwarded to CameraController; omit to inherit the default.
 defineProps<{ camera?: CameraProps }>()
 
-// Render config (bloom, outline presets) — engine defaults, overridable by the app
-// via provideGameConfig() above this host.
 const config = useGameConfig()
 
-const { state, close, emitAction } = useContextMenuProvider()
+// Set up the context-menu provider here so both the canvas (pointer-missed) and
+// the HUD (which injects it) share one instance.
+const { close } = useContextMenuProvider()
 useOutlinePassProvider()
 
 function handlePointerMissed() {
   close()
-}
-
-function handleContextMenuAction(action: string, entityId: string) {
-  emitAction(action, entityId)
 }
 
 // WebGPU renderer is engine policy.
@@ -74,14 +67,5 @@ const createWebGPURenderer = (ctx: TresRendererSetupContext) => {
       }"
     />
   </TresCanvas>
-  <EntityContextMenu
-    :state="state"
-    @update:open="state.open = $event"
-    @action="handleContextMenuAction"
-  />
-  <ActionBar />
-  <InventoryCharacterInventoryModal />
-  <InventoryLootPopover />
-  <InventoryItemContextMenu />
-  <DialogPanel />
+  <Hud />
 </template>

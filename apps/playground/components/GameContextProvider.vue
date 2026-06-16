@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useControls } from '@tresjs/leches'
-import { Game } from '@artificer-forge/engine/ui'
+import { Game } from '@artificer-forge/engine'
 import { provideGameConfig } from '@artificer-forge/engine/runtime'
 
 // App-level context around the engine's <Game> host: positions the Leches debug GUI

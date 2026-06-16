@@ -6,8 +6,8 @@ export * from './useItemContextMenu'
 export * from './useItemDrag'
 export * from './useEntityActions'
 
-// Scene host — TresCanvas + renderer + systems + post-processing + HUD overlay
-export { default as Game } from './components/Game.vue'
+// HUD — the 2D DOM overlay layer (context menu + action bar + inventory + dialog)
+export { default as Hud } from './components/Hud.vue'
 
 // Action bar
 export { default as ActionBar } from './components/ActionBar.vue'

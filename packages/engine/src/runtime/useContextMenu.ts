@@ -12,6 +12,7 @@ export interface ContextMenuApi {
   open: (entityId: string, x: number, y: number) => void
   close: () => void
   onAction: (handler: (action: string, entityId: string) => void) => void
+  emitAction: (action: string, entityId: string) => void
 }
 
 export const ContextMenuKey: InjectionKey<ContextMenuApi> = Symbol('context-menu')
@@ -51,6 +52,7 @@ export function useContextMenuProvider() {
     open,
     close,
     onAction,
+    emitAction,
   }
 
   provide(ContextMenuKey, api)
