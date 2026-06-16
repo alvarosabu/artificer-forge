@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { StatusEffectId } from '@artificer-forge/engine/core'
-import { useStatusEffectStore } from '@artificer-forge/engine/runtime'
+import { useStatusEffectStore } from '../stores/statusEffects'
 
 const props = defineProps<{
   effectId: StatusEffectId

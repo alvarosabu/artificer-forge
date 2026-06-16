@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { type EntityState, useGameStore, useInventory, usePortraitRenderer } from '@artificer-forge/engine/runtime'
-import StatusEffectBadges from './StatusEffectBadges.vue'
+import { type EntityState, StatusEffectBadges, useGameStore, useInventory, usePortraitRenderer } from '@artificer-forge/engine/runtime'
 
 const props = defineProps<{
   member: EntityState

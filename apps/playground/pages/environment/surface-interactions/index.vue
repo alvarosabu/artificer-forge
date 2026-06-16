@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { PartyPanel } from '@artificer-forge/engine/ui'
 import SurfaceInteractionsExperience from './experience.vue'
 useHead({ title: 'Surface Interactions - Environment' })
 </script>

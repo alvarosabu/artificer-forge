@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Floor, useSceneRefs } from '@artificer-forge/engine/runtime'
+import { Actor, Character, DialogCameraDirector, Floor, useSceneRefs } from '@artificer-forge/engine/runtime'
 import { Vector3 } from 'three'
 const gameStore = useGameStore()
 const dialogStore = useDialogStore()

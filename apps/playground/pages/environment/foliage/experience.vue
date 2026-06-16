@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Object3D, Vector3 } from 'three'
-import { Floor, Foliage, useSceneRefs } from '@artificer-forge/engine/runtime'
+import { Character, Floor, Foliage, useSceneRefs } from '@artificer-forge/engine/runtime'
 const references = [
   { position: [2, 0, -3] as [number, number, number], scale: 1.0 },
   { position: [-4, 0, 1] as [number, number, number], scale: 0.8 },

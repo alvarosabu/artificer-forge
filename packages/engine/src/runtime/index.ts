@@ -42,6 +42,9 @@ export { default as StatusEffectText } from './components/StatusEffectText.vue'
 export { default as CombatSystem } from './components/CombatSystem.vue'
 export { default as DialogCameraDirector } from './components/DialogCameraDirector.vue'
 export { default as CameraController } from './components/CameraController.vue'
+export { default as Nameplate } from './components/Nameplate.vue'
+export { default as StatusEffectBadge } from './components/StatusEffectBadge.vue'
+export { default as StatusEffectBadges } from './components/StatusEffectBadges.vue'
 
 // Movement / animation controllers
 export * from './useCharacterAnimations'

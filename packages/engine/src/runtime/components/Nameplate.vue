@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { StatusEffect, Team } from '../stores/game'
+import StatusEffectBadges from './StatusEffectBadges.vue'
 
 const props = defineProps<{
   name: string

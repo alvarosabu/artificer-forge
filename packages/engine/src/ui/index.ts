@@ -20,8 +20,6 @@ export { default as CharacterPanel } from './components/CharacterPanel.vue'
 export { default as PartyPanel } from './components/PartyPanel.vue'
 export { default as DialogPanel } from './components/DialogPanel.vue'
 export { default as EntityContextMenu } from './components/EntityContextMenu.vue'
-export { default as StatusEffectBadge } from './components/StatusEffectBadge.vue'
-export { default as StatusEffectBadges } from './components/StatusEffectBadges.vue'
 
 // Inventory
 export { default as BagGrid } from './components/inventory/BagGrid.vue'

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { StatusEffect } from '@artificer-forge/engine/runtime'
+import type { StatusEffect } from '../stores/game'
 import StatusEffectBadge from './StatusEffectBadge.vue'
 
 const props = defineProps<{
