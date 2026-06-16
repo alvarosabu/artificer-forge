@@ -27,7 +27,7 @@ Build 3D adventure games with Vue and TresJS. A pnpm monorepo toolkit for RPG de
   color: neutral
   icon: simple-icons-github
   size: xl
-  to: https://github.com/alvarosabu/game-lab
+  to: https://github.com/alvarosabu/artificer-forge
   variant: outline
   ---
   View on GitHub
