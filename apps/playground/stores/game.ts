@@ -1,3 +1,5 @@
+import { carryCapacity, computeDamage, deriveMaxArmor, encumbrance, totalWeight } from '@artificer-forge/engine/core'
+
 // Types
 export interface Position {
   x: number
@@ -540,23 +542,19 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function weightOf(characterId: string): number {
-    let total = 0
-    for (const e of entities.value.values()) {
-      if (e.type === 'item' && e.containerId === characterId) {
-        total += (e.weight ?? 0) * (e.quantity ?? 1)
-      }
-    }
-    return total
+    const items = [...entities.value.values()].filter(
+      e => e.type === 'item' && e.containerId === characterId,
+    )
+    return totalWeight(items)
   }
 
   function capacityOf(characterId: string): number {
     const entity = entities.value.get(characterId)
-    const str = entity?.stats?.strength ?? 10
-    return 50 + str * 5
+    return carryCapacity(entity?.stats?.strength)
   }
 
   function encumbranceOf(characterId: string): number {
-    return weightOf(characterId) / capacityOf(characterId)
+    return encumbrance(weightOf(characterId), capacityOf(characterId))
   }
 
   function derivedEquipment(entityId: string): Equipment {
@@ -572,14 +570,10 @@ export const useGameStore = defineStore('game', () => {
 
   // Max armor pools = sum of `armor` from every equipped item on this character.
   function derivedMaxArmor(entityId: string): { physical: number, magical: number } {
-    let physical = 0
-    let magical = 0
-    for (const e of entities.value.values()) {
-      if (e.type !== 'item' || e.containerId !== entityId || !e.slot) continue
-      physical += e.armor?.physical ?? 0
-      magical += e.armor?.magical ?? 0
-    }
-    return { physical, magical }
+    const equipped = [...entities.value.values()].filter(
+      e => e.type === 'item' && e.containerId === entityId && e.slot,
+    )
+    return deriveMaxArmor(equipped)
   }
 
   // Refill current armor pools to their derived max (called on (re)equip — no passive regen).
@@ -600,21 +594,8 @@ export const useGameStore = defineStore('game', () => {
     if (!entity) return { armorAbsorbed: 0, hpDamage: 0 }
 
     const armorType = useDamageTypeStore().get(damageTypeId)?.armorType
-    const partial: Partial<EntityState> = {}
-    let remaining = amount
-    let armorAbsorbed = 0
-
-    if (armorType === 'physical' || armorType === 'magical') {
-      const key = armorType === 'physical' ? 'physicalArmor' : 'magicalArmor'
-      const current = entity[key] ?? 0
-      armorAbsorbed = Math.min(current, remaining)
-      partial[key] = current - armorAbsorbed
-      remaining -= armorAbsorbed
-    }
-
-    const hpDamage = remaining
-    partial.hp = Math.max(0, (entity.hp ?? 0) - hpDamage)
-    updateEntity(targetId, partial)
+    const { armorAbsorbed, hpDamage, next } = computeDamage(entity, amount, armorType)
+    updateEntity(targetId, next)
     return { armorAbsorbed, hpDamage }
   }
 
