@@ -5,7 +5,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { rollDice } from '@artificer-forge/utils'
 import { useProjectile } from '~/composables/useProjectile'
-import { AnimationName, useSceneRefs } from '@artificer-forge/engine/runtime'
+import { AnimationName, useDamageTypeStore, useSceneRefs } from '@artificer-forge/engine/runtime'
 const dracoLoader = new DRACOLoader()
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/')
 

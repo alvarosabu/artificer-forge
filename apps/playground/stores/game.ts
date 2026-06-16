@@ -1,4 +1,5 @@
 import { carryCapacity, computeDamage, deriveMaxArmor, encumbrance, totalWeight } from '@artificer-forge/engine/core'
+import { useDamageTypeStore } from '@artificer-forge/engine/runtime'
 
 // Types
 export interface Position {

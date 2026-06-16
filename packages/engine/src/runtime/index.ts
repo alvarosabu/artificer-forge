@@ -5,6 +5,9 @@ export { default as Floor } from './components/Floor.vue'
 export { default as Foliage } from './components/foliage/Foliage.vue'
 export * from './components/foliage/foliage'
 
+// Stores
+export * from './stores/damageTypes'
+
 // Movement / animation controllers
 export * from './useCharacterAnimations'
 export * from './useCharacterController'
