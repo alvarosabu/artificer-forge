@@ -1,4 +1,5 @@
 import { createSharedComposable } from '@vueuse/core'
+import { entitiesInCircle, entitiesInCone, entitiesInLine } from '@artificer-forge/engine/core'
 import {
   Vector3,
   Mesh,
@@ -58,70 +59,6 @@ function createShapeMesh(config: AoEConfig): Mesh {
   mesh.rotation.x = -Math.PI / 2
   mesh.position.y = 0.01
   return mesh
-}
-
-function entitiesInCircle(
-  center: Vector3,
-  radius: number,
-  entities: Map<string, { position: { x: number, z: number } }>,
-): string[] {
-  const ids: string[] = []
-  for (const [id, e] of entities) {
-    const dx = e.position.x - center.x
-    const dz = e.position.z - center.z
-    if (Math.sqrt(dx * dx + dz * dz) <= radius) ids.push(id)
-  }
-  return ids
-}
-
-function entitiesInCone(
-  origin: Vector3,
-  direction: Vector3,
-  length: number,
-  halfAngleDeg: number,
-  entities: Map<string, { position: { x: number, z: number } }>,
-): string[] {
-  const halfAngle = halfAngleDeg * (Math.PI / 180)
-  const dirNorm = new Vector3(direction.x, 0, direction.z).normalize()
-  const ids: string[] = []
-
-  for (const [id, e] of entities) {
-    const dx = e.position.x - origin.x
-    const dz = e.position.z - origin.z
-    const dist = Math.sqrt(dx * dx + dz * dz)
-    if (dist > length) continue
-
-    const vec = new Vector3(dx, 0, dz).normalize()
-    const angle = Math.acos(Math.min(1, dirNorm.dot(vec)))
-    if (angle <= halfAngle) ids.push(id)
-  }
-  return ids
-}
-
-function entitiesInLine(
-  start: Vector3,
-  end: Vector3,
-  halfWidth: number,
-  entities: Map<string, { position: { x: number, z: number } }>,
-): string[] {
-  const dx = end.x - start.x
-  const dz = end.z - start.z
-  const length = Math.sqrt(dx * dx + dz * dz)
-  if (length === 0) return []
-
-  const dirX = dx / length
-  const dirZ = dz / length
-  const ids: string[] = []
-
-  for (const [id, e] of entities) {
-    const px = e.position.x - start.x
-    const pz = e.position.z - start.z
-    const proj = px * dirX + pz * dirZ
-    if (proj < 0 || proj > length) continue
-    const perp = Math.abs(px * (-dirZ) + pz * dirX)
-    if (perp <= halfWidth) ids.push(id)
-  }
-  return ids
 }
 
 export const useAoESystem = createSharedComposable(() => {
