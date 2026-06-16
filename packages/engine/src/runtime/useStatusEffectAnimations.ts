@@ -1,5 +1,8 @@
-import type { ComputedRef } from 'vue'
-import { AnimationName, type AnimationNameType, useStatusEffectStore } from '@artificer-forge/engine/runtime'
+import { type ComputedRef, onScopeDispose, watch } from 'vue'
+import { AnimationName, type AnimationNameType } from './useCharacterAnimations'
+import { useStatusEffectStore } from './stores/statusEffects'
+import { useGameStore } from './stores/game'
+
 export function useStatusEffectAnimations(
   entityId: ComputedRef<string>,
   play: (name: AnimationNameType, fadeTime?: number) => void,

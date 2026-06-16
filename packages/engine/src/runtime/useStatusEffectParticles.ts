@@ -1,7 +1,8 @@
-import type { ComputedRef } from 'vue'
+import { type ComputedRef, onScopeDispose, watch } from 'vue'
 import type { Object3D } from 'three'
 import { createEmberSystem, heatColor, EMBER_COUNT, MAX_RADIUS, RESET_Y } from '@artificer-forge/vfx'
 import type { StatusEffectId } from '@artificer-forge/engine/core'
+import { useGameStore } from './stores/game'
 
 export function useStatusEffectParticles(
   rig: ComputedRef<Object3D | null | undefined>,

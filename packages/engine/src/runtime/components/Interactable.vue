@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { computed, type Ref, ref } from 'vue'
 import { useGLTF, Html, useBVH } from '@tresjs/cientos'
-import { useGraph, type TresObject3D, type TresPointerEvent } from '@tresjs/core'
+import { useGraph, useLoop, type TresObject3D, type TresPointerEvent } from '@tresjs/core'
 import { MathUtils } from 'three'
 import { useOutlinePass } from '@artificer-forge/post-processing'
+import { useContextMenu } from '../useContextMenu'
+import { useGameStore } from '../stores/game'
 
 const { open: openContextMenu } = useContextMenu()
 const { addToSelection, removeFromSelection } = useOutlinePass()
@@ -18,16 +21,19 @@ interface AnimationsConfig {
   states: Record<string, AnimationState>
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   entityId: string
-}>()
+  // BVH debug visualization — wired by the app (was Leches-backed in the playground).
+  debug?: boolean
+}>(), {
+  debug: false,
+})
 
 const emit = defineEmits<{
   interact: [entityId: string]
 }>()
 
 const gameStore = useGameStore()
-const { debugBvh } = useDebugControls()
 const entity = computed(() => gameStore.getEntity(props.entityId))
 const modelPath = computed(() => entity.value?.model!)
 const animations = computed(() => entity.value?.animations as AnimationsConfig | undefined)
@@ -38,7 +44,7 @@ const { state: model } = useGLTF(modelPath.value, {
 const scene = computed(() => model.value?.scene)
 
 useBVH(() => scene.value, {
-  debug: debugBvh,
+  debug: () => props.debug,
 })
 
 /* const { applyBVHWhenReady } = useBVH({

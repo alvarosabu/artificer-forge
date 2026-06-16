@@ -1,9 +1,16 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Vector3 } from 'three'
 import { useLoop } from '@tresjs/core'
 import { Html } from '@tresjs/cientos'
 import { TargetReticle, TargetIndicator } from '@artificer-forge/vfx'
-import { useSceneRefs } from '@artificer-forge/engine/runtime'
+import { useSceneRefs } from '../useSceneRefs'
+import { useAbilitySystem } from '../useAbilitySystem'
+import { useAoESystem } from '../useAoESystem'
+import { useActionBar } from '../useActionBar'
+import { useGameStore } from '../stores/game'
+import { useCombatStore } from '../stores/combat'
+import TrajectoryPreview from './TrajectoryPreview.vue'
 
 const gameStore = useGameStore()
 const combatStore = useCombatStore()

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onUnmounted, shallowRef, watch, watchEffect } from 'vue'
 import { Mesh, NoColorSpace, PlaneGeometry, RepeatWrapping, SRGBColorSpace, TextureLoader } from 'three'
 import type { InstancedMesh, Texture } from 'three'
 import { TGALoader } from 'three/examples/jsm/loaders/TGALoader.js'
@@ -10,6 +11,7 @@ import {
   createFireBillboards,
   createInstancedEmberSystem,
 } from '@artificer-forge/vfx'
+import { useSurface } from '../useSurface'
 
 // Global surface renderer (sibling to CombatSystem in Game.vue). Pure renderer:
 // reads the engine's textures and renders the field. The engine (useSurface) owns

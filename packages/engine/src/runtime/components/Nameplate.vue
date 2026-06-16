@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { StatusEffect, Team } from '~/stores/game'
+import { computed } from 'vue'
+import type { StatusEffect, Team } from '../stores/game'
 
 const props = defineProps<{
   name: string

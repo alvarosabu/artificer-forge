@@ -1,4 +1,4 @@
-import type { ComputedRef } from 'vue'
+import { type ComputedRef, onScopeDispose, shallowRef, watch } from 'vue'
 import type { Mesh, Object3D } from 'three'
 import {
   STATUS_OVERLAY_EFFECTS,
@@ -6,6 +6,7 @@ import {
   type StatusOverlayEffectId,
 } from '@artificer-forge/vfx'
 import type { StatusEffectId } from '@artificer-forge/engine/core'
+import { useGameStore } from './stores/game'
 
 const PRIORITY: StatusOverlayEffectId[] = ['burning', 'poisoned', 'frozen']
 

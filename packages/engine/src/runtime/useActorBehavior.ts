@@ -1,5 +1,6 @@
-import { AnimationName, type AnimationNameType } from '@artificer-forge/engine/runtime'
-import type { EntityState } from '~/stores/game'
+import { computed, type Ref, watch } from 'vue'
+import { AnimationName, type AnimationNameType } from './useCharacterAnimations'
+import type { EntityState } from './stores/game'
 
 const validAnimNames = new Set<string>(Object.values(AnimationName))
 

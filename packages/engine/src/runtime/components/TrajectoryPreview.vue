@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import {
   Vector3,
   CatmullRomCurve3,

@@ -1,9 +1,18 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import { useGLTF, Html } from '@tresjs/cientos'
 import type { TresPointerEvent } from '@tresjs/core'
-import { useCharacterAnimations } from '@artificer-forge/engine/runtime'
 import { useOutlinePass } from '@artificer-forge/post-processing'
-import { useActorBehavior } from '~/composables/useActorBehavior'
+import { useCharacterAnimations } from '../useCharacterAnimations'
+import { useActorBehavior } from '../useActorBehavior'
+import { useContextMenu } from '../useContextMenu'
+import { useEquipment } from '../useEquipment'
+import { useStatusEffectOverlay } from '../useStatusEffectOverlay'
+import { useStatusEffectParticles } from '../useStatusEffectParticles'
+import { useStatusEffectAnimations } from '../useStatusEffectAnimations'
+import { usePortraitRenderer } from '../portrait/usePortraitRenderer'
+import { useGameStore } from '../stores/game'
+import Nameplate from './Nameplate.vue'
 
 const { open: openContextMenu } = useContextMenu()
 const { addToSelection, removeFromSelection } = useOutlinePass()

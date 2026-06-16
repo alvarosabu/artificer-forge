@@ -1,6 +1,7 @@
-import type { ComputedRef } from 'vue'
+import { type ComputedRef, onScopeDispose, ref, watch } from 'vue'
 import type { StatusEffectId } from '@artificer-forge/engine/core'
-import { useStatusEffectStore } from '@artificer-forge/engine/runtime'
+import { useStatusEffectStore } from './stores/statusEffects'
+import { useGameStore } from './stores/game'
 
 export interface StatusTextEntry {
   id: string

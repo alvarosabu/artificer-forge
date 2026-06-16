@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { OrbitControls } from '@tresjs/cientos'
+import { useGameStore } from '../stores/game'
+
 // Shared camera + orbit controls for every Game scene. Lives inside <Game> so the
 // active PerspectiveCamera resolves via useTresContext() for any consumer (e.g.
 // DialogCameraDirector). Controls auto-disable while input is blocked (dialogs, etc).

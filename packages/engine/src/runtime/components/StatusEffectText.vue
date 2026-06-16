@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { onMounted, ref, shallowRef } from 'vue'
 import { Html } from '@tresjs/cientos'
 import { useLoop, useTresContext } from '@tresjs/core'
 import { Vector3 } from 'three'
-import type { StatusTextEntry } from '~/composables/useStatusEffectTexts'
+import type { StatusTextEntry } from '../useStatusEffectTexts'
 
 const props = defineProps<{ entry: StatusTextEntry }>()
 const emit = defineEmits<{ done: [] }>()

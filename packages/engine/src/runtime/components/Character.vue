@@ -1,10 +1,24 @@
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue'
 import { useGLTF, Html } from '@tresjs/cientos'
 import { useLoop, type TresPointerEvent } from '@tresjs/core'
 import { Mesh, Vector3, type Group } from 'three'
-import { useCharacterAnimations, AnimationName, useCharacterController, type RigSize } from '@artificer-forge/engine/runtime'
 import { useDamageNumbers, DamageNumber, ghostMaterial } from '@artificer-forge/vfx'
 import { useOutlinePass } from '@artificer-forge/post-processing'
+import { AnimationName, type RigSize, useCharacterAnimations } from '../useCharacterAnimations'
+import { useCharacterController } from '../useCharacterController'
+import { useContextMenu } from '../useContextMenu'
+import { useActionBar } from '../useActionBar'
+import { useEquipment } from '../useEquipment'
+import { useStatusEffectOverlay } from '../useStatusEffectOverlay'
+import { useStatusEffectParticles } from '../useStatusEffectParticles'
+import { useStatusEffectAnimations } from '../useStatusEffectAnimations'
+import { useStatusEffectTexts } from '../useStatusEffectTexts'
+import { usePortraitRenderer } from '../portrait/usePortraitRenderer'
+import { useCombatStore } from '../stores/combat'
+import { useGameStore } from '../stores/game'
+import Nameplate from './Nameplate.vue'
+import StatusEffectText from './StatusEffectText.vue'
 
 const { open: openContextMenu } = useContextMenu()
 const { addToSelection, removeFromSelection } = useOutlinePass()
