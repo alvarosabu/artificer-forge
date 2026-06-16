@@ -12,6 +12,7 @@ import {
   type SurfaceGrid,
   type SurfaceKind,
 } from '@artificer-forge/engine/core'
+import { useSurfaceStore } from '@artificer-forge/engine/runtime'
 
 interface SurfaceField {
   grid: SurfaceGrid

@@ -1,4 +1,6 @@
-import type { SurfaceGridConfig, SurfaceSourceDef } from '@artificer-forge/engine/core'
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import type { SurfaceGridConfig, SurfaceSourceDef } from '../../core/surface'
 
 /** Default field: 32×32 cells at 0.5m ⇒ 16×16m, centred on world origin. */
 const DEFAULT_GRID: SurfaceGridConfig = { cols: 32, rows: 32, cell: 0.5 }

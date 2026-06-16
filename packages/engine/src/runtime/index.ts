@@ -8,6 +8,7 @@ export * from './components/foliage/foliage'
 // Stores
 export * from './stores/damageTypes'
 export * from './stores/statusEffects'
+export * from './stores/surface'
 
 // Movement / animation controllers
 export * from './useCharacterAnimations'
