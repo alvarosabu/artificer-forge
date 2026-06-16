@@ -11,6 +11,16 @@ export * from './stores/damageTypes'
 export * from './stores/statusEffects'
 export * from './stores/surface'
 export * from './stores/portraits'
+export * from './stores/combat'
+export * from './stores/dialog'
+
+// Combat / ability / dialog systems
+export * from './useProjectile'
+export * from './useAoESystem'
+export * from './useActionBar'
+export * from './useAbilitySystem'
+export * from './useDialogEngine'
+export * from './useDialogCamera'
 
 // Movement / animation controllers
 export * from './useCharacterAnimations'

@@ -19,6 +19,10 @@ export default defineNuxtPlugin(async () => {
       queryCollection('entities').where('templateId', '=', templateId).first() as unknown as Promise<EntityTemplate | null>,
     resolveScene: sceneId =>
       queryCollection('scenes').where('sceneId', '=', sceneId).first() as unknown as Promise<SceneDef | null>,
+    resolveAbility: abilityId =>
+      queryCollection('abilities').where('abilityId', '=', abilityId).first(),
+    resolveDialog: dialogId =>
+      queryCollection('dialogs').where('dialogId', '=', dialogId).first(),
   })
 
   await Promise.all([

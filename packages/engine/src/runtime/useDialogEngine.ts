@@ -1,4 +1,4 @@
-import type { EntityState } from '~/stores/game'
+import { type EntityState, useGameStore } from './stores/game'
 
 // === Types ===
 

@@ -1,6 +1,21 @@
 <script setup lang="ts">
 const gameStore = useGameStore()
-const { playerEntity, playerClassId, slots, activeCategory, setCategory, activateSlot, activeWeaponSlot, setActiveWeaponSlot } = useActionBar()
+const { playerEntity, playerClassId, slots, activeCategory, setCategory, activateSlot, activeWeaponSlot, setActiveWeaponSlot, toggleWeaponSlot } = useActionBar()
+
+// Keyboard shortcuts live with the UI; the engine composable stays headless.
+defineShortcuts({
+  1: () => activateSlot(0),
+  2: () => activateSlot(1),
+  3: () => activateSlot(2),
+  4: () => activateSlot(3),
+  5: () => activateSlot(4),
+  6: () => activateSlot(5),
+  7: () => activateSlot(6),
+  8: () => activateSlot(7),
+  9: () => activateSlot(8),
+  0: () => activateSlot(9),
+  tab: () => toggleWeaponSlot(),
+})
 
 // Portrait rendered dynamically from the player's live model (falls back to the
 // entity's `portrait` field / icon when generation is unavailable).
