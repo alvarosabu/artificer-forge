@@ -4,21 +4,21 @@
   "type": "module",
   "exports": {
     "./core": {
-      "types": "./dist/core/index.d.mts",
-      "import": "./dist/core/index.mjs"
+      "types": "./src/core/index.ts",
+      "import": "./src/core/index.ts"
     },
     "./runtime": {
-      "types": "./dist/runtime/index.d.mts",
-      "import": "./dist/runtime/index.mjs"
+      "types": "./src/runtime/index.ts",
+      "import": "./src/runtime/index.ts"
     },
     "./ui": {
-      "types": "./dist/ui/index.d.mts",
-      "import": "./dist/ui/index.mjs"
+      "types": "./src/ui/index.ts",
+      "import": "./src/ui/index.ts"
     },
     "./styles.css": "./styles.css"
   },
   "files": [
-    "dist",
+    "src",
     "styles.css"
   ],
   "scripts": {
