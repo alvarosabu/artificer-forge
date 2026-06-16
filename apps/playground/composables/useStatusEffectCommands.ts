@@ -1,5 +1,5 @@
 import type { CommandGroup } from './useCommandPalette'
-import type { StatusEffectDefinition } from '~/stores/statusEffects'
+import { type StatusEffectDefinition, useStatusEffectStore } from '@artificer-forge/engine/runtime'
 
 export function useStatusEffectCommands(onDone?: () => void) {
   const gameStore = useGameStore()

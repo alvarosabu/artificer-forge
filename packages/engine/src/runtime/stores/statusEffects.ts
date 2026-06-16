@@ -1,4 +1,6 @@
-import type { StatusEffectId } from '~/shared/statusEffectIds'
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
+import type { StatusEffectId } from '../../core/statusEffects'
 
 export interface StatusEffectDefinition {
   statusEffectId: StatusEffectId
@@ -12,15 +14,19 @@ export interface StatusEffectDefinition {
   icon: string
 }
 
+/** Supplied by the app — fetches the status-effect definitions (e.g. from Nuxt Content). */
+export type StatusEffectLoader = () => Promise<StatusEffectDefinition[]>
+
 export const useStatusEffectStore = defineStore('statusEffects', () => {
   const effects = ref<Map<string, StatusEffectDefinition>>(new Map())
 
   // Computed array used by command palette and animations
   const allEffects = computed(() => [...effects.value.values()])
 
-  async function load() {
+  /** Hydrate once from an app-provided loader. The engine never fetches content itself. */
+  async function load(loader: StatusEffectLoader) {
     if (effects.value.size > 0) return
-    const all = await queryCollection('statusEffect').all() as unknown as StatusEffectDefinition[]
+    const all = await loader()
     all.forEach(e => effects.value.set(e.statusEffectId, e))
   }
 

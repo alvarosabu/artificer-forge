@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { StatusEffectId } from '~/shared/statusEffectIds'
+import type { StatusEffectId } from '@artificer-forge/engine/core'
+import { useStatusEffectStore } from '@artificer-forge/engine/runtime'
 
 const props = defineProps<{
   effectId: StatusEffectId

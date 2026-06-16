@@ -42,7 +42,7 @@ export const ALL_EQUIPMENT_SLOTS: EquipmentSlotKey[] = [
   'offHand',
 ]
 
-export type { StatusEffectId } from '~/shared/statusEffectIds'
+export type { StatusEffectId } from '@artificer-forge/engine/core'
 
 export interface StatusEffect {
   id: StatusEffectId

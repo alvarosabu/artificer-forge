@@ -1,5 +1,5 @@
-import type { StatusEffectId } from '~/shared/statusEffectIds'
-import type { StatusEffectDefinition } from '~/stores/statusEffects'
+import type { StatusEffectId } from '@artificer-forge/engine/core'
+import { type StatusEffectDefinition, useStatusEffectStore } from '@artificer-forge/engine/runtime'
 
 export type StatusEffectType = 'debuff' | 'dot' | 'cc' | 'buff'
 
