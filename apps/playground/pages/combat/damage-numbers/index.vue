@@ -6,9 +6,9 @@ useHead({ title: 'Damage Numbers - TresJS Playground' })
 
 <template>
   <div>
-    <Game>
+    <GameContextProvider>
       <CombatExperience />
-    </Game>
+    </GameContextProvider>
     <GameCommandPalette />
     <PartyPanel />
   </div>

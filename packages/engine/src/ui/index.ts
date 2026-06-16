@@ -6,6 +6,9 @@ export * from './useItemContextMenu'
 export * from './useItemDrag'
 export * from './useEntityActions'
 
+// Scene host — TresCanvas + renderer + systems + post-processing + HUD overlay
+export { default as Game } from './components/Game.vue'
+
 // Action bar
 export { default as ActionBar } from './components/ActionBar.vue'
 export { default as ActionBarPortrait } from './components/ActionBarPortrait.vue'

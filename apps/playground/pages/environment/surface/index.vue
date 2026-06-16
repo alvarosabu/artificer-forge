@@ -12,10 +12,10 @@ provide('unique-uuid', uuid)
 </script>
 
 <template>
-  <Game>
+  <GameContextProvider>
     <template #controls>
       <TresLeches :uuid="uuid" />  <!-- own panel: expanded, or different uuid entirely -->
     </template>
     <SurfaceExperience />
-  </Game>
+  </GameContextProvider>
 </template>

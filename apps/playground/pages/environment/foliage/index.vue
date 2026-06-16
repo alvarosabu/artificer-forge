@@ -4,7 +4,7 @@ useHead({ title: 'Foliage - Environment' })
 </script>
 
 <template>
-  <Game>
+  <GameContextProvider>
     <FoliageExperience />
-  </Game>
+  </GameContextProvider>
 </template>

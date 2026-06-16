@@ -6,9 +6,9 @@ useHead({ title: 'Orc Raider - TresJS Playground' })
 
 <template>
   <div>
-    <Game>
+    <GameContextProvider>
       <OrcRaiderExperience />
-    </Game>
+    </GameContextProvider>
     <GameCommandPalette />
     <PartyPanel />
   </div>

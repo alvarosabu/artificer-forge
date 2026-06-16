@@ -6,9 +6,9 @@ useHead({ title: 'Dialog NPC - TresJS Playground' })
 
 <template>
   <div>
-    <Game>
+    <GameContextProvider>
       <DialogExperience />
-    </Game>
+    </GameContextProvider>
     <GameCommandPalette />
     <PartyPanel />
   </div>

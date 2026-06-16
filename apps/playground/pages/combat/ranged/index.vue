@@ -6,9 +6,9 @@ useHead({ title: 'Ranged - TresJS Playground' })
 
 <template>
   <div>
-    <Game>
+    <GameContextProvider>
       <RangedExperience />
-    </Game>
+    </GameContextProvider>
     <GameCommandPalette />
     <PartyPanel />
   </div>

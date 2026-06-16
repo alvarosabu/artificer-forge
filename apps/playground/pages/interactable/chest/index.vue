@@ -6,9 +6,9 @@ useHead({ title: 'Chest - TresJS Playground' })
 
 <template>
   <div>
-    <Game>
+    <GameContextProvider>
       <InteractableExperience />
-    </Game>
+    </GameContextProvider>
     <GameCommandPalette />
     <PartyPanel />
   </div>
