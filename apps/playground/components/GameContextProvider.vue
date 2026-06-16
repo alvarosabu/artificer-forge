@@ -42,6 +42,17 @@ watchEffect(() => {
     <TresLeches :uuid="uuid" collapsed />
   </slot>
   <Game :camera="camera">
+    <!-- Only forward these when the page actually provides them, otherwise an
+         empty slot would suppress Game's camera / systems / Hud defaults. -->
+    <template v-if="$slots.camera" #camera>
+      <slot name="camera" />
+    </template>
+    <template v-if="$slots.systems" #systems>
+      <slot name="systems" />
+    </template>
+    <template v-if="$slots.hud" #hud>
+      <slot name="hud" />
+    </template>
     <slot />
   </Game>
 </template>

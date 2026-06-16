@@ -20,7 +20,8 @@ interface CameraProps {
   controls?: boolean
 }
 
-// Per-scene camera override forwarded to CameraController; omit to inherit the default.
+// Per-scene camera override forwarded to the default CameraController; omit to
+// inherit the default. Ignored when the #camera slot is overridden.
 defineProps<{ camera?: CameraProps }>()
 
 const config = useGameConfig()
@@ -53,10 +54,16 @@ const createWebGPURenderer = (ctx: TresRendererSetupContext) => {
     shadows
     @pointer-missed="handlePointerMissed"
   >
-    <CameraController v-bind="camera" />
+    <slot name="camera">
+      <CameraController v-bind="camera" />
+    </slot>
     <slot />
-    <CombatSystem />
-    <SurfaceSystem />
+    <!-- Gameplay systems — override to compose your own set (engine + custom),
+         or pass an empty #systems slot for non-gameplay scenes (menus, char select). -->
+    <slot name="systems">
+      <CombatSystem />
+      <SurfaceSystem />
+    </slot>
     <EffectComposer
       :outline-presets="config.outlinePresets"
       :bloom="{
@@ -67,5 +74,7 @@ const createWebGPURenderer = (ctx: TresRendererSetupContext) => {
       }"
     />
   </TresCanvas>
-  <Hud />
+  <slot name="hud">
+    <Hud />
+  </slot>
 </template>
