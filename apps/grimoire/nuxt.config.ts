@@ -1,4 +1,9 @@
 export default defineNuxtConfig({
+  modules: ['@barzhsieh/nuxt-content-mermaid'],
+  contentMermaid: {
+    // Match diagrams to the Docus light/dark theme.
+    theme: { light: 'default', dark: 'dark' },
+  },
   css: ['~/assets/css/main.css'],
   fonts: {
     families: [

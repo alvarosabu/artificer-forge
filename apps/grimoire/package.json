@@ -13,5 +13,8 @@
     "nuxt": "catalog:nuxt",
     "zod": "catalog:nuxt",
     "zod-to-json-schema": "catalog:nuxt"
+  },
+  "devDependencies": {
+    "@barzhsieh/nuxt-content-mermaid": "catalog:"
   }
 }
