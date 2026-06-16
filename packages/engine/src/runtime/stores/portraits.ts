@@ -1,3 +1,6 @@
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+
 export interface PortraitEntry {
   url: string
   signature: string
@@ -5,12 +8,14 @@ export interface PortraitEntry {
 
 const STORAGE_KEY = 'af:portraits'
 
+/** Client-only persistence — guard on `window` so the store is safe under SSR. */
+const isClient = typeof window !== 'undefined'
+
 export const usePortraitStore = defineStore('portraits', () => {
   const entries = ref<Record<string, PortraitEntry>>({})
 
-  // Client-only; localStorage is unavailable during SSR.
   function hydrate() {
-    if (!import.meta.client) return
+    if (!isClient) return
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
       if (raw) entries.value = JSON.parse(raw)
@@ -21,7 +26,7 @@ export const usePortraitStore = defineStore('portraits', () => {
   }
 
   function persist() {
-    if (!import.meta.client) return
+    if (!isClient) return
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(entries.value))
     }

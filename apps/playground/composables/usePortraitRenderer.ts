@@ -1,3 +1,4 @@
+import { usePortraitStore } from '@artificer-forge/engine/runtime'
 import { resolvePortraitBackground } from '~/utils/portraitBackgrounds'
 import { portraitSignature } from '~/utils/portraitSignature'
 
