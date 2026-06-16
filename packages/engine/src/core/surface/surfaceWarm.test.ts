@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createSurfaceGrid } from '../utils/surfaces/grid'
-import { hasFireNear } from '../utils/surfaces/matrix'
+import { createSurfaceGrid } from './grid'
+import { hasFireNear } from './matrix'
 
 // 10x10 grid, 1m cells, centred on origin.
 function fireGrid() {

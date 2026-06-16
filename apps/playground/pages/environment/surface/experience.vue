@@ -2,7 +2,7 @@
 import { OrbitControls } from '@tresjs/cientos'
 import { Floor } from '@artificer-forge/components/tres'
 import type { TresPointerEvent } from '@tresjs/core'
-import type { SurfaceKind } from '~/utils/surfaces/types'
+import type { SurfaceKind } from '@artificer-forge/engine/core'
 
 const uuid = inject<string>('unique-uuid')
 

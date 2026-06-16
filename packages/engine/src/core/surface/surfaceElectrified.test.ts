@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { createSurfaceGrid } from '../utils/surfaces/grid'
-import { applyEvent, step } from '../utils/surfaces/sim'
-import { CHARGE_HOLD } from '../utils/surfaces/types'
+import { createSurfaceGrid } from './grid'
+import { applyEvent, step } from './sim'
+import { CHARGE_HOLD } from './types'
 
 // World (0,0) is cell (10,10) on a 20x20 centred grid.
 function waterPool() {

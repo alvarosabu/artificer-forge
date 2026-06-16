@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createSurfaceGrid } from '../utils/surfaces/grid'
-import { packState } from '../utils/surfaces/texture'
+import { createSurfaceGrid } from './grid'
+import { packState } from './texture'
 
 describe('packState', () => {
   it('packs electrified into R and frozen into G', () => {

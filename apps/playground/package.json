@@ -18,6 +18,7 @@
     "@artificer-forge/components": "workspace:*",
     "@artificer-forge/composables": "workspace:*",
     "@artificer-forge/dialog-editor": "workspace:*",
+    "@artificer-forge/engine": "workspace:*",
     "@artificer-forge/post-processing": "workspace:*",
     "@artificer-forge/utils": "workspace:*",
     "@artificer-forge/vfx": "workspace:*",

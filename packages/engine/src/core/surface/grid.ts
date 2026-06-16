@@ -1,4 +1,4 @@
-// apps/playground/utils/surfaces/grid.ts
+// Surface grid: factory + closure state (no class — repo convention).
 import type { ChargeSource, SurfaceCell, SurfaceKind, SurfaceSource } from './types'
 import { emptyCell, KIND_CONFIG } from './types'
 

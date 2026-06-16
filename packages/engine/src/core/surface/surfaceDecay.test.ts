@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { createSurfaceGrid } from '../utils/surfaces/grid'
-import { step } from '../utils/surfaces/sim'
-import type { SurfaceKind } from '../utils/surfaces/types'
+import { createSurfaceGrid } from './grid'
+import { step } from './sim'
+import type { SurfaceKind } from './types'
 
 // 20x20 grid, 1m cells, centred on origin → world (0,0) is cell (10,10).
 function grownPool(kind: SurfaceKind) {

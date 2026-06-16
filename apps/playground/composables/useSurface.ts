@@ -1,9 +1,17 @@
 import { DataTexture, FloatType, LinearFilter, RGBAFormat } from 'three'
-import { createSurfaceGrid, type SurfaceGrid } from '~/utils/surfaces/grid'
-import { applyEvent, step } from '~/utils/surfaces/sim'
-import { packCells, packFire, packState } from '~/utils/surfaces/texture'
-import { hasFireNear, statusForCell } from '~/utils/surfaces/matrix'
-import type { SurfaceEvent, SurfaceKind } from '~/utils/surfaces/types'
+import {
+  applyEvent,
+  createSurfaceGrid,
+  hasFireNear,
+  packCells,
+  packFire,
+  packState,
+  statusForCell,
+  step,
+  type SurfaceEvent,
+  type SurfaceGrid,
+  type SurfaceKind,
+} from '@artificer-forge/engine/core'
 
 interface SurfaceField {
   grid: SurfaceGrid

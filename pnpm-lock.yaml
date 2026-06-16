@@ -202,6 +202,9 @@ importers:
       '@artificer-forge/dialog-editor':
         specifier: workspace:*
         version: link:../../packages/dialog-editor
+      '@artificer-forge/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
       '@artificer-forge/post-processing':
         specifier: workspace:*
         version: link:../../packages/post-processing

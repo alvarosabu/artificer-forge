@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createSurfaceGrid } from '../utils/surfaces/grid'
-import { step } from '../utils/surfaces/sim'
+import { createSurfaceGrid } from './grid'
+import { step } from './sim'
 
 describe('frozen cells pause decay', () => {
   it('a frozen finite-lifetime cell does not age', () => {
