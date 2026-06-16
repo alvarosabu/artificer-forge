@@ -1,3 +1,12 @@
 // @artificer-forge/engine/runtime — Vue/Tres/Three stores, systems, controllers, scene components.
-// Populated in Milestone 2.
-export {}
+
+// Scene components
+export { default as Floor } from './components/Floor.vue'
+export { default as Foliage } from './components/foliage/Foliage.vue'
+export * from './components/foliage/foliage'
+
+// Movement / animation controllers
+export * from './useCharacterAnimations'
+export * from './useCharacterController'
+export * from './usePointerController'
+export * from './useSceneRefs'

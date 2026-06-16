@@ -2,7 +2,7 @@
 import { useGLTF, Html } from '@tresjs/cientos'
 import { useLoop, type TresPointerEvent } from '@tresjs/core'
 import { Mesh, Vector3, type Group } from 'three'
-import { useCharacterAnimations, AnimationName, useCharacterController, type RigSize } from '@artificer-forge/composables'
+import { useCharacterAnimations, AnimationName, useCharacterController, type RigSize } from '@artificer-forge/engine/runtime'
 import { useDamageNumbers, DamageNumber, ghostMaterial } from '@artificer-forge/vfx'
 import { useOutlinePass } from '@artificer-forge/post-processing'
 

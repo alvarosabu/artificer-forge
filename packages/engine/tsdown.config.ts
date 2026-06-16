@@ -10,9 +10,8 @@ export default defineConfig({
   clean: true,
   external: [
     'vue',
-    'three',
-    'three/webgpu',
-    'three/tsl',
+    // all three entrypoints (three, three/webgpu, three/tsl, three/examples/*, three/addons/*)
+    /^three(\/.*)?$/,
     '@tresjs/core',
     '@tresjs/cientos',
     '@vueuse/core',

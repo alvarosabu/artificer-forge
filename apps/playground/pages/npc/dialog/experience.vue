@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { Floor } from '@artificer-forge/components/tres'
+import { Floor, useSceneRefs } from '@artificer-forge/engine/runtime'
 import { Vector3 } from 'three'
-import { useSceneRefs } from '@artificer-forge/composables'
-
 const gameStore = useGameStore()
 const dialogStore = useDialogStore()
 const { setCharacterRef, getCharacterRef } = useSceneRefs()

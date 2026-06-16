@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Floor } from '@artificer-forge/components/tres'
+import { Floor } from '@artificer-forge/engine/runtime'
 import { abs, add, color, dot, float, mix, mx_fractal_noise_float, mx_worley_noise_float, normalView, positionLocal, positionViewDirection, pow, sin, smoothstep, time, uniform, vec3 } from 'three/tsl';
 import { MeshPhysicalNodeMaterial } from 'three/webgpu';
 

@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { onKeyDown } from '@vueuse/core'
 import { TargetReticle } from '@artificer-forge/vfx'
-import { Floor } from '@artificer-forge/components/tres'
-import { useSceneRefs } from '@artificer-forge/composables'
-
+import { Floor, useSceneRefs } from '@artificer-forge/engine/runtime'
 const gameStore = useGameStore()
 const { setCharacterRef, getCharacterRef } = useSceneRefs()
 

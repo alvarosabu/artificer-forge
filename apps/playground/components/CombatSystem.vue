@@ -3,7 +3,7 @@ import { Vector3 } from 'three'
 import { useLoop } from '@tresjs/core'
 import { Html } from '@tresjs/cientos'
 import { TargetReticle, TargetIndicator } from '@artificer-forge/vfx'
-import { useSceneRefs } from '@artificer-forge/composables'
+import { useSceneRefs } from '@artificer-forge/engine/runtime'
 
 const gameStore = useGameStore()
 const combatStore = useCombatStore()

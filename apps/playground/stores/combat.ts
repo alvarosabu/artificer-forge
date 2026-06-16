@@ -1,6 +1,6 @@
 import { Vector3 } from 'three'
 import { useEventListener } from '@vueuse/core'
-import { useSceneRefs } from '@artificer-forge/composables'
+import { useSceneRefs } from '@artificer-forge/engine/runtime'
 
 export const useCombatStore = defineStore('combat', () => {
   const gameStore = useGameStore()

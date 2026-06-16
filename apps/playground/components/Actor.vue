@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useGLTF, Html } from '@tresjs/cientos'
 import type { TresPointerEvent } from '@tresjs/core'
-import { useCharacterAnimations } from '@artificer-forge/composables'
+import { useCharacterAnimations } from '@artificer-forge/engine/runtime'
 import { useOutlinePass } from '@artificer-forge/post-processing'
 import { useActorBehavior } from '~/composables/useActorBehavior'
 

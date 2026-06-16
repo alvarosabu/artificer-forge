@@ -1,6 +1,6 @@
 import type { CommandGroup } from './useCommandPalette'
 import type { DamageType } from '@artificer-forge/vfx'
-import type { CharacterRef } from '@artificer-forge/composables'
+import type { CharacterRef } from '@artificer-forge/engine/runtime'
 
 export function useDamageNumberCommands(
   getCharacterRef: (entityId: string) => CharacterRef | null,

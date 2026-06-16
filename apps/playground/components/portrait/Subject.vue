@@ -2,7 +2,7 @@
 import { Box3, type Mesh, Vector3 } from 'three'
 import { useGLTF } from '@tresjs/cientos'
 import { type TresObject3D, useTresContext } from '@tresjs/core'
-import { AnimationName, type RigSize, useCharacterAnimations } from '@artificer-forge/composables'
+import { AnimationName, type RigSize, useCharacterAnimations } from '@artificer-forge/engine/runtime'
 import type { Vec3 } from '~/utils/portraitRigPresets'
 import type { PortraitSubjectDescriptor } from '~/composables/usePortraitStudio'
 
