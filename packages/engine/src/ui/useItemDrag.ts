@@ -1,5 +1,5 @@
-// apps/playground/composables/useItemDrag.ts
-import type { EntityState } from '~/stores/game'
+import { reactive } from 'vue'
+import type { EntityState } from '@artificer-forge/engine/runtime'
 import { createSharedComposable } from '@vueuse/core'
 
 interface DragState {

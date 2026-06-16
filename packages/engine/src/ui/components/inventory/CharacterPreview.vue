@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { TresCanvas } from '@tresjs/core'
+import { useGameStore } from '@artificer-forge/engine/runtime'
+import InventoryCharacterPreviewModel from './CharacterPreviewModel.vue'
 
 const props = defineProps<{
   characterId: string

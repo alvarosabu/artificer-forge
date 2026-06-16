@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import type { EntityState, EquipmentSlotKey } from '~/stores/game'
+import { computed, ref } from 'vue'
+import { type EntityState, type EquipmentSlotKey, useGameStore } from '@artificer-forge/engine/runtime'
+import { useItemDrag } from '../../useItemDrag'
+import InventoryItemTooltip from './ItemTooltip.vue'
 
 const props = defineProps<{
   characterId: string

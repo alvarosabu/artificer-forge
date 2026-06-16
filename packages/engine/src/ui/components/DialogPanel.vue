@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { onKeyStroke } from '@vueuse/core'
+import { useDialogStore, usePortraitRenderer } from '@artificer-forge/engine/runtime'
 
 const dialogStore = useDialogStore()
 

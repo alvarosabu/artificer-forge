@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import type { EntityState } from '~/stores/game'
+import { computed, useTemplateRef } from 'vue'
+import type { EntityState } from '@artificer-forge/engine/runtime'
+import { useItemDrag } from '../../useItemDrag'
+import InventoryItemTooltip from './ItemTooltip.vue'
 
 const props = defineProps<{
   item: EntityState | null

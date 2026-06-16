@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { useTemplateRef } from 'vue'
 import { useDropZone } from '@vueuse/core'
+import { useGameStore } from '@artificer-forge/engine/runtime'
+import { useItemDrag } from '../../useItemDrag'
 
 const props = defineProps<{
   characterId: string

@@ -1,35 +1,37 @@
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue'
+import { onKeyStroke } from '@vueuse/core'
+import { useActionBar, useGameStore, usePortraitRenderer } from '@artificer-forge/engine/runtime'
+import ActionBarPortrait from './ActionBarPortrait.vue'
+import ActionBarWeapon from './ActionBarWeapon.vue'
+import ActionPointsGroup from './ActionPointsGroup.vue'
+import ActionBarSlots from './ActionBarSlots.vue'
+import ActionBarResources from './ActionBarResources.vue'
+
 const gameStore = useGameStore()
 const { playerEntity, playerClassId, slots, activeCategory, setCategory, activateSlot, activeWeaponSlot, setActiveWeaponSlot, toggleWeaponSlot } = useActionBar()
 
-// Keyboard shortcuts live with the UI; the engine composable stays headless.
-defineShortcuts({
-  1: () => activateSlot(0),
-  2: () => activateSlot(1),
-  3: () => activateSlot(2),
-  4: () => activateSlot(3),
-  5: () => activateSlot(4),
-  6: () => activateSlot(5),
-  7: () => activateSlot(6),
-  8: () => activateSlot(7),
-  9: () => activateSlot(8),
-  0: () => activateSlot(9),
-  tab: () => toggleWeaponSlot(),
+// Keyboard shortcuts (1–9,0 → ability slots; Tab → weapon swap). @vueuse keydown
+// rather than Nuxt UI's defineShortcuts so this component stays package-portable.
+const SLOT_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+SLOT_KEYS.forEach((key, idx) => onKeyStroke(key, (e) => {
+  e.preventDefault()
+  activateSlot(idx)
+}))
+onKeyStroke('Tab', (e) => {
+  e.preventDefault()
+  toggleWeaponSlot()
 })
 
 // Portrait rendered dynamically from the player's live model (falls back to the
 // entity's `portrait` field / icon when generation is unavailable).
 const { url: playerPortrait } = usePortraitRenderer(computed(() => playerEntity.value?.id ?? ''))
 
-// Resolve class metadata from content collection
-const { data: playerClass } = await useAsyncData(
-  () => `class-${playerClassId.value}`,
-  () => {
-    if (!playerClassId.value) return Promise.resolve(null)
-    return queryCollection('classes').where('classId', '=', playerClassId.value).first()
-  },
-  { watch: [playerClassId] },
-)
+// Resolve class metadata via the engine's injected content source (not queryCollection).
+const playerClass = ref<Record<string, any> | null>(null)
+watch(playerClassId, async (id) => {
+  playerClass.value = id ? await gameStore.resolveClass(id) : null
+}, { immediate: true })
 </script>
 
 <template>

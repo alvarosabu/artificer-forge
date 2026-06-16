@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useGameStore } from '@artificer-forge/engine/runtime'
+import CharacterPanel from './CharacterPanel.vue'
+
 const gameStore = useGameStore()
 
 const partyMembers = computed(() => gameStore.partyEntities)

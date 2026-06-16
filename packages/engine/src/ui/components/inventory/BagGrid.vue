@@ -1,6 +1,9 @@
-<!-- apps/playground/components/inventory/BagGrid.vue -->
 <script setup lang="ts">
-import type { EntityState } from '~/stores/game'
+import { computed, ref } from 'vue'
+import { type EntityState, useGameStore } from '@artificer-forge/engine/runtime'
+import { useItemDrag } from '../../useItemDrag'
+import InventoryItemCell from './ItemCell.vue'
+import InventoryWeightBar from './WeightBar.vue'
 
 const props = defineProps<{
   characterId: string

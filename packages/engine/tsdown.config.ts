@@ -16,7 +16,9 @@ export default defineConfig({
     '@tresjs/cientos',
     '@vueuse/core',
     'pinia',
-    '@nuxt/ui',
+    // all @nuxt/ui entrypoints incl. composables (useToast etc.) — the consuming
+    // Nuxt app resolves them (they rely on Nuxt's #imports at runtime).
+    /^@nuxt\/ui(\/.*)?$/,
     '@artificer-forge/vfx',
     '@artificer-forge/post-processing',
     // self-subpaths: entries reference each other as externals (resolved at runtime

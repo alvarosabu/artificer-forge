@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useGLTF } from '@tresjs/cientos'
 import type { TresPointerEvent } from '@tresjs/core'
-import type { EntityState } from '~/stores/game'
+import { type EntityState, useContextMenu } from '@artificer-forge/engine/runtime'
 
 const props = defineProps<{
   item: EntityState

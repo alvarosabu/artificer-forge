@@ -27,6 +27,9 @@ export * from './useStatusEffectTexts'
 export * from './useStatusEffectOverlay'
 export * from './useStatusEffectParticles'
 export * from './useStatusEffectAnimations'
+export * from './useStatusEffects'
+export * from './useInventory'
+export * from './useLoot'
 export * from './useSurface'
 
 // In-scene game components

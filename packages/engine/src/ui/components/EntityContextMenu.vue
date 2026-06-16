@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { DropdownMenuItem } from '@nuxt/ui'
-import type { ContextMenuState } from '~/composables/useContextMenu'
+import { type ContextMenuState, useGameStore } from '@artificer-forge/engine/runtime'
+import { useEntityActions } from '../useEntityActions'
 
 const props = defineProps<{
   state: ContextMenuState

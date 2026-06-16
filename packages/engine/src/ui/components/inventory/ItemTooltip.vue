@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { EntityState } from '~/stores/game'
+import type { EntityState } from '@artificer-forge/engine/runtime'
 
 const props = defineProps<{
   item: EntityState

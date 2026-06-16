@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { WeaponSlot } from '~/composables/useActionBar'
+import type { WeaponSlot } from '@artificer-forge/engine/runtime'
 
 defineProps<{
   mainHand?: string

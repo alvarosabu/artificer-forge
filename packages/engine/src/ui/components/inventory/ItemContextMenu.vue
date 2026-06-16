@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useItemContextMenu } from '../../useItemContextMenu'
+
 const itemMenu = useItemContextMenu()
 const menuGroups = itemMenu.menuGroups
 const menuState = itemMenu.state

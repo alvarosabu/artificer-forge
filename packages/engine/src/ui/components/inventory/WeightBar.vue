@@ -1,5 +1,6 @@
-<!-- apps/playground/components/inventory/WeightBar.vue -->
 <script setup lang="ts">
+import { computed } from 'vue'
+
 const props = defineProps<{
   current: number
   capacity: number

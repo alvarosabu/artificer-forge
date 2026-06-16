@@ -1,5 +1,5 @@
 import type { DropdownMenuItem } from '@nuxt/ui'
-import type { EntityState } from '~/stores/game'
+import type { EntityState } from '@artificer-forge/engine/runtime'
 
 export interface EntityAction {
   id: string

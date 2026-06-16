@@ -1,6 +1,10 @@
 <script setup lang="ts">
+import { computed, useTemplateRef } from 'vue'
 import { onClickOutside, onKeyStroke } from '@vueuse/core'
-import type { EntityState } from '~/stores/game'
+import { useToast } from '@nuxt/ui/composables/useToast'
+import { type EntityState, useGameStore, useLoot } from '@artificer-forge/engine/runtime'
+import { useItemContextMenu } from '../../useItemContextMenu'
+import InventoryItemCell from './ItemCell.vue'
 
 const loot = useLoot()
 const gameStore = useGameStore()

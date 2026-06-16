@@ -1,6 +1,7 @@
+import { computed, reactive } from 'vue'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { createSharedComposable } from '@vueuse/core'
-import type { EntityState, EquipmentSlotKey } from '~/stores/game'
+import { type EntityState, type EquipmentSlotKey, useGameStore } from '@artificer-forge/engine/runtime'
 
 interface MenuState {
   open: boolean

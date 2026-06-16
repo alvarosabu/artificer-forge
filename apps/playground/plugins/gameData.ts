@@ -23,6 +23,8 @@ export default defineNuxtPlugin(async () => {
       queryCollection('abilities').where('abilityId', '=', abilityId).first(),
     resolveDialog: dialogId =>
       queryCollection('dialogs').where('dialogId', '=', dialogId).first(),
+    resolveClass: classId =>
+      queryCollection('classes').where('classId', '=', classId).first(),
   })
 
   await Promise.all([

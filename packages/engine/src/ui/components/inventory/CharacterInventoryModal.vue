@@ -1,6 +1,10 @@
-<!-- apps/playground/components/inventory/CharacterInventoryModal.vue -->
 <script setup lang="ts">
-import type { EntityState, EquipmentSlotKey } from '~/stores/game'
+import { computed } from 'vue'
+import { type EntityState, type EquipmentSlotKey, useGameStore, useInventory } from '@artificer-forge/engine/runtime'
+import { useItemContextMenu } from '../../useItemContextMenu'
+import InventoryBagGrid from './BagGrid.vue'
+import InventoryCharacterPreview from './CharacterPreview.vue'
+import InventoryEquipmentSlot from './EquipmentSlot.vue'
 
 const { isOpen, focusedCharacter } = useInventory()
 const gameStore = useGameStore()

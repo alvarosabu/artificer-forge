@@ -162,9 +162,10 @@ export interface SceneDef {
 export interface ContentSource {
   resolveTemplate: (templateId: string) => Promise<EntityTemplate | null>
   resolveScene: (sceneId: string) => Promise<SceneDef | null>
-  // Loosely typed (app-provided content); ability/dialog consumers cast to their own shapes.
+  // Loosely typed (app-provided content); ability/dialog/class consumers cast to their own shapes.
   resolveAbility: (abilityId: string) => Promise<any | null>
   resolveDialog: (dialogId: string) => Promise<any | null>
+  resolveClass: (classId: string) => Promise<any | null>
 }
 
 const DEFAULT_ABILITIES = ['melee-attack', 'dash', 'throw']
@@ -191,6 +192,9 @@ export const useGameStore = defineStore('game', () => {
   }
   function resolveDialog(dialogId: string): Promise<any | null> {
     return requireContent().resolveDialog(dialogId)
+  }
+  function resolveClass(classId: string): Promise<any | null> {
+    return requireContent().resolveClass(classId)
   }
 
   // === WORLD STATE ===
@@ -890,5 +894,6 @@ export const useGameStore = defineStore('game', () => {
     resolveTemplate,
     resolveAbility,
     resolveDialog,
+    resolveClass,
   }
 })

@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import { computed, toRef } from 'vue'
 import { useGLTF } from '@tresjs/cientos'
 import type { TresObject3D } from '@tresjs/core'
-import { useCharacterAnimations, type RigSize } from '@artificer-forge/engine/runtime'
-import type { Equipment } from '~/stores/game'
+import { type Equipment, type RigSize, useCharacterAnimations, useEquipment } from '@artificer-forge/engine/runtime'
 
 const props = defineProps<{
   modelUrl: string

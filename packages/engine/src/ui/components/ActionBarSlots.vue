@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import type { ActionSlot } from '~/composables/useActionBar'
+import { computed } from 'vue'
+import type { ActionSlot } from '@artificer-forge/engine/runtime'
+import ActionBarTabs from './ActionBarTabs.vue'
 
 const GRID_SIZE = 24 // 8×3
 
