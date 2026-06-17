@@ -155,6 +155,17 @@ export interface SceneDef {
 }
 
 /**
+ * Minimal class-template shape the engine UI consumes (the ActionBar emblem and
+ * accent colour). Apps own the full schema and may attach arbitrary extra fields
+ * — hence the open index signature — but these are what the engine itself reads.
+ */
+export interface ClassTemplate {
+  emblem?: string
+  color?: string
+  [key: string]: unknown
+}
+
+/**
  * Content source injected by the app — the engine never fetches content itself
  * (no Nuxt Content / queryCollection coupling). Wire this once at app init via
  * `useGameStore().configureContent(...)`.
@@ -162,10 +173,10 @@ export interface SceneDef {
 export interface ContentSource {
   resolveTemplate: (templateId: string) => Promise<EntityTemplate | null>
   resolveScene: (sceneId: string) => Promise<SceneDef | null>
-  // Loosely typed (app-provided content); ability/dialog/class consumers cast to their own shapes.
+  // Loosely typed (app-provided content); ability/dialog consumers cast to their own shapes.
   resolveAbility: (abilityId: string) => Promise<any | null>
   resolveDialog: (dialogId: string) => Promise<any | null>
-  resolveClass: (classId: string) => Promise<any | null>
+  resolveClass: (classId: string) => Promise<ClassTemplate | null>
 }
 
 const DEFAULT_ABILITIES = ['melee-attack', 'dash', 'throw']
@@ -193,7 +204,7 @@ export const useGameStore = defineStore('game', () => {
   function resolveDialog(dialogId: string): Promise<any | null> {
     return requireContent().resolveDialog(dialogId)
   }
-  function resolveClass(classId: string): Promise<any | null> {
+  function resolveClass(classId: string): Promise<ClassTemplate | null> {
     return requireContent().resolveClass(classId)
   }
 

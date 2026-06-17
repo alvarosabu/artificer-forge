@@ -6,6 +6,5 @@ export default defineConfig({
     // core rules + pure runtime utils (e.g. portrait helpers). Browser-dependent
     // runtime code has no node tests.
     include: ['src/core/**/*.test.ts', 'src/runtime/**/*.test.ts'],
-    passWithNoTests: true,
   },
 })

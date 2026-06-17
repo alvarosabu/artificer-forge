@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { onKeyStroke } from '@vueuse/core'
-import { useDialogStore, usePortraitRenderer } from '@artificer-forge/engine/runtime'
+import { isEditableTarget, useDialogStore, usePortraitRenderer } from '@artificer-forge/engine/runtime'
 
 const dialogStore = useDialogStore()
 
@@ -32,7 +32,7 @@ const checkLabel = (raw: { check?: { skill: string, dc: number } }) => {
 }
 
 onKeyStroke(['1', '2', '3', '4', '5', '6', '7', '8', '9'], (e) => {
-  if (!dialogStore.isOpen) return
+  if (!dialogStore.isOpen || isEditableTarget(e)) return
   const idx = Number(e.key) - 1
   const choice = visibleChoices.value[idx]
   if (choice && choice.available) {

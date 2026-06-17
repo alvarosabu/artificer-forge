@@ -53,6 +53,8 @@ export * from './usePointerController'
 export * from './useSceneRefs'
 export * from './useEquipment'
 export * from './useGameConfig'
+export * from './keyboard'
+export * from './camera'
 
 // Portrait generator (3D-rendered character portraits)
 export * from './portrait/portraitBackgrounds'

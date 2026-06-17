@@ -9,16 +9,8 @@ import { NoToneMapping } from 'three'
 import { WebGPURenderer } from 'three/webgpu'
 import { EffectComposer, useOutlinePassProvider } from '@artificer-forge/post-processing'
 import { CameraController, CombatSystem, SurfaceSystem, useContextMenuProvider, useGameConfig } from '@artificer-forge/engine/runtime'
+import type { CameraProps } from '@artificer-forge/engine/runtime'
 import { Hud } from '@artificer-forge/engine/ui'
-
-interface CameraProps {
-  position?: [number, number, number]
-  lookAt?: [number, number, number]
-  target?: [number, number, number]
-  near?: number
-  far?: number
-  controls?: boolean
-}
 
 // Per-scene camera override forwarded to the default CameraController; omit to
 // inherit the default. Ignored when the #camera slot is overridden.

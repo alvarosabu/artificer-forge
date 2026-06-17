@@ -62,8 +62,8 @@ export const useCombatStore = defineStore('combat', () => {
     }
   }
 
-  // Keyboard/mouse cancellation
-  if (typeof document !== 'undefined') {
+  // Keyboard/mouse cancellation — client-only.
+  if (typeof window !== 'undefined') {
     useEventListener(document, 'keydown', (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isTargeting.value) {
         const abilitySystem = useAbilitySystem()

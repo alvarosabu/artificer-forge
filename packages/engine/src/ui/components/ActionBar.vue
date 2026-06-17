@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { onKeyStroke } from '@vueuse/core'
-import { useActionBar, useGameStore, usePortraitRenderer } from '@artificer-forge/engine/runtime'
+import { isEditableTarget, useActionBar, useGameStore, usePortraitRenderer } from '@artificer-forge/engine/runtime'
+import type { ClassTemplate } from '@artificer-forge/engine/runtime'
 import ActionBarPortrait from './ActionBarPortrait.vue'
 import ActionBarWeapon from './ActionBarWeapon.vue'
 import ActionPointsGroup from './ActionPointsGroup.vue'
@@ -12,13 +13,16 @@ const gameStore = useGameStore()
 const { playerEntity, playerClassId, slots, activeCategory, setCategory, activateSlot, activeWeaponSlot, setActiveWeaponSlot, toggleWeaponSlot } = useActionBar()
 
 // Keyboard shortcuts (1–9,0 → ability slots; Tab → weapon swap). @vueuse keydown
-// rather than Nuxt UI's defineShortcuts so this component stays package-portable.
+// rather than Nuxt UI's defineShortcuts so this component stays package-portable;
+// isEditableTarget restores the focus guard so shortcuts don't fire while typing.
 const SLOT_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
 SLOT_KEYS.forEach((key, idx) => onKeyStroke(key, (e) => {
+  if (isEditableTarget(e)) { return }
   e.preventDefault()
   activateSlot(idx)
 }))
 onKeyStroke('Tab', (e) => {
+  if (isEditableTarget(e)) { return }
   e.preventDefault()
   toggleWeaponSlot()
 })
@@ -28,7 +32,7 @@ onKeyStroke('Tab', (e) => {
 const { url: playerPortrait } = usePortraitRenderer(computed(() => playerEntity.value?.id ?? ''))
 
 // Resolve class metadata via the engine's injected content source (not queryCollection).
-const playerClass = ref<Record<string, any> | null>(null)
+const playerClass = ref<ClassTemplate | null>(null)
 watch(playerClassId, async (id) => {
   playerClass.value = id ? await gameStore.resolveClass(id) : null
 }, { immediate: true })

@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { createSharedComposable, onKeyStroke } from '@vueuse/core'
 import { useGameStore } from './stores/game'
+import { isEditableTarget } from './keyboard'
 
 export const useInventory = createSharedComposable(() => {
   const gameStore = useGameStore()
@@ -39,8 +40,7 @@ export const useInventory = createSharedComposable(() => {
 
   // Global hotkey
   onKeyStroke('i', (e) => {
-    const tag = (e.target as HTMLElement | null)?.tagName
-    if (tag === 'INPUT' || tag === 'TEXTAREA') { return }
+    if (isEditableTarget(e)) { return }
     e.preventDefault()
     toggle()
   })

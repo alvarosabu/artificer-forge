@@ -2,18 +2,10 @@
 import { useControls } from '@tresjs/leches'
 import { Game } from '@artificer-forge/engine'
 import { provideGameConfig } from '@artificer-forge/engine/runtime'
+import type { CameraProps } from '@artificer-forge/engine/runtime'
 
 // App-level context around the engine's <Game> host: positions the Leches debug GUI
 // and feeds its tunable values into the engine via provideGameConfig().
-
-interface CameraProps {
-  position?: [number, number, number]
-  lookAt?: [number, number, number]
-  target?: [number, number, number]
-  near?: number
-  far?: number
-  controls?: boolean
-}
 
 defineProps<{ camera?: CameraProps }>()
 
