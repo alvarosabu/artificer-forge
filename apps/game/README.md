@@ -1,4 +1,4 @@
-# dnd-game
+# game
 
 > A TresJS Nuxt application
 

@@ -55,7 +55,7 @@ export interface CheckRoll {
   success: boolean
 }
 
-// === Skill → stat mapping (D&D 5e style) ===
+// === Skill → stat mapping (tabletop RPG style) ===
 
 const SKILL_TO_STAT: Record<string, string> = {
   athletics: 'strength',

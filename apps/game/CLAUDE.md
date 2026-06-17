@@ -1,12 +1,12 @@
-# D&D Game
+# Game
 
-D&D-style adventure game built on Artificer Forge patterns.
+Tabletop RPG-style adventure game built on Artificer Forge patterns.
 
 ## Commands
 
 ```bash
-pnpm -F @artificer-forge/dnd-game dev
-pnpm -F @artificer-forge/dnd-game build
+pnpm -F @artificer-forge/game dev
+pnpm -F @artificer-forge/game build
 ```
 
 ## Notes

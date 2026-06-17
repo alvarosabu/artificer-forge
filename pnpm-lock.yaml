@@ -130,7 +130,7 @@ importers:
         specifier: catalog:typescript
         version: 5.9.3
 
-  apps/dnd-game:
+  apps/game:
     dependencies:
       '@nuxt/eslint':
         specifier: catalog:nuxt

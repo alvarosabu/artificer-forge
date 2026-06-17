@@ -1,5 +1,5 @@
 {
-  "name": "@artificer-forge/dnd-game",
+  "name": "@artificer-forge/game",
   "private": true,
   "type": "module",
   "description": "TresJS Nuxt application",

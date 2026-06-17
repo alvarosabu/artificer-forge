@@ -7,7 +7,7 @@ export interface DiceResult {
 
 /**
  * Parse a dice string like "2d6", "1d4+1", "1d8" and roll it.
- * Optionally add a D&D 5e stat modifier: floor((statValue - 10) / 2).
+ * Optionally add a tabletop RPG stat modifier: floor((statValue - 10) / 2).
  */
 export function rollDice(dice: string, statValue?: number): DiceResult {
   const match = dice.match(/^(\d+)d(\d+)(?:\+(\d+))?$/)

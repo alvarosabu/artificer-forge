@@ -4,7 +4,7 @@ import { queryCollection, useRuntimeConfig } from '#imports'
 
 interface Source { collection: string, field: string, where?: Record<string, unknown> }
 
-// D&D 5e skills (mirror SKILL_TO_STAT keys in the playground dialog engine).
+// Tabletop RPG skills (mirror SKILL_TO_STAT keys in the playground dialog engine).
 const SKILLS_DEFAULT = [
   'athletics', 'acrobatics', 'sleight-of-hand', 'stealth', 'arcana', 'history',
   'investigation', 'nature', 'religion', 'animal-handling', 'insight', 'medicine',
