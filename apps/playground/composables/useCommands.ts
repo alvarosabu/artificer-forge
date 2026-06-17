@@ -1,4 +1,4 @@
-import { useSceneRefs } from '@artificer-forge/composables'
+import { useGameStore, useSceneRefs } from '@artificer-forge/engine/runtime'
 
 interface CommandsOptions {
   entities?: boolean

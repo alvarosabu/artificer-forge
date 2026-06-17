@@ -31,6 +31,9 @@ export default defineNuxtConfig({
       { name: 'Crimson Pro', provider: 'google', weights: [400, 500, 600, 700] },
     ],
   },
+  build: {
+    transpile: ['@artificer-forge/engine'],
+  },
   icon: {
     customCollections: [{
       prefix: 'af',

@@ -1,0 +1,67 @@
+{
+  "name": "@artificer-forge/engine",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./core": {
+      "types": "./src/core/index.ts",
+      "import": "./src/core/index.ts"
+    },
+    "./runtime": {
+      "types": "./src/runtime/index.ts",
+      "import": "./src/runtime/index.ts"
+    },
+    "./ui": {
+      "types": "./src/ui/index.ts",
+      "import": "./src/ui/index.ts"
+    },
+    "./styles.css": "./styles.css"
+  },
+  "files": [
+    "src",
+    "styles.css"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "@nuxt/ui": ">=4.0.0",
+    "@tresjs/cientos": ">=5.0.0",
+    "@tresjs/core": ">=5.0.0",
+    "@vueuse/core": ">=12.0.0",
+    "pinia": ">=3.0.0",
+    "three": ">=0.170.0",
+    "vue": ">=3.4.0"
+  },
+  "peerDependenciesMeta": {
+    "@nuxt/ui": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@artificer-forge/post-processing": "workspace:*",
+    "@artificer-forge/vfx": "workspace:*"
+  },
+  "devDependencies": {
+    "@nuxt/ui": "catalog:nuxt",
+    "@tresjs/cientos": "catalog:three",
+    "@tresjs/core": "catalog:three",
+    "@types/three": "catalog:three",
+    "@vueuse/core": "catalog:vue",
+    "pinia": "catalog:vue",
+    "three": "catalog:three",
+    "tsdown": "catalog:build",
+    "typescript": "catalog:typescript",
+    "unplugin-vue": "catalog:build",
+    "vitest": "catalog:",
+    "vue": "catalog:vue",
+    "vue-tsc": "catalog:build"
+  }
+}

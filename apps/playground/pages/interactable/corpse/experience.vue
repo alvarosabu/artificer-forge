@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { Floor } from '@artificer-forge/components/tres'
+import { Character, Floor, useContextMenu, useGameStore, useLoot, useSceneRefs } from '@artificer-forge/engine/runtime'
+import { WorldItem as InventoryWorldItem } from '@artificer-forge/engine/ui'
 import { Vector3 } from 'three'
-import { useSceneRefs } from '@artificer-forge/composables'
-
 const gameStore = useGameStore()
 const {
   setCharacterRef,

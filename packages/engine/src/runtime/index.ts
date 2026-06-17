@@ -1,0 +1,69 @@
+// @artificer-forge/engine/runtime — Vue/Tres/Three stores, systems, controllers, scene components.
+
+// Scene components
+export { default as Floor } from './components/Floor.vue'
+export { default as Foliage } from './components/foliage/Foliage.vue'
+export * from './components/foliage/foliage'
+
+// Stores
+export * from './stores/game'
+export * from './stores/damageTypes'
+export * from './stores/statusEffects'
+export * from './stores/surface'
+export * from './stores/portraits'
+export * from './stores/combat'
+export * from './stores/dialog'
+
+// Combat / ability / dialog systems
+export * from './useProjectile'
+export * from './useAoESystem'
+export * from './useActionBar'
+export * from './useAbilitySystem'
+export * from './useDialogEngine'
+export * from './useDialogCamera'
+export * from './useContextMenu'
+export * from './useActorBehavior'
+export * from './useStatusEffectTexts'
+export * from './useStatusEffectOverlay'
+export * from './useStatusEffectParticles'
+export * from './useStatusEffectAnimations'
+export * from './useStatusEffects'
+export * from './useInventory'
+export * from './useLoot'
+export * from './useSurface'
+
+// In-scene game components
+export { default as Actor } from './components/Actor.vue'
+export { default as Character } from './components/Character.vue'
+export { default as Interactable } from './components/Interactable.vue'
+export { default as SurfaceSystem } from './components/SurfaceSystem.vue'
+export { default as TrajectoryPreview } from './components/TrajectoryPreview.vue'
+export { default as StatusEffectText } from './components/StatusEffectText.vue'
+export { default as CombatSystem } from './components/CombatSystem.vue'
+export { default as DialogCameraDirector } from './components/DialogCameraDirector.vue'
+export { default as CameraController } from './components/CameraController.vue'
+export { default as Nameplate } from './components/Nameplate.vue'
+export { default as StatusEffectBadge } from './components/StatusEffectBadge.vue'
+export { default as StatusEffectBadges } from './components/StatusEffectBadges.vue'
+
+// Movement / animation controllers
+export * from './useCharacterAnimations'
+export * from './useCharacterController'
+export * from './usePointerController'
+export * from './useSceneRefs'
+export * from './useEquipment'
+export * from './useGameConfig'
+export * from './keyboard'
+export * from './camera'
+
+// Portrait generator (3D-rendered character portraits)
+export * from './portrait/portraitBackgrounds'
+export * from './portrait/portraitBakeQueue'
+export * from './portrait/portraitRigPresets'
+export * from './portrait/portraitSignature'
+export * from './portrait/usePortraitStudio'
+export * from './portrait/usePortraitRenderer'
+export { default as PortraitStudio } from './components/portrait/Studio.vue'
+export { default as PortraitSubject } from './components/portrait/Subject.vue'
+export { default as PortraitBackground } from './components/portrait/Background.vue'
+export { default as PortraitLights } from './components/portrait/Lights.vue'

@@ -2,9 +2,16 @@
 import { TresCanvas } from '@tresjs/core'
 import { OrbitControls } from '@tresjs/cientos'
 import { useControls } from '@tresjs/leches'
-import { frameFromHead, PORTRAIT_CAMERA, type Vec3 } from '~/utils/portraitRigPresets'
-import { resolvePortraitBackground } from '~/utils/portraitBackgrounds'
-import type { Equipment } from '~/stores/game'
+import {
+  frameFromHead,
+  PORTRAIT_CAMERA,
+  PortraitBackground,
+  PortraitLights,
+  PortraitSubject,
+  resolvePortraitBackground,
+  type Vec3,
+} from '@artificer-forge/engine/runtime'
+import type { Equipment } from '@artificer-forge/engine/runtime'
 import type { PerspectiveCamera } from 'three'
 
 useHead({ title: 'Character Portraits — Lab' })

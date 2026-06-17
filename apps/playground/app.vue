@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { PortraitStudio, usePortraitStore } from '@artificer-forge/engine/runtime'
+
 const portraitStore = usePortraitStore()
 
 onMounted(() => portraitStore.hydrate())

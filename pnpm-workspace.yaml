@@ -3,6 +3,7 @@ packages:
   - packages/*
 
 catalog:
+  '@barzhsieh/nuxt-content-mermaid': ^2.2.3
   '@nuxt/icon': ^2.2.1
   gsap: ^3.15.0
   vitest: ^4.1.7

@@ -1,13 +1,14 @@
 <script setup lang="ts">
+import { PartyPanel } from '@artificer-forge/engine/ui'
 import NpcExperience from './experience.vue'
 useHead({ title: 'Basic NPC - TresJS Playground' })
 </script>
 
 <template>
   <div>
-    <Game>
+    <GameContextProvider>
       <NpcExperience />
-    </Game>
+    </GameContextProvider>
     <GameCommandPalette />
     <PartyPanel />
   </div>

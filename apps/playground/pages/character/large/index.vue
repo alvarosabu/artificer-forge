@@ -1,13 +1,14 @@
 <script setup lang="ts">
+import { PartyPanel } from '@artificer-forge/engine/ui'
 import CharacterExperience from './experience.vue'
 useHead({ title: 'Large Character - TresJS Playground' })
 </script>
 
 <template>
   <div>
-    <Game>
+    <GameContextProvider>
       <CharacterExperience />
-    </Game>
+    </GameContextProvider>
     <GameCommandPalette />
     <PartyPanel />
   </div>

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+/* Registers the engine's HUD/scene component utility classes (self-contained @source). */
+@import "@artificer-forge/engine/styles.css";
 
 @theme {
   --font-sans: "Inter", sans-serif;

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { DialogContext } from '../composables/useDialogEngine'
+import type { DialogContext } from '@artificer-forge/engine/runtime'
 import {
   applyEffects,
   availableChoices,
@@ -7,7 +7,7 @@ import {
   evaluateConditions,
   resolveText,
   rollCheck,
-} from '../composables/useDialogEngine'
+} from '@artificer-forge/engine/runtime'
 
 // === Minimal fake game store ===
 // The engine only touches the methods exercised below, so a hand-rolled fake

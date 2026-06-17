@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { Floor } from '@artificer-forge/components/tres'
-import { useSceneRefs } from '@artificer-forge/composables'
-import type { SurfaceSourceDef } from '~/utils/surfaces/types'
+import { Character, Floor, useGameStore, useSceneRefs, useSurfaceStore } from '@artificer-forge/engine/runtime'
+import type { SurfaceSourceDef } from '@artificer-forge/engine/core'
 
 // Demo surface layout. These pre-placed pools stand in for what a level loader
 // will eventually seed into useSurfaceStore from level data — the engine

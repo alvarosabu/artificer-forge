@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-import { Floor } from '@artificer-forge/components/tres'
+import { Floor } from '@artificer-forge/engine/runtime'
 import { DoubleSide, MeshStandardNodeMaterial } from 'three/webgpu'
 import { ghostMaterial } from '@artificer-forge/vfx'
 
