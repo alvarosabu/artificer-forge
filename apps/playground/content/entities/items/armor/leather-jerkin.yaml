@@ -1,0 +1,18 @@
+templateId: leather-jerkin
+type: item
+subtype: armor
+name: Leather Jerkin
+# Sexed fitted variants (ARM_{M,F}_MEDIUM_Leather_Jerkin.glb) — resolved per body
+# type via the ARMORS manifest in utils/characterParts.ts, not from this field.
+modular:
+  slot: armor
+  hides: [torso]
+texture:
+  base: /models/characters/armors/leather_jerkin_texture.png
+  tints:
+    - { id: black, label: Black, map: /models/characters/armors/leather_jerkin_black.png }
+    - { id: crimson, label: Crimson, map: /models/characters/armors/leather_jerkin_crimson.png }
+armor:
+  physical: 8
+weight: 6
+value: 45

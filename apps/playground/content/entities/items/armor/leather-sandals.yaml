@@ -1,0 +1,15 @@
+templateId: leather-sandals
+type: item
+subtype: armor
+name: Leather Sandals
+model: /models/characters/boots/leather_sandals.glb
+modular:
+  slot: boots
+  # Sandals bring their own foot mesh (exposed toes use the Skin material).
+  hides: [foot]
+texture:
+  base: /models/characters/boots/common_folk_clothes_texture.png
+armor:
+  physical: 1
+weight: 1
+value: 8

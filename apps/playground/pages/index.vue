@@ -24,6 +24,7 @@ const categories: DemoCategory[] = [
       { label: 'Large', to: '/character/large' },
       { label: 'Party', to: '/character/party' },
       { label: 'Character Portrait', to: '/character/portraits' },
+      { label: 'Create Character', to: '/character/create' },
     ],
   },
   {

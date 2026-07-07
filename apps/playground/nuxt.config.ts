@@ -4,6 +4,7 @@ const { resolve } = createResolver(import.meta.url)
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   modules: [
+    '@nuxt/eslint',
     '@tresjs/nuxt',
     '@nuxt/content',
     '@nuxt/devtools',

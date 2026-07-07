@@ -100,6 +100,24 @@ export default defineContentConfig({
           physical: z.number().optional(),
           magical: z.number().optional(),
         }).optional(),
+        // Modular-character equip rendering: which body segments this piece hides
+        // when worn. Keys are side-agnostic body-segment names (expanded to L/R at
+        // runtime). See components/CharacterPreview.vue body assembly.
+        modular: z.object({
+          slot: z.enum(['helmet', 'armor', 'trousers', 'gauntlets', 'boots']),
+          hides: z.array(z.enum(['head', 'torso', 'hips', 'arm', 'hand', 'leg', 'foot'])),
+        }).optional(),
+        // Palette-atlas tinting: `base` is the default atlas (also the GLB's embedded
+        // map); each `tints` entry is an alternate recolored atlas swapped onto the
+        // material's map. See components/CharacterPreview.vue armor tinting.
+        texture: z.object({
+          base: z.string(),
+          tints: z.array(z.object({
+            id: z.string(),
+            label: z.string(),
+            map: z.string(),
+          })).optional(),
+        }).optional(),
         weight: z.number().optional(),
         value: z.number().optional(),
         usable: z.boolean().optional(),
@@ -122,6 +140,7 @@ export default defineContentConfig({
           offHand: z.string().optional(),
           helmet: z.string().optional(),
           armor: z.string().optional(),
+          trousers: z.string().optional(),
           gauntlets: z.string().optional(),
           boots: z.string().optional(),
           amulet: z.string().optional(),
@@ -133,6 +152,7 @@ export default defineContentConfig({
           'offHand',
           'helmet',
           'armor',
+          'trousers',
           'gauntlets',
           'boots',
           'amulet',
