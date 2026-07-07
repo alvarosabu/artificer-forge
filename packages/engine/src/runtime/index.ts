@@ -47,6 +47,9 @@ export { default as StatusEffectBadge } from './components/StatusEffectBadge.vue
 export { default as StatusEffectBadges } from './components/StatusEffectBadges.vue'
 
 // Movement / animation controllers
+export * from './modular/partRegistry'
+export * from './modular/useModularRig'
+export { loadGltf } from './modular/gltfCache'
 export * from './useCharacterAnimations'
 export * from './useCharacterController'
 export * from './usePointerController'
