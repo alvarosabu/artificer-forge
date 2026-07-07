@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, reactive, ref } from 'vue'
-import { carryCapacity, computeDamage, deriveMaxArmor, encumbrance, totalWeight, type CharacterAppearance, type Sex } from '@artificer-forge/engine/core'
+import { carryCapacity, computeDamage, deriveMaxArmor, encumbrance, totalWeight, type CharacterAppearance, type ModularSlot, type Sex } from '@artificer-forge/engine/core'
 import { useDamageTypeStore } from './damageTypes'
 
 // Types
@@ -125,6 +125,11 @@ export interface EntityState {
   weight?: number                // per unit (kg)
 
   // Item template metadata copied from YAML at spawn
+  // Modular equip rendering: which body segments the piece hides when worn and
+  // the fitted mesh per body sex (`any` = unisex). See useModularArmor.
+  modular?: { slot: ModularSlot, hides: string[], assets?: Partial<Record<Sex | 'any', string>> }
+  // Palette-atlas tinting: base atlas + alternate recolored atlases.
+  texture?: { base: string, tints?: { id: string, label: string, map: string }[] }
   damage?: { dice: string, type: string }
   armor?: { physical?: number, magical?: number }
   properties?: string[]
@@ -292,6 +297,8 @@ export const useGameStore = defineStore('game', () => {
       stackable: template.stackable ?? false,
       maxStack: template.maxStack ?? 1,
       weight: template.weight ?? 0,
+      modular: template.modular,
+      texture: template.texture,
       damage: template.damage,
       armor: template.armor,
       properties: template.properties,

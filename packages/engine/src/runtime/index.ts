@@ -49,6 +49,7 @@ export { default as StatusEffectBadges } from './components/StatusEffectBadges.v
 // Movement / animation controllers
 export * from './modular/partRegistry'
 export * from './modular/useModularRig'
+export * from './modular/useModularArmor'
 export { loadGltf } from './modular/gltfCache'
 export * from './useCharacterAnimations'
 export * from './useCharacterController'

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { useGameStore } from '@artificer-forge/engine/runtime'
+import { useGameStore, useModularArmor } from '@artificer-forge/engine/runtime'
 
 const TAV_TEMPLATE = {
   templateId: 'tav',
@@ -24,8 +24,30 @@ const TAV_TEMPLATE = {
 }
 
 const ITEMS: Record<string, any> = {
-  'leather-jerkin': { templateId: 'leather-jerkin', type: 'item', subtype: 'armor', name: 'Leather Jerkin', armor: { physical: 8 } },
-  'common-pants': { templateId: 'common-pants', type: 'item', subtype: 'trousers', name: 'Common Pants', armor: { physical: 1 } },
+  'leather-jerkin': {
+    templateId: 'leather-jerkin',
+    type: 'item',
+    subtype: 'armor',
+    name: 'Leather Jerkin',
+    armor: { physical: 8 },
+    modular: {
+      slot: 'armor',
+      hides: ['torso'],
+      assets: { M: '/models/characters/armors/ARM_M_MEDIUM_Leather_Jerkin.glb', F: '/models/characters/armors/ARM_F_MEDIUM_Leather_Jerkin.glb' },
+    },
+    texture: {
+      base: '/models/characters/armors/leather_jerkin_texture.png',
+      tints: [{ id: 'crimson', label: 'Crimson', map: '/models/characters/armors/leather_jerkin_crimson.png' }],
+    },
+  },
+  'common-pants': {
+    templateId: 'common-pants',
+    type: 'item',
+    subtype: 'trousers',
+    name: 'Common Pants',
+    armor: { physical: 1 },
+    modular: { slot: 'trousers', hides: ['hips', 'leg'], assets: { any: '/models/characters/trousers/common_pants.glb' } },
+  },
   'leather-sandals': { templateId: 'leather-sandals', type: 'item', subtype: 'boots', name: 'Leather Sandals', armor: { physical: 1 } },
 }
 
@@ -56,6 +78,49 @@ describe('spawning a modular character template', () => {
     expect(store.equippedAt(id, 'armor')?.templateId).toBe('leather-jerkin')
     expect(store.equippedAt(id, 'trousers')?.templateId).toBe('common-pants')
     expect(store.equippedAt(id, 'boots')?.templateId).toBe('leather-sandals')
+  })
+
+  it('derives modular armor pieces from equipped items', async () => {
+    const store = useGameStore()
+    const id = await store.spawnFromTemplate('tav', { x: 0, y: 0, z: 0 })
+    const pieces = useModularArmor(id)
+    // Sexed jerkin resolves the M asset; unisex pants resolve `any`; sandals
+    // have no modular block and render nothing.
+    expect(pieces.value).toEqual([
+      {
+        id: 'ARM_M_MEDIUM_Leather_Jerkin',
+        path: '/models/characters/armors/ARM_M_MEDIUM_Leather_Jerkin.glb',
+        hides: ['torso'],
+        tint: null,
+      },
+      {
+        id: 'common_pants',
+        path: '/models/characters/trousers/common_pants.glb',
+        hides: ['hips', 'leg'],
+        tint: null,
+      },
+    ])
+  })
+
+  it('resolves the appearance tint through the item texture tints', async () => {
+    const store = useGameStore()
+    const id = await store.spawnFromTemplate('tav', { x: 0, y: 0, z: 0 })
+    store.updateEntity(id, {
+      appearance: { ...store.getEntity(id)!.appearance!, equipmentTint: { armor: 'crimson' } },
+    })
+    const pieces = useModularArmor(id)
+    expect(pieces.value[0]!.tint).toBe('/models/characters/armors/leather_jerkin_crimson.png')
+  })
+
+  it('reacts to unequipping mid-game', async () => {
+    const store = useGameStore()
+    const id = await store.spawnFromTemplate('tav', { x: 0, y: 0, z: 0 })
+    const pieces = useModularArmor(id)
+    expect(pieces.value).toHaveLength(2)
+    const jerkin = store.equippedAt(id, 'armor')!
+    store.moveItem(jerkin.id, { containerId: id }) // unequip → backpack
+    expect(pieces.value).toHaveLength(1)
+    expect(pieces.value[0]!.id).toBe('common_pants')
   })
 
   it('trousers slot only accepts trousers items', async () => {
