@@ -50,6 +50,7 @@ export { default as StatusEffectBadges } from './components/StatusEffectBadges.v
 export * from './modular/partRegistry'
 export * from './modular/useModularRig'
 export * from './modular/useModularArmor'
+export * from './modular/segmentMaterials'
 export { loadGltf } from './modular/gltfCache'
 export * from './useCharacterAnimations'
 export * from './useCharacterController'

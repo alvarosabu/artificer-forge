@@ -16,6 +16,14 @@ onMounted(async () => {
   const { spawnPoint } = await gameStore.loadScene('character_scene')
   gameStore.updateEntity(playerId, { position: spawnPoint })
 
+  // Origin companion with a ghostly right arm (appearance.segmentMaterials).
+  const cedricId = await gameStore.spawnFromTemplate('cedric', {
+    x: spawnPoint.x - 2,
+    y: spawnPoint.y,
+    z: spawnPoint.z - 1,
+  })
+  gameStore.addToParty(cedricId)
+
   // Modular NPC via Actor.vue: same template, different look + neutral team.
   await gameStore.spawnFromTemplate('tav', { x: spawnPoint.x + 3, y: spawnPoint.y, z: spawnPoint.z - 2 }, {
     name: 'Villager',

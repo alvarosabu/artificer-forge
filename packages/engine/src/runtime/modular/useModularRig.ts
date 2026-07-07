@@ -20,6 +20,7 @@ import { createHornMaterials, type HornMaterialSet } from '@artificer-forge/vfx'
 import type { CharacterAppearance } from '../../core/appearance'
 import { loadGltf } from './gltfCache'
 import { manifestRigPath, resolvePartPath } from './partRegistry'
+import { resolveSegmentMaterial, segmentMatcher } from './segmentMaterials'
 
 // In-game modular character assembly. Loads the canonical bare skeleton and
 // rebinds part meshes onto it (by bone name — joint order differs across part
@@ -141,6 +142,8 @@ export function useModularRig(
     const cloned = arr.map(m => (m.name === 'Horns' ? hornMaterial() : m.clone()))
     mesh.material = Array.isArray(mesh.material) ? cloned : cloned[0]!
     mesh.userData.materials = cloned
+    // The assigned value (array or single), kept to restore segment overrides.
+    mesh.userData.baseMaterial = mesh.material
     mesh.userData.baseMap = cloned.map(m => (m as Material & { map?: Texture | null }).map ?? null)
     mesh.castShadow = true
   }
@@ -339,6 +342,45 @@ export function useModularRig(
     if (hornFallback) hornFallback.color.set(app.hornColorA ?? '#2b2230')
   })
 
+  // --- Segment material overrides (e.g. a ghostly arm) ---
+  // Swaps whole-mesh materials on matching body segments; factories come from
+  // the app via registerSegmentMaterials. One material per override entry per
+  // instance (uniforms like time-based noise must not be shared across chars).
+  const overrideMaterials = new Map<string, Material>()
+
+  watchEffect(() => {
+    void version.value
+    const bodyId = attached.body
+    const group = bodyId ? prepared.get(bodyId) : null
+    if (!group) return
+    const overrides = toValue(appearance)?.segmentMaterials ?? []
+
+    // Restore everything first so removed/changed overrides revert cleanly.
+    group.children.forEach((child) => {
+      const mesh = child as Mesh
+      if (mesh.isMesh && mesh.userData.baseMaterial) mesh.material = mesh.userData.baseMaterial
+    })
+
+    for (const [i, override] of overrides.entries()) {
+      const factory = resolveSegmentMaterial(override.material)
+      if (!factory) {
+        console.warn(`[useModularRig] Unknown segment material (not registered): ${override.material}`)
+        continue
+      }
+      const key = `${i}:${override.material}:${isWebGPU.value}`
+      let material = overrideMaterials.get(key)
+      if (!material) {
+        material = factory(override.params, { isWebGPU: isWebGPU.value })
+        overrideMaterials.set(key, material)
+      }
+      const matchers = override.segments.map(segmentMatcher)
+      group.children.forEach((child) => {
+        const mesh = child as Mesh
+        if (mesh.isMesh && matchers.some(r => r.test(mesh.name))) mesh.material = material!
+      })
+    }
+  })
+
   // --- Armor palette-atlas tints (per-instance materials, shared textures) ---
   watchEffect(() => {
     void version.value
@@ -371,6 +413,8 @@ export function useModularRig(
       })
     }
     prepared.clear()
+    for (const m of overrideMaterials.values()) m.dispose()
+    overrideMaterials.clear()
   })
 
   return { rig }

@@ -1,0 +1,69 @@
+templateId: cedric
+type: character
+name: Cedric
+class: fighter
+level: 1
+race: human
+sex: M
+
+stats:
+  hp: 38
+  maxHp: 38
+  ac: 14
+  strength: 14
+  dexterity: 12
+  constitution: 14
+  intelligence: 10
+  wisdom: 12
+  charisma: 12
+  maxActions: 1
+  maxBonusActions: 1
+
+team: player
+controllable: true
+
+ai:
+  behavior: companion
+  followDistance: 3
+
+# Static portrait until modular portrait baking exists (reusing hero art).
+portrait: /img/portraits/hero_portrait.png
+portraitBackground: /img/portraits/bgs/blue-storm.png
+
+# Origin character: dedicated head, and his whole right arm is ghostly —
+# a material swap on the shared body, not a special body export.
+appearance:
+  body: HUM_M_MEDIUM_Body_A
+  head: HUM_M_Head_Cedric
+  hair: GEN_M_Hair_Short_C
+  beard: null
+  eyebrows: GEN_Eyebrows_Thick_A
+  horns: null
+  skinColor: '#eecbb0'
+  hairColor: '#2c222b'
+  segmentMaterials:
+    - segments: [armR, handR]
+      material: ghost
+      params: { color: '#88ccff', glowStrength: 12, fresnelPower: 1.2 }
+
+abilities:
+  - arrow-shot
+  - magic-missile
+  - fireball
+
+equipmentSlots:
+  - mainHand
+  - offHand
+  - helmet
+  - armor
+  - trousers
+  - gauntlets
+  - boots
+  - amulet
+  - ring1
+  - ring2
+
+equipment:
+  mainHand: shortsword
+  trousers: common-pants
+  boots: leather-sandals

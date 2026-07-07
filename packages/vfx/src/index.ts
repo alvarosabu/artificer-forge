@@ -3,7 +3,7 @@ export { default as TargetIndicator } from './components/TargetIndicator.vue'
 export { useDamageNumbers, type DamageEntry, type DamageType } from './composables/useDamageNumbers'
 
 // Materials
-export { ghostMaterial } from './materials/ghost'
+export { ghostMaterial, type GhostMaterialOptions } from './materials/ghost'
 export {
   buildWorleyEmissiveNode,
   buildBurningEmissiveNode,

@@ -69,6 +69,14 @@ export default defineContentConfig({
           hornPattern: z.enum(['gradient', 'repeated', 'solid']).optional(),
           hornWeight: z.number().optional(),
           equipmentTint: z.record(z.string()).optional(),
+          // Per-body-segment material swap (e.g. a ghostly arm). `material`
+          // names a factory registered via registerSegmentMaterials; sided
+          // segment keys (armR) hit one side, side-agnostic (arm) hit both.
+          segmentMaterials: z.array(z.object({
+            segments: z.array(z.string()),
+            material: z.string(),
+            params: z.record(z.any()).optional(),
+          })).optional(),
         }).optional(),
         faction: z.string().optional(),
         team: z.enum(['player', 'ally', 'neutral', 'hostile']).optional(),
