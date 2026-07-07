@@ -4,6 +4,8 @@ import { useGLTF, Html } from '@tresjs/cientos'
 import type { TresPointerEvent } from '@tresjs/core'
 import { useOutlinePass } from '@artificer-forge/post-processing'
 import { useCharacterAnimations } from '../useCharacterAnimations'
+import { useModularRig } from '../modular/useModularRig'
+import { useModularArmor } from '../modular/useModularArmor'
 import { useActorBehavior } from '../useActorBehavior'
 import { useContextMenu } from '../useContextMenu'
 import { useEquipment } from '../useEquipment'
@@ -25,10 +27,19 @@ const props = withDefaults(defineProps<{
 
 const gameStore = useGameStore()
 const entity = computed(() => gameStore.getEntity(props.entityId))
-const modelPath = computed(() => entity.value?.model!)
 
-const { nodes } = useGLTF(modelPath.value, { draco: true })
-const rig = computed(() => nodes.value?.Rig_Medium)
+// Rig source is a setup-time decision: an entity is either modular (assembled
+// from appearance parts) or single-GLB — it never switches.
+const isModular = !!entity.value?.appearance
+
+function useSingleGltfRig() {
+  const { nodes } = useGLTF(entity.value?.model ?? '', { draco: true })
+  return computed(() => nodes.value?.Rig_Medium)
+}
+
+const rig = isModular
+  ? useModularRig(() => entity.value?.appearance, useModularArmor(() => props.entityId)).rig
+  : useSingleGltfRig()
 
 const { play } = useCharacterAnimations(rig)
 

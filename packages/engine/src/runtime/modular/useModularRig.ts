@@ -288,7 +288,11 @@ export function useModularRig(
     const bodyId = attached.body
     const group = bodyId ? prepared.get(bodyId) : null
     if (!group) return
-    const keys = new Set((toValue(armor) ?? []).flatMap(p => p.hides))
+    // Only ATTACHED pieces hide segments — hiding for a piece that is still
+    // loading would leave the character with invisible limbs for a moment.
+    // (This effect runs after the assembly effect on the same trigger, so
+    // armorAttached is already up to date.)
+    const keys = new Set((toValue(armor) ?? []).filter(p => armorAttached.has(p.id)).flatMap(p => p.hides))
     const matchers = [...keys].map((k) => {
       const token = k[0]!.toUpperCase() + k.slice(1)
       return new RegExp(`_${token}(L|R)?(_|$)`)
