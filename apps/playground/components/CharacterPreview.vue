@@ -5,7 +5,7 @@ import { Color, DataTexture, Group, MeshToonMaterial, NearestFilter, RedFormat, 
 import type { Bone, Material, Mesh, Object3D, SkinnedMesh, Texture } from 'three'
 import { AnimationName, useCharacterAnimations } from '@artificer-forge/engine/runtime'
 import { ARMORS, BEARDS, BODIES, EYEBROWS, HAIR, HEADS, HORNS, RIG_MEDIUM } from '../utils/characterParts'
-import { createHornMaterials, HORN_PATTERN_INDEX, type HornPattern } from '../utils/hornMaterial'
+import { createHornMaterials, HORN_PATTERN_INDEX, type HornPattern } from '@artificer-forge/vfx'
 
 // Dumb renderer for the modular-character rebind approach. Loads the canonical
 // bare skeleton (rig_medium.glb) and assembles parts onto it:

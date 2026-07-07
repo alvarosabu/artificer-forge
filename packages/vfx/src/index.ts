@@ -31,6 +31,7 @@ export { createFireBillboards } from './particles/fireBillboards'
 
 // Surface materials
 export { buildFireSurfaceMaterial } from './materials/fireSurface'
+export { createHornMaterials, HORN_PATTERN_INDEX, type HornMaterialSet, type HornPattern, type HornUniforms } from './materials/hornMaterial'
 export { buildCharcoalSurfaceMaterial } from './materials/charcoalSurface'
 export { buildPoolSurfaceMaterial } from './materials/poolSurface'
 

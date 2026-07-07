@@ -1,7 +1,7 @@
 import { computed, reactive, watch } from 'vue'
 import { BEARDS, BODIES, EYEBROWS, HAIR, HEADS, HORNS } from '../utils/characterParts'
 import { forRaceSex, forSex, type Race, type Sex } from '../utils/partManifest'
-import type { HornPattern } from '../utils/hornMaterial'
+import type { HornPattern } from '@artificer-forge/vfx'
 
 export type EquipSlot = 'helmet' | 'armor' | 'trousers' | 'gauntlets' | 'boots'
 

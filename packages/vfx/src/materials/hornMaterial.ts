@@ -34,7 +34,9 @@ export interface HornMaterialSet {
   uniforms: HornUniforms
 }
 
-export function createHornMaterials(gradientMap: Texture): HornMaterialSet {
+// gradientMap is only used by the toon variant — std-only consumers (in-game
+// rendering) can omit it.
+export function createHornMaterials(gradientMap?: Texture): HornMaterialSet {
   const colorA = uniform(new Color('#2b2230'))
   const colorB = uniform(new Color('#8a6d5c'))
   const weight = uniform(0.5) // 0..1, where color A hands over to B
@@ -65,7 +67,7 @@ export function createHornMaterials(gradientMap: Texture): HornMaterialSet {
   std.colorNode = colorNode
   std.name = 'Horns'
 
-  const toon = new MeshToonNodeMaterial({ gradientMap })
+  const toon = new MeshToonNodeMaterial(gradientMap ? { gradientMap } : {})
   toon.colorNode = colorNode
   toon.name = 'Horns'
 
