@@ -309,10 +309,8 @@ export function useModularRig(
     if (!app) return
     const skin = new Color(app.skinColor)
     const hair = new Color(app.hairColor)
-    for (const slot of ['head', ...SKINNED_SLOTS] as Slot[]) {
-      const id = attached[slot]
-      const obj = id ? prepared.get(id) : null
-      obj?.traverse((o) => {
+    const tintObject = (obj: Object3D) => {
+      obj.traverse((o) => {
         const mats = (o as Mesh).userData?.materials as (Material & { color?: Color })[] | undefined
         mats?.forEach((m) => {
           if (!m.color) return
@@ -320,6 +318,17 @@ export function useModularRig(
           else if (m.name === 'Hair') m.color.copy(hair)
         })
       })
+    }
+    for (const slot of ['head', ...SKINNED_SLOTS] as Slot[]) {
+      const id = attached[slot]
+      const obj = id ? prepared.get(id) : null
+      if (obj) tintObject(obj)
+    }
+    // Armor pieces can expose skin too (e.g. sandals bring their own foot mesh
+    // whose toes use the Skin material).
+    for (const piece of toValue(armor) ?? []) {
+      const obj = prepared.get(piece.id)
+      if (obj && armorAttached.has(piece.id)) tintObject(obj)
     }
     if (hornSet) {
       hornSet.uniforms.colorA.value.set(app.hornColorA ?? '#2b2230')
