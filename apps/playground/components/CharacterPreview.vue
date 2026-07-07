@@ -4,7 +4,7 @@ import { useGLTF } from '@tresjs/cientos'
 import { Color, DataTexture, Group, MeshToonMaterial, NearestFilter, RedFormat, Skeleton, SRGBColorSpace, TextureLoader } from 'three'
 import type { Bone, Material, Mesh, Object3D, SkinnedMesh, Texture } from 'three'
 import { AnimationName, useCharacterAnimations } from '@artificer-forge/engine/runtime'
-import { ARMORS, BEARDS, BODIES, EYEBROWS, HAIR, HEADS, HORNS, RIG_MEDIUM } from '../utils/characterParts'
+import { BEARDS, BODIES, EYEBROWS, HAIR, HEADS, HORNS, RIG_MEDIUM } from '../utils/characterParts'
 import { createHornMaterials, HORN_PATTERN_INDEX, type HornPattern } from '@artificer-forge/vfx'
 
 // Dumb renderer for the modular-character rebind approach. Loads the canonical
@@ -14,10 +14,11 @@ import { createHornMaterials, HORN_PATTERN_INDEX, type HornPattern } from '@arti
 // Each mesh keeps a standard and a MeshToonMaterial variant; `toon` swaps between
 // them. Skin/hair colors tint whichever variant is active.
 
-// An equipped armor piece: which asset (id, matches an ARMORS preload entry), which
-// body segments it hides (side-agnostic keys from the item's modular.hides), and an
-// optional tint atlas URL (null/undefined = the piece's base/embedded map).
-interface ArmorPiece { id: string, hides: string[], tint?: string | null }
+// An equipped armor piece: mesh asset (id = filename stem, path from the item's
+// modular.assets), which body segments it hides (side-agnostic keys from the
+// item's modular.hides), and an optional tint atlas URL (null/undefined = the
+// piece's base/embedded map).
+interface ArmorPiece { id: string, path: string, hides: string[], tint?: string | null }
 
 const props = withDefaults(defineProps<{
   body: string | null
@@ -39,11 +40,18 @@ const props = withDefaults(defineProps<{
 type Slot = 'body' | 'head' | 'hair' | 'beard' | 'eyebrows' | 'horns'
 const SKINNED_SLOTS: Slot[] = ['body', 'hair', 'beard', 'eyebrows', 'horns']
 
-// --- Preload everything up front (one useGLTF per asset, like the anim packs) ---
+// --- Preload every manifest part up front (one useGLTF per asset, like the anim
+// packs). Armor assets come from item YAML (modular.assets) and load lazily on
+// first equip — their loaders join the same map.
 const rigLoader = useGLTF(RIG_MEDIUM)
 const partLoaders = new Map<string, ReturnType<typeof useGLTF>>(
-  [...BODIES, ...ARMORS, ...HEADS, ...HAIR, ...BEARDS, ...EYEBROWS, ...HORNS].map(p => [p.id, useGLTF(p.path, { draco: true })]),
+  [...BODIES, ...HEADS, ...HAIR, ...BEARDS, ...EYEBROWS, ...HORNS].map(p => [p.id, useGLTF(p.path, { draco: true })]),
 )
+
+function armorLoader(piece: ArmorPiece) {
+  if (!partLoaders.has(piece.id)) partLoaders.set(piece.id, useGLTF(piece.path, { draco: true }))
+  return partLoaders.get(piece.id)!
+}
 
 const rigRoot = computed(() => rigLoader.nodes.value.Rig_Medium as Object3D | undefined)
 
@@ -262,6 +270,7 @@ function syncArmor() {
   }
   for (const piece of props.armor) {
     if (armorAttached.has(piece.id)) continue
+    armorLoader(piece)
     const obj = prepareSkinned(piece.id)
     if (!obj) continue // asset not ready yet — watchEffect re-runs when it loads
     rigRoot.value!.add(obj)

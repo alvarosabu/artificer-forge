@@ -9,7 +9,7 @@ import PartPicker from '../../../components/PartPicker.vue'
 import ThumbStudio from '../../../components/ThumbStudio.vue'
 import { useCharacterCustomization } from '../../../composables/useCharacterCustomization'
 import type { EquipSlot } from '../../../composables/useCharacterCustomization'
-import { armorForItem, HEADS } from '../../../utils/characterParts'
+import { HEADS } from '../../../utils/characterParts'
 import { forRaceSex, type Race } from '../../../utils/partManifest'
 
 useHead({ title: 'Create Character — Lab' })
@@ -32,7 +32,7 @@ interface TintEntry { id: string, label: string, map: string }
 interface ItemTemplate {
   templateId: string
   name: string
-  modular?: { hides: string[] }
+  modular?: { hides: string[], assets?: Partial<Record<'M' | 'F' | 'any', string>> }
   texture?: { base: string, tints?: TintEntry[] }
 }
 
@@ -54,17 +54,17 @@ const equippedSlots = computed(() =>
 
 // Nude preview passes no armor: CharacterPreview detaches the pieces and the
 // coverage mask shrinks, so every body segment flips back visible.
-// Sexed items resolve to their fitted variant, so switching body type re-dresses.
+// Sexed items resolve their fitted variant from modular.assets (item YAML is
+// the source of truth), so switching body type re-dresses.
 const armor = computed(() =>
   state.nude
     ? []
     : equippedSlots.value.flatMap(({ slot, item }) => {
-        if (!item.modular) return []
-        const entry = armorForItem(item.templateId, state.sex)
-        if (!entry) return []
+        const path = item.modular?.assets?.[state.sex] ?? item.modular?.assets?.any
+        if (!item.modular || !path) return []
         const tintId = state.equipmentTint[slot]
         const tint = tintId ? item.texture?.tints?.find(t => t.id === tintId)?.map ?? null : null
-        return [{ id: entry.id, hides: item.modular.hides, tint }]
+        return [{ id: path.split('/').pop()!.replace(/\.glb$/, ''), path, hides: item.modular.hides, tint }]
       }),
 )
 
