@@ -37,20 +37,18 @@ describe('parsePart', () => {
   })
 
   it('applies overrides over parsed fields', () => {
-    const head = parsePart('ELF_M_Head_A', 'heads', PART_OVERRIDES)!
-    expect(head.race).toEqual(['elf', 'tiefling'])
+    const body = parsePart('HUM_M_MEDIUM_Body_A', 'bodies', PART_OVERRIDES)!
+    expect(body.race).toBeUndefined()
   })
 })
 
 describe('forRaceSex', () => {
-  const heads = ['HUM_M_Head_A', 'HUM_F_Head_A', 'ELF_M_Head_A', 'ELF_F_Head_A']
+  const heads = ['HUM_M_Head_A', 'HUM_F_Head_A', 'ELF_M_Head_A', 'ELF_F_Head_A', 'TIF_M_Head_A', 'TIF_F_Head_A']
     .map(s => parsePart(s, 'heads', PART_OVERRIDES)!)
 
-  it('tieflings share the elf heads', () => {
-    const elf = forRaceSex(heads, 'elf', 'M').map(p => p.id)
-    const tif = forRaceSex(heads, 'tiefling', 'M').map(p => p.id)
-    expect(tif).toEqual(elf)
-    expect(tif).toContain('ELF_M_Head_A')
+  it('each race gets its own heads', () => {
+    expect(forRaceSex(heads, 'tiefling', 'M').map(p => p.id)).toEqual(['TIF_M_Head_A'])
+    expect(forRaceSex(heads, 'elf', 'M').map(p => p.id)).toEqual(['ELF_M_Head_A'])
   })
 
   it('humans do not get elf/tiefling heads', () => {
