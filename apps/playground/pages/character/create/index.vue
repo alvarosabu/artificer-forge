@@ -9,7 +9,8 @@ import PartPicker from '../../../components/PartPicker.vue'
 import ThumbStudio from '../../../components/ThumbStudio.vue'
 import { useCharacterCustomization } from '../../../composables/useCharacterCustomization'
 import type { EquipSlot } from '../../../composables/useCharacterCustomization'
-import { armorForItem, forRaceSex, HEADS, type Race } from '../../../utils/characterParts'
+import { armorForItem, HEADS } from '../../../utils/characterParts'
+import { forRaceSex, type Race } from '../../../utils/partManifest'
 
 useHead({ title: 'Create Character — Lab' })
 

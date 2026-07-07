@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, watchEffect } from 'vue'
-import { HEADS, type PartEntry } from '../utils/characterParts'
+import { HEADS } from '../utils/characterParts'
+import type { PartEntry } from '../utils/partManifest'
 import { type ThumbDescriptor, type ThumbSlot, thumbKey, useModularThumbnails } from '../composables/useModularThumbnails'
 
 // Collapsible grid of part thumbnails. Each cell bakes (once) via the shared

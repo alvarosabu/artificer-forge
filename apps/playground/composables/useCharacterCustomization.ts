@@ -1,5 +1,6 @@
 import { computed, reactive, watch } from 'vue'
-import { BEARDS, BODIES, EYEBROWS, forRaceSex, forSex, HAIR, HEADS, HORNS, type Race, type Sex } from '../utils/characterParts'
+import { BEARDS, BODIES, EYEBROWS, HAIR, HEADS, HORNS } from '../utils/characterParts'
+import { forRaceSex, forSex, type Race, type Sex } from '../utils/partManifest'
 import type { HornPattern } from '../utils/hornMaterial'
 
 export type EquipSlot = 'helmet' | 'armor' | 'trousers' | 'gauntlets' | 'boots'
