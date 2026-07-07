@@ -85,6 +85,12 @@ function onItemClick(_item: EntityState) {}
               @context="onEquipmentContext"
             />
             <InventoryEquipmentSlot
+              v-if="hasSlot('trousers')"
+              slot-key="trousers"
+              :character-id="character.id"
+              @context="onEquipmentContext"
+            />
+            <InventoryEquipmentSlot
               v-if="hasSlot('gauntlets')"
               slot-key="gauntlets"
               :character-id="character.id"

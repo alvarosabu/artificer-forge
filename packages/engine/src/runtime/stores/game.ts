@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, reactive, ref } from 'vue'
-import { carryCapacity, computeDamage, deriveMaxArmor, encumbrance, totalWeight } from '@artificer-forge/engine/core'
+import { carryCapacity, computeDamage, deriveMaxArmor, encumbrance, totalWeight, type CharacterAppearance, type Sex } from '@artificer-forge/engine/core'
 import { useDamageTypeStore } from './damageTypes'
 
 // Types
@@ -26,6 +26,7 @@ export type EquipmentSlotKey =
   | 'offHand'
   | 'helmet'
   | 'armor'
+  | 'trousers'
   | 'gauntlets'
   | 'boots'
   | 'amulet'
@@ -36,6 +37,7 @@ export const ALL_EQUIPMENT_SLOTS: EquipmentSlotKey[] = [
   'helmet',
   'amulet',
   'armor',
+  'trousers',
   'gauntlets',
   'boots',
   'ring1',
@@ -75,6 +77,9 @@ export interface EntityState {
   class?: string
   level?: number
   race?: string
+  sex?: Sex
+  // Modular cosmetics — presence switches rendering to modular assembly.
+  appearance?: CharacterAppearance
   faction?: string
   team?: Team
   controllable?: boolean
@@ -328,6 +333,8 @@ export const useGameStore = defineStore('game', () => {
       class: template.class,
       level: template.level,
       race: template.race,
+      sex: template.sex,
+      appearance: template.appearance,
       faction: template.faction,
       team: template.team ?? 'neutral',
       controllable: template.controllable,
@@ -666,6 +673,8 @@ export const useGameStore = defineStore('game', () => {
         return item.subtype === 'helmet'
       case 'armor':
         return item.subtype === 'armor'
+      case 'trousers':
+        return item.subtype === 'trousers'
       case 'gauntlets':
         return item.subtype === 'gauntlets'
       case 'boots':

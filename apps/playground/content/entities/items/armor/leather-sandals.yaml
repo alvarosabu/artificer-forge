@@ -1,10 +1,12 @@
 templateId: leather-sandals
 type: item
-subtype: armor
+subtype: boots
 name: Leather Sandals
 model: /models/characters/boots/leather_sandals.glb
 modular:
   slot: boots
+  assets:
+    any: /models/characters/boots/leather_sandals.glb
   # Sandals bring their own foot mesh (exposed toes use the Skin material).
   hides: [foot]
 texture:

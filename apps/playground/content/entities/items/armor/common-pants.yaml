@@ -1,10 +1,12 @@
 templateId: common-pants
 type: item
-subtype: armor
+subtype: trousers
 name: Common Pants
 model: /models/characters/trousers/common_pants.glb
 modular:
   slot: trousers
+  assets:
+    any: /models/characters/trousers/common_pants.glb
   # Pants cover hips + legs. A shorts variant would use hides: [leg] only.
   hides: [hips, leg]
 texture:

@@ -2,11 +2,13 @@ templateId: leather-jerkin
 type: item
 subtype: armor
 name: Leather Jerkin
-# Sexed fitted variants (ARM_{M,F}_MEDIUM_Leather_Jerkin.glb) — resolved per body
-# type via the ARMORS manifest in utils/characterParts.ts, not from this field.
 modular:
   slot: armor
   hides: [torso]
+  # Sexed fitted variants, resolved per body sex: assets[sex] ?? assets.any.
+  assets:
+    M: /models/characters/armors/ARM_M_MEDIUM_Leather_Jerkin.glb
+    F: /models/characters/armors/ARM_F_MEDIUM_Leather_Jerkin.glb
 texture:
   base: /models/characters/armors/leather_jerkin_texture.png
   tints:

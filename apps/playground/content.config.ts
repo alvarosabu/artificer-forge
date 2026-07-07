@@ -50,6 +50,26 @@ export default defineContentConfig({
         level: z.number().optional(),
         race: z.string().optional(),
         // Character fields
+        sex: z.enum(['M', 'F']).optional(),
+        // Modular cosmetics — presence switches rendering from `model` (single
+        // GLB) to modular assembly. Part ids come from the generated part
+        // manifest (modules/part-manifest.ts). Armor is NOT part of appearance:
+        // it derives from equipped items (modular.assets below).
+        appearance: z.object({
+          body: z.string(),
+          head: z.string(),
+          hair: z.string().nullable().optional(),
+          beard: z.string().nullable().optional(),
+          eyebrows: z.string().nullable().optional(),
+          horns: z.string().nullable().optional(),
+          skinColor: z.string(),
+          hairColor: z.string(),
+          hornColorA: z.string().optional(),
+          hornColorB: z.string().optional(),
+          hornPattern: z.enum(['gradient', 'repeated', 'solid']).optional(),
+          hornWeight: z.number().optional(),
+          equipmentTint: z.record(z.string()).optional(),
+        }).optional(),
         faction: z.string().optional(),
         team: z.enum(['player', 'ally', 'neutral', 'hostile']).optional(),
         controllable: z.boolean().optional(),
@@ -106,6 +126,13 @@ export default defineContentConfig({
         modular: z.object({
           slot: z.enum(['helmet', 'armor', 'trousers', 'gauntlets', 'boots']),
           hides: z.array(z.enum(['head', 'torso', 'hips', 'arm', 'hand', 'leg', 'foot'])),
+          // Fitted mesh per body sex; `any` = unisex asset. Resolution:
+          // assets[entity.sex] ?? assets.any (miss = piece renders nothing).
+          assets: z.object({
+            M: z.string().optional(),
+            F: z.string().optional(),
+            any: z.string().optional(),
+          }).optional(),
         }).optional(),
         // Palette-atlas tinting: `base` is the default atlas (also the GLB's embedded
         // map); each `tints` entry is an alternate recolored atlas swapped onto the
