@@ -10,7 +10,7 @@ modular:
   # Pants cover hips + legs. A shorts variant would use hides: [leg] only.
   hides: [hips, leg]
 texture:
-  base: /models/characters/trousers/common_folk_clothes_texture.png
+  base: /models/characters/textures/common_folk_clothes_texture.png
 armor:
   physical: 1
 weight: 2

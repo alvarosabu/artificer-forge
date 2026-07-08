@@ -36,8 +36,8 @@ const ITEMS: Record<string, any> = {
       assets: { M: '/models/characters/armors/ARM_M_MEDIUM_Leather_Jerkin.glb', F: '/models/characters/armors/ARM_F_MEDIUM_Leather_Jerkin.glb' },
     },
     texture: {
-      base: '/models/characters/armors/leather_jerkin_texture.png',
-      tints: [{ id: 'crimson', label: 'Crimson', map: '/models/characters/armors/leather_jerkin_crimson.png' }],
+      base: '/models/characters/textures/leather_jerkin_texture.png',
+      tints: [{ id: 'crimson', label: 'Crimson', map: '/models/characters/textures/leather_jerkin_crimson.png' }],
     },
   },
   'common-pants': {
@@ -109,7 +109,7 @@ describe('spawning a modular character template', () => {
       appearance: { ...store.getEntity(id)!.appearance!, equipmentTint: { armor: 'crimson' } },
     })
     const pieces = useModularArmor(id)
-    expect(pieces.value[0]!.tint).toBe('/models/characters/armors/leather_jerkin_crimson.png')
+    expect(pieces.value[0]!.tint).toBe('/models/characters/textures/leather_jerkin_crimson.png')
   })
 
   it('reacts to unequipping mid-game', async () => {

@@ -10,7 +10,7 @@ modular:
   # Sandals bring their own foot mesh (exposed toes use the Skin material).
   hides: [foot]
 texture:
-  base: /models/characters/boots/common_folk_clothes_texture.png
+  base: /models/characters/textures/common_folk_clothes_texture.png
 armor:
   physical: 1
 weight: 1

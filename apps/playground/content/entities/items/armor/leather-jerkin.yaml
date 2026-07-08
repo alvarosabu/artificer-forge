@@ -10,10 +10,10 @@ modular:
     M: /models/characters/armors/ARM_M_MEDIUM_Leather_Jerkin.glb
     F: /models/characters/armors/ARM_F_MEDIUM_Leather_Jerkin.glb
 texture:
-  base: /models/characters/armors/leather_jerkin_texture.png
+  base: /models/characters/textures/leather_jerkin_texture.png
   tints:
-    - { id: black, label: Black, map: /models/characters/armors/leather_jerkin_black.png }
-    - { id: crimson, label: Crimson, map: /models/characters/armors/leather_jerkin_crimson.png }
+    - { id: black, label: Black, map: /models/characters/textures/leather_jerkin_black.png }
+    - { id: crimson, label: Crimson, map: /models/characters/textures/leather_jerkin_crimson.png }
 armor:
   physical: 8
 weight: 6
