@@ -6,7 +6,7 @@
 export type Sex = 'M' | 'F'
 
 /** Equipment slots that render as modular meshes on the body. */
-export type ModularSlot = 'helmet' | 'armor' | 'trousers' | 'gauntlets' | 'boots'
+export type ModularSlot = 'helmet' | 'armor' | 'cloak' | 'trousers' | 'gauntlets' | 'boots'
 
 export type HornPattern = 'gradient' | 'repeated' | 'solid'
 

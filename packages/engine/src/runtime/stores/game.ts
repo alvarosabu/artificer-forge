@@ -26,8 +26,9 @@ export type EquipmentSlotKey =
   | 'offHand'
   | 'helmet'
   | 'armor'
+  | 'cloak'
   | 'trousers'
-  | 'gauntlets'
+  | 'gauntlets' 
   | 'boots'
   | 'amulet'
   | 'ring1'
@@ -37,6 +38,7 @@ export const ALL_EQUIPMENT_SLOTS: EquipmentSlotKey[] = [
   'helmet',
   'amulet',
   'armor',
+  'cloak',
   'trousers',
   'gauntlets',
   'boots',
@@ -680,6 +682,8 @@ export const useGameStore = defineStore('game', () => {
         return item.subtype === 'helmet'
       case 'armor':
         return item.subtype === 'armor'
+      case 'cloak':
+        return item.subtype === 'cloak'
       case 'trousers':
         return item.subtype === 'trousers'
       case 'gauntlets':

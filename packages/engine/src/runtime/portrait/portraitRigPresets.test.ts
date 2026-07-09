@@ -35,7 +35,7 @@ describe('frameFromHead', () => {
 
   it('is identical for same-rig characters (depends only on head box)', () => {
     // Characters sharing a rig resolve to the same head box, so framing must match
-    // exactly — capes/weapons/body shape never enter the math.
+    // exactly — cloaks/weapons/body shape never enter the math.
     expect(frameFromHead(center, headHeight)).toEqual(frameFromHead(center, headHeight))
   })
 

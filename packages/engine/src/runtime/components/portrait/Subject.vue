@@ -5,6 +5,7 @@ import { useGLTF } from '@tresjs/cientos'
 import { type TresObject3D, useTresContext } from '@tresjs/core'
 import { AnimationName, type RigSize, useCharacterAnimations } from '../../useCharacterAnimations'
 import { useEquipment } from '../../useEquipment'
+import { useModularRig } from '../../modular/useModularRig'
 import type { Vec3 } from '../../portrait/portraitRigPresets'
 import type { PortraitSubjectDescriptor } from '../../portrait/usePortraitStudio'
 
@@ -29,12 +30,23 @@ const emit = defineEmits<{
 // Must be called synchronously, BEFORE the first await, for inject to resolve.
 const { renderer } = useTresContext()
 
-// Await load so the parent <Suspense> only resolves once the model is ready.
-const { nodes, execute } = useGLTF(props.descriptor.model, { draco: true })
-await execute()
+// Setup-time branch, mirroring Actor.vue: a subject is either modular
+// (assembled from appearance parts) or single-GLB.
+const isModular = !!props.descriptor.appearance
 
-// The rig is a named node inside the GLTF (e.g. 'Rig_Medium'), not the scene root.
-const rig = computed<TresObject3D | undefined>(() => nodes.value?.[props.descriptor.rig])
+async function useSingleGltfRig() {
+  // Await load so the parent <Suspense> only resolves once the model is ready.
+  const { nodes, execute } = useGLTF(props.descriptor.model!, { draco: true })
+  await execute()
+  // The rig is a named node inside the GLTF (e.g. 'Rig_Medium'), not the scene root.
+  return computed<TresObject3D | undefined>(() => nodes.value?.[props.descriptor.rig])
+}
+
+// Modular parts load incrementally AFTER Suspense resolves; the capture below
+// waits for the assembly to settle instead of assuming the rig is complete.
+const rig = isModular
+  ? useModularRig(() => props.descriptor.appearance, () => props.descriptor.armor ?? []).rig
+  : await useSingleGltfRig()
 
 useEquipment(rig, toRef(() => props.descriptor.equipment))
 
@@ -57,8 +69,8 @@ function findHeadMesh(root: TresObject3D): Mesh | undefined {
 
 function captureFrame() {
   // Two rAFs: the first lets the Tres render loop draw a frame with the freshly
-  // framed camera; the second guarantees that frame is in the drawing buffer
-  // before we read it (preserveDrawingBuffer keeps it readable).
+  // framed camera; the second guarantees that frame has been presented to the
+  // canvas before we read it back with toDataURL.
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       try {
@@ -77,20 +89,55 @@ function captureFrame() {
 // on the first action risks play() no-op'ing and capturing a bind/T-pose.
 let signaled = false
 let settleTimer: ReturnType<typeof setTimeout> | undefined
+
+// Wait for the mesh assembly to settle before framing: modular parts, armor and
+// equipment attach asynchronously even after the idle action is ready. Two
+// consecutive identical mesh counts (and at least one mesh) = settled; the try
+// cap bails before the studio's 10s watchdog if a part never lands.
+function whenSettled(done: () => void) {
+  let prev = -1
+  let stable = 0
+  let tries = 0
+  const tick = () => {
+    let count = 0
+    rig.value?.traverse((o) => {
+      if ((o as Mesh).isMesh) count++
+    })
+    if (count > 0 && count === prev) stable++
+    else {
+      stable = 0
+      prev = count
+    }
+    tries++
+    if (stable >= 2 || tries >= 25) return done()
+    settleTimer = setTimeout(tick, 150)
+  }
+  settleTimer = setTimeout(tick, 200)
+}
+
 watch(
   () => actions[AnimationName.IDLE_A],
   (idle) => {
     if (signaled || !idle) return
     signaled = true
     play(AnimationName.IDLE_A)
-    settleTimer = setTimeout(() => {
-      // After a few frames the idle pose has settled and world matrices are valid,
-      // so the head mesh world box (hence framing) is accurate.
+    whenSettled(() => {
+      // The idle pose has settled and world matrices are valid, so the head mesh
+      // world box (hence framing) is accurate.
       if (rig.value) {
+        // Self-shadowing (hair on forehead, chin on neck) is a big part of the
+        // authored-portrait look; rig assembly only sets castShadow.
+        rig.value.traverse((o) => {
+          const mesh = o as Mesh
+          if (mesh.isMesh) {
+            mesh.castShadow = true
+            mesh.receiveShadow = true
+          }
+        })
         rig.value.updateWorldMatrix(true, true)
 
         // Bounds are emitted for the lab's orbit target / readout only — framing
-        // no longer derives from them (a cape/weapon would skew the box).
+        // no longer derives from them (a cloak/weapon would skew the box).
         const box = new Box3().setFromObject(rig.value)
         emit('bounds', box.min.toArray() as Vec3, box.max.toArray() as Vec3)
 
@@ -117,7 +164,7 @@ watch(
       }
       // Let the new camera apply + render, then capture (skipped in lab preview).
       if (props.autoCapture) captureFrame()
-    }, 200)
+    })
   },
   { immediate: true },
 )

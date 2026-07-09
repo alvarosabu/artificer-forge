@@ -1,0 +1,17 @@
+templateId: cedric-padded-armor
+type: item
+subtype: armor
+name: Cedric's Padded Armor
+icon: /img/armor/cedric_padded.png
+modular:
+  slot: armor
+  hides: [torso]
+  # Male-fitted only: it's Cedric's origin gear.
+  assets:
+    M: /models/characters/armors/ARM_M_Cedric_Padded.glb
+texture:
+  base: /models/characters/textures/cedric_armor_texture.png
+armor:
+  physical: 6
+weight: 8
+value: 60

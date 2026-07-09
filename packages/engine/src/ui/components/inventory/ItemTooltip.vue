@@ -7,12 +7,12 @@ const props = defineProps<{
 </script>
 
 <template>
-  <div class="relative min-w-56 max-w-72 bg-marine-900 border border-gold-600/60 rounded-md p-3 pr-20 text-sm text-gold-100 shadow-xl">
+  <div class="relative min-w-56 max-w-96 bg-marine-900 border border-gold-600/60 rounded-md p-3 pr-32 text-sm text-gold-100 shadow-xl">
     <img
       v-if="props.item.icon"
       :src="props.item.icon"
       :alt="props.item.name"
-      class="absolute -top-4 -right-4 w-20 h-20 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)] pointer-events-none select-none"
+      class="absolute -top-8 -right-4 w-32 h-32 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)] pointer-events-none select-none [mask-image:linear-gradient(to_bottom,black_50%,transparent)]"
       draggable="false"
     />
     <div class="font-serif text-base text-gold-200 mb-1">{{ props.item.name }}</div>

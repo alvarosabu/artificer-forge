@@ -2,7 +2,7 @@
 import { computed, reactive, watch, watchEffect } from 'vue'
 import { useGLTF } from '@tresjs/cientos'
 import { Color, DataTexture, Group, MeshToonMaterial, NearestFilter, RedFormat, Skeleton, SRGBColorSpace, TextureLoader } from 'three'
-import type { Bone, Material, Mesh, Object3D, SkinnedMesh, Texture } from 'three'
+import type { Bone, Material, Mesh, MeshStandardMaterial, Object3D, SkinnedMesh, Texture } from 'three'
 import { AnimationName, useCharacterAnimations } from '@artificer-forge/engine/runtime'
 import { BEARDS, BODIES, EYEBROWS, HAIR, HEADS, HORNS, RIG_MEDIUM } from '../utils/characterParts'
 import { createHornMaterials, HORN_PATTERN_INDEX, type HornPattern } from '@artificer-forge/vfx'
@@ -103,7 +103,13 @@ function prepareMaterials(obj: Object3D) {
     if (!mesh.isMesh || !mesh.material) return
     const arr = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
     // 'Horns'-named materials are replaced by the shared TSL pair instead of cloned.
-    mesh.userData.std = arr.map(m => (m.name === 'Horns' ? hornSet.std : m.clone()))
+    mesh.userData.std = arr.map((m) => {
+      if (m.name === 'Horns') return hornSet.std
+      const c = m.clone()
+      // GLBs export Skin/Eyes glossy (0.7/0.5) — force matte.
+      if (c.name === 'Skin' || c.name === 'Eyes') (c as MeshStandardMaterial).roughness = 1
+      return c
+    })
     mesh.userData.toon = arr.map(m => (m.name === 'Horns' ? hornSet.toon : toToon(m)))
     mesh.userData.single = !Array.isArray(mesh.material)
     // Original atlas per slot, to restore when a tint is cleared (see applyArmorTint).

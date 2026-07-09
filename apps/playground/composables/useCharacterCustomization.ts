@@ -3,7 +3,7 @@ import { BEARDS, BODIES, EYEBROWS, HAIR, HEADS, HORNS } from '../utils/character
 import { forRaceSex, forSex, type Race, type Sex } from '../utils/partManifest'
 import type { HornPattern } from '@artificer-forge/vfx'
 
-export type EquipSlot = 'helmet' | 'armor' | 'trousers' | 'gauntlets' | 'boots'
+export type EquipSlot = 'helmet' | 'armor' | 'cloak' | 'trousers' | 'gauntlets' | 'boots'
 
 export interface CustomizationState {
   race: Race
@@ -64,7 +64,7 @@ export function useCharacterCustomization() {
     hornColorB: DEFAULT_HORN_COLOR_B,
     hornPattern: 'gradient',
     hornWeight: 0.5,
-    equipment: { helmet: null, armor: 'leather-jerkin', trousers: 'common-pants', gauntlets: null, boots: 'leather-sandals' },
+    equipment: { helmet: null, armor: 'leather-jerkin', cloak: null, trousers: 'common-pants', gauntlets: null, boots: 'leather-sandals' },
     equipmentTint: {},
     skinColor: DEFAULT_SKIN_COLOR,
     hairColor: DEFAULT_HAIR_COLOR,

@@ -1,0 +1,19 @@
+templateId: cedric-gauntlet
+type: item
+subtype: gauntlets
+name: Cedric's Gauntlet
+icon: /img/armor/cedric_gauntlet.png
+modular:
+  slot: gauntlets
+  # Left hand only (the right arm is Cedric's ghost arm). The body has no
+  # forearm segment, so the whole left arm is hidden — the gauntlet plus the
+  # padded armor's sleeve cover it.
+  hides: [armL]
+  assets:
+    any: /models/characters/gauntlets/ARM_Cedric_Gauntlet.glb
+texture:
+  base: /models/characters/textures/cedric_armor_texture.png
+armor:
+  physical: 2
+weight: 2
+value: 30

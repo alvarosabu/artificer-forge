@@ -12,7 +12,8 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "sync:blender": "./scripts/sync-blender.sh"
   },
   "dependencies": {
     "@artificer-forge/dialog-editor": "workspace:*",

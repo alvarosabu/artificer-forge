@@ -7,9 +7,6 @@ useHead({ title: 'Basic Character - TresJS Playground' })
 <template>
   <div>
     <GameContextProvider>
-      <template #camera>
-        <TresPerspectiveCamera :position="[0,0,1]" :near="0.1" :far="100" />
-      </template>
       <CharacterExperience />
     </GameContextProvider>
     <GameCommandPalette />

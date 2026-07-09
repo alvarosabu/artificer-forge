@@ -3,7 +3,7 @@ import type { ModularSlot } from '../../core/appearance'
 import { useGameStore } from '../stores/game'
 import type { ArmorPiece } from './useModularRig'
 
-const MODULAR_SLOTS: ModularSlot[] = ['helmet', 'armor', 'trousers', 'gauntlets', 'boots']
+const MODULAR_SLOTS: ModularSlot[] = ['helmet', 'armor', 'cloak', 'trousers', 'gauntlets', 'boots']
 
 const warned = new Set<string>()
 

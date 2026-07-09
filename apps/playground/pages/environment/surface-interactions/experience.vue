@@ -29,7 +29,7 @@ const { register: registerEntities, unregister: unregisterEntities } = useEntity
 onMounted(async () => {
   surfaceStore.setSources(DEMO_SURFACES)
 
-  const heroId = await gameStore.spawnFromTemplate('hero', { x: 0, y: 0, z: 0 })
+  const heroId = await gameStore.spawnFromTemplate('cedric', { x: 0, y: 0, z: 0 })
   gameStore.addToParty(heroId)
   gameStore.selectEntity(heroId)
 

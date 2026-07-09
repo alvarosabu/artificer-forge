@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { TresCanvas, type TresRendererSetupContext } from '@tresjs/core'
 import { OrbitControls } from '@tresjs/cientos'
 import { WebGPURenderer } from 'three/webgpu'
@@ -9,6 +9,7 @@ import PartPicker from '../../../components/PartPicker.vue'
 import ThumbStudio from '../../../components/ThumbStudio.vue'
 import { useCharacterCustomization } from '../../../composables/useCharacterCustomization'
 import type { EquipSlot } from '../../../composables/useCharacterCustomization'
+import { customizationToTemplateYaml } from '../../../utils/customizationToTemplateYaml'
 import { HEADS } from '../../../utils/characterParts'
 import { forRaceSex, type Race } from '../../../utils/partManifest'
 
@@ -108,6 +109,20 @@ const CAM_POS: [number, number, number] = [0, 1.5, 3.4]
 const ambientIntensity = computed(() => (state.toon ? 0.45 : 1.1))
 const keyIntensity = computed(() => (state.toon ? 1.1 : 2))
 const fillIntensity = computed(() => (state.toon ? 0.3 : 0.6))
+
+// Export the current customization as a drop-in entity template
+// (content/entities/characters/). toon/nude stay lab-only.
+const characterName = ref('')
+
+function downloadTemplate() {
+  const { filename, yaml } = customizationToTemplateYaml(state, characterName.value)
+  const url = URL.createObjectURL(new Blob([yaml], { type: 'text/yaml' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
 </script>
 
 <template>
@@ -363,6 +378,25 @@ const fillIntensity = computed(() => (state.toon ? 0.3 : 0.6))
 
     </aside>
 
+    <!-- BOTTOM: name + download as entity template YAML -->
+    <div class="export-bar">
+      <input
+        v-model="characterName"
+        type="text"
+        class="export-name"
+        placeholder="Character name"
+        maxlength="40"
+        @keyup.enter="downloadTemplate"
+      >
+      <button
+        type="button"
+        class="export-btn"
+        @click="downloadTemplate"
+      >
+        Download Template
+      </button>
+    </div>
+
     <!-- Off-screen thumbnail baker (own GL context) -->
     <ThumbStudio />
   </div>
@@ -426,4 +460,26 @@ const fillIntensity = computed(() => (state.toon ? 0.3 : 0.6))
 .weight-field { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.6rem; }
 .weight-label { font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; color: #9a958a; }
 .weight-slider { width: 100%; accent-color: #c5a560; }
+.export-bar {
+  position: absolute; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: 0.5rem; width: 16rem;
+  padding: 0.75rem; border-radius: 0.75rem;
+  border: 1px solid rgba(197, 165, 96, 0.35);
+  background: linear-gradient(180deg, rgba(20, 22, 28, 0.92), rgba(12, 13, 17, 0.94));
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px);
+}
+.export-name {
+  padding: 0.45rem 0.7rem; border-radius: 0.4rem; font-size: 0.85rem; text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.03); color: #e7e2d4;
+}
+.export-name::placeholder { color: #7d7869; }
+.export-name:focus { outline: none; border-color: rgba(197, 165, 96, 0.6); }
+.export-btn {
+  padding: 0.55rem; border-radius: 0.4rem; font-size: 0.8rem; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;
+  border: 1px solid #c5a560; background: rgba(197, 165, 96, 0.16); color: #f4edd8;
+  transition: background 0.15s;
+}
+.export-btn:hover { background: rgba(197, 165, 96, 0.28); }
 </style>

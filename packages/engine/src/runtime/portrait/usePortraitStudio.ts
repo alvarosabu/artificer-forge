@@ -1,9 +1,16 @@
 import { shallowRef } from 'vue'
+import type { CharacterAppearance } from '../../core/appearance'
 import type { Equipment } from '../stores/game'
+import type { ArmorPiece } from '../modular/useModularRig'
 import { createBakeQueue } from './portraitBakeQueue'
 
 export interface PortraitSubjectDescriptor {
-  model: string
+  /** Single-GLB characters. Omitted for modular ones. */
+  model?: string
+  /** Modular characters: cosmetic recipe assembled via useModularRig. */
+  appearance?: CharacterAppearance
+  /** Modular characters: resolved armor pieces (from the entity's equipment). */
+  armor?: ArmorPiece[]
   rig: string
   equipment: Equipment
   // Optional backdrop texture URL (per-character). Undefined = transparent canvas.

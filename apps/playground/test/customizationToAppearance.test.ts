@@ -15,7 +15,7 @@ const STATE: CustomizationState = {
   hornColorB: '#8a6d5c',
   hornPattern: 'repeated',
   hornWeight: 0.7,
-  equipment: { helmet: null, armor: 'leather-jerkin', trousers: null, gauntlets: null, boots: null },
+  equipment: { helmet: null, armor: 'leather-jerkin', cloak: null, trousers: null, gauntlets: null, boots: null },
   equipmentTint: { armor: 'crimson' },
   skinColor: '#CE4C47',
   hairColor: '#3b2417',

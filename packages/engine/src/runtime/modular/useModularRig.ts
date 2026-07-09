@@ -139,7 +139,13 @@ export function useModularRig(
   // other characters. Captures each material's base atlas for tint clearing.
   function adoptMesh(mesh: Mesh) {
     const arr = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-    const cloned = arr.map(m => (m.name === 'Horns' ? hornMaterial() : m.clone()))
+    const cloned = arr.map((m) => {
+      if (m.name === 'Horns') return hornMaterial()
+      const c = m.clone()
+      // GLBs export Skin/Eyes glossy (0.7/0.5) — force matte.
+      if (c.name === 'Skin' || c.name === 'Eyes') (c as MeshStandardMaterial).roughness = 1
+      return c
+    })
     mesh.material = Array.isArray(mesh.material) ? cloned : cloned[0]!
     mesh.userData.materials = cloned
     // The assigned value (array or single), kept to restore segment overrides.
@@ -285,7 +291,8 @@ export function useModularRig(
 
   // --- Coverage: hide body segments under equipped armor ---
   // A hide key ('torso', 'arm'…) matches body-group children named e.g.
-  // HUM_M_Torso_A, HUM_M_ArmL_A (side-agnostic: 'arm' hits both L and R).
+  // HUM_M_Torso_A, HUM_M_ArmL_A (side-agnostic: 'arm' hits both L and R;
+  // sided keys like 'armL' hit only that side).
   watchEffect(() => {
     void version.value
     const bodyId = attached.body

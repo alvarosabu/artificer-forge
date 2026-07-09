@@ -132,8 +132,15 @@ export default defineContentConfig({
         // when worn. Keys are side-agnostic body-segment names (expanded to L/R at
         // runtime). See components/CharacterPreview.vue body assembly.
         modular: z.object({
-          slot: z.enum(['helmet', 'armor', 'trousers', 'gauntlets', 'boots']),
-          hides: z.array(z.enum(['head', 'torso', 'hips', 'arm', 'hand', 'leg', 'foot'])),
+          slot: z.enum(['helmet', 'armor', 'cloak', 'trousers', 'gauntlets', 'boots']),
+          // Side-agnostic keys ('arm') hide both sides; sided keys ('armL') one.
+          hides: z.array(z.enum([
+            'head', 'torso', 'hips',
+            'arm', 'armL', 'armR',
+            'hand', 'handL', 'handR',
+            'leg', 'legL', 'legR',
+            'foot', 'footL', 'footR',
+          ])),
           // Fitted mesh per body sex; `any` = unisex asset. Resolution:
           // assets[entity.sex] ?? assets.any (miss = piece renders nothing).
           assets: z.object({
@@ -175,6 +182,7 @@ export default defineContentConfig({
           offHand: z.string().optional(),
           helmet: z.string().optional(),
           armor: z.string().optional(),
+          cloak: z.string().optional(),
           trousers: z.string().optional(),
           gauntlets: z.string().optional(),
           boots: z.string().optional(),
@@ -187,6 +195,7 @@ export default defineContentConfig({
           'offHand',
           'helmet',
           'armor',
+          'cloak',
           'trousers',
           'gauntlets',
           'boots',

@@ -7,7 +7,7 @@ const { setCharacterRef } = useSceneRefs()
 useCommands({ entities: true, animations: true, statusEffects: true, recruit: true })
 
 onMounted(async () => {
-  const playerId = await gameStore.spawnFromTemplate('hero', { x: 0, y: 0, z: 0 })
+  const playerId = await gameStore.spawnFromTemplate('cedric', { x: 0, y: 0, z: 0 })
   gameStore.addToParty(playerId)
   gameStore.selectEntity(playerId)
 

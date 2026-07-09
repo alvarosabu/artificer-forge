@@ -1,0 +1,17 @@
+templateId: cedric-boots
+type: item
+subtype: boots
+name: Cedric's Boots
+icon: /img/armor/cedric_boots.png
+modular:
+  slot: boots
+  # Tall boots bring their own foot mesh and reach mid-calf.
+  hides: [foot]
+  assets:
+    any: /models/characters/boots/ARM_Cedric_Boots.glb
+texture:
+  base: /models/characters/textures/cedric_armor_texture.png
+armor:
+  physical: 2
+weight: 3
+value: 45

@@ -2,7 +2,8 @@
 import { computed, onErrorCaptured, ref, shallowRef, watchEffect } from 'vue'
 import { TresCanvas } from '@tresjs/core'
 import type { PerspectiveCamera } from 'three'
-import { frameFromHead, type PortraitFraming, type Vec3 } from '../../portrait/portraitRigPresets'
+import { createWebGPURenderer } from '../../createWebGPURenderer'
+import { frameFromHead, PORTRAIT_RENDERING, type PortraitFraming, type Vec3 } from '../../portrait/portraitRigPresets'
 import { usePortraitStudio } from '../../portrait/usePortraitStudio'
 import PortraitBackground from './Background.vue'
 import PortraitLights from './Lights.vue'
@@ -19,7 +20,7 @@ const { active, captured, failed } = usePortraitStudio()
 const NEUTRAL_FRAMING: PortraitFraming = {
   cameraPosition: [0, 2, 6] as Vec3,
   lookAt: [0, 2, 0] as Vec3,
-  fov: 30,
+  fov: 10,
 }
 const liveFrame = ref<PortraitFraming | null>(null)
 const framing = computed(() => liveFrame.value ?? NEUTRAL_FRAMING)
@@ -80,10 +81,15 @@ const studioStyle = {
 
 <template>
   <div :style="studioStyle">
+    <!-- No preserve-drawing-buffer: that's a WebGL context option; WebGPU canvases
+         stay readable via toDataURL after present. -->
     <TresCanvas
       :alpha="true"
       :antialias="true"
-      :preserve-drawing-buffer="true"
+      :renderer="createWebGPURenderer"
+      :tone-mapping="PORTRAIT_RENDERING.toneMapping"
+      :tone-mapping-exposure="PORTRAIT_RENDERING.toneMappingExposure"
+      :shadows="PORTRAIT_RENDERING.shadows"
     >
       <TresPerspectiveCamera ref="camRef">
         <PortraitBackground

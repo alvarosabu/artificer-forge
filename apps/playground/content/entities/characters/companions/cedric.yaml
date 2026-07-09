@@ -35,9 +35,9 @@ portraitBackground: /img/portraits/bgs/blue-storm.png
 appearance:
   body: HUM_M_MEDIUM_Body_A
   head: HUM_M_Head_Cedric
-  hair: GEN_M_Hair_Short_C
+  hair: GEN_M_Hair_Long_A
   beard: null
-  eyebrows: GEN_Eyebrows_Thick_A
+  eyebrows: GEN_Eyebrows_Thin_A
   horns: null
   skinColor: '#eecbb0'
   hairColor: '#2c222b'
@@ -56,6 +56,7 @@ equipmentSlots:
   - offHand
   - helmet
   - armor
+  - cloak
   - trousers
   - gauntlets
   - boots
@@ -65,5 +66,8 @@ equipmentSlots:
 
 equipment:
   mainHand: shortsword
-  trousers: common-pants
-  boots: leather-sandals
+  armor: cedric-padded-armor
+  cloak: cedric-cloak
+  trousers: cedric-trousers
+  gauntlets: cedric-gauntlet
+  boots: cedric-boots

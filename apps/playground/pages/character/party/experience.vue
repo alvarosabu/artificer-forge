@@ -10,7 +10,7 @@ useCommands({ entities: true, animations: true, statusEffects: true, recruit: tr
 // eyeballing the auto-generated portraits (ActionBar) against the live models.
 const PARTY = [
   { template: 'fenrath', position: { x: -4, y: 0, z: 0 } },
-  { template: 'hero', position: { x: -2, y: 0, z: 0 } },
+  { template: 'cedric', position: { x: -2, y: 0, z: 0 } },
   { template: 'zynrae', position: { x: 0, y: 0, z: 0 } },
 ]
 const NPCS = [
@@ -22,7 +22,7 @@ onMounted(async () => {
   for (const { template, position } of PARTY) {
     const id = await gameStore.spawnFromTemplate(template, position)
     gameStore.addToParty(id)
-    if (template === 'hero') gameStore.selectEntity(id)
+    if (template === 'cedric') gameStore.selectEntity(id)
   }
   for (const { template, position } of NPCS) {
     await gameStore.spawnFromTemplate(template, position)
