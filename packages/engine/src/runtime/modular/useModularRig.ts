@@ -1,4 +1,4 @@
-import { computed, onUnmounted, reactive, ref, shallowRef, toValue, watchEffect, type MaybeRefOrGetter, type ShallowRef } from 'vue'
+import { computed, onUnmounted, reactive, ref, shallowRef, toValue, watch, watchEffect, type MaybeRefOrGetter, type ShallowRef } from 'vue'
 import { useTresContext } from '@tresjs/core'
 import {
   Color,
@@ -19,7 +19,7 @@ import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { createHornMaterials, type HornMaterialSet } from '@artificer-forge/vfx'
 import type { CharacterAppearance } from '../../core/appearance'
 import { loadGltf } from './gltfCache'
-import { manifestRigPath, resolvePartPath } from './partRegistry'
+import { DEFAULT_RIG_KEY, manifestRigPath, resolvePartPath, resolvePartRig } from './partRegistry'
 import { resolveSegmentMaterial, segmentMatcher } from './segmentMaterials'
 
 // In-game modular character assembly. Loads the canonical bare skeleton and
@@ -67,22 +67,40 @@ export function useModularRig(
   // Bumped whenever an async load lands so the assembly watchEffect re-runs.
   const version = ref(0)
 
-  const rigPath = manifestRigPath()
-  if (!rigPath) {
-    console.warn('[useModularRig] No part manifest registered — call registerPartManifest() at app startup.')
-  }
-  else {
+  // The selected body names the skeleton (small races bind to rig_small);
+  // switching body across rig sizes tears the assembly down and rebuilds it.
+  const rigKey = computed(() => {
+    const body = toValue(appearance)?.body
+    return body ? resolvePartRig(body) : DEFAULT_RIG_KEY
+  })
+
+  let rigToken = 0
+  watch(rigKey, (key) => {
+    const rigPath = manifestRigPath(key)
+    if (!rigPath) {
+      console.warn('[useModularRig] No part manifest registered — call registerPartManifest() at app startup.')
+      return
+    }
+    const token = ++rigToken
     loadGltf(rigPath).then((gltf) => {
+      if (token !== rigToken) return // superseded by a newer rig swap
+      // Prepared clones are bound to the previous skeleton's bones — rebuild all.
+      disposePrepared()
+      boneByName.clear()
       // Own skeleton per instance; SkeletonUtils.clone keeps bone bindings intact.
       const cloned = cloneSkeleton(gltf.scene)
-      const root = cloned.getObjectByName('Rig_Medium') ?? cloned
+      let root: Object3D | undefined
+      cloned.traverse((o) => {
+        if (!root && o.name.startsWith('Rig_')) root = o
+      })
+      root ??= cloned
       root.traverse((o) => {
         if ((o as Bone).isBone) boneByName.set(o.name, o as Bone)
       })
       rig.value = root
       version.value++
     }).catch(err => console.warn(`[useModularRig] Failed to load rig ${rigPath}:`, err))
-  }
+  }, { immediate: true })
 
   // --- Part sources (shared cache) and per-instance prepared clones ---
   const sources = new Map<string, GLTF>()
@@ -408,8 +426,8 @@ export function useModularRig(
     }
   })
 
-  // Per-instance clones own their materials — free them with the component.
-  onUnmounted(() => {
+  // Per-instance clones own their materials — free them on rig swap/unmount.
+  function disposePrepared() {
     for (const obj of prepared.values()) {
       obj.parent?.remove(obj)
       obj.traverse((o) => {
@@ -420,6 +438,12 @@ export function useModularRig(
       })
     }
     prepared.clear()
+    for (const slot of Object.keys(attached) as Slot[]) attached[slot] = null
+    armorAttached.clear()
+  }
+
+  onUnmounted(() => {
+    disposePrepared()
     for (const m of overrideMaterials.values()) m.dispose()
     overrideMaterials.clear()
   })

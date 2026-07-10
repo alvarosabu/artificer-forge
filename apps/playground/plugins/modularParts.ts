@@ -8,7 +8,7 @@ import { ghostMaterial, type GhostMaterialOptions } from '@artificer-forge/vfx'
 // assets resolve through item YAML (modular.assets).
 export default defineNuxtPlugin(() => {
   registerPartManifest({
-    rig: manifest.rig,
+    rigs: manifest.rigs,
     parts: [
       ...manifest.bodies,
       ...manifest.heads,

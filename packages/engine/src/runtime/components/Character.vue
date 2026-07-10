@@ -8,6 +8,7 @@ import { useOutlinePass } from '@artificer-forge/post-processing'
 import { AnimationName, type RigSize, useCharacterAnimations } from '../useCharacterAnimations'
 import { useModularRig } from '../modular/useModularRig'
 import { useModularArmor } from '../modular/useModularArmor'
+import { resolvePartRig } from '../modular/partRegistry'
 import { useCharacterController } from '../useCharacterController'
 import { useContextMenu } from '../useContextMenu'
 import { useActionBar } from '../useActionBar'
@@ -36,13 +37,18 @@ const gameStore = useGameStore()
 const entity = computed(() => gameStore.getEntity(props.entityId))
 
 // Rig source is a setup-time decision: an entity is either modular (assembled
-// from appearance parts, always Rig_Medium) or single-GLB — it never switches.
+// from appearance parts, skeleton named by its body part) or single-GLB — it
+// never switches.
 const isModular = !!entity.value?.appearance
 const rigKey = computed(() => entity.value?.rig ?? 'Rig_Medium')
-const rigSize = computed<RigSize>(() => isModular ? 'Medium' : rigKey.value.replace('Rig_', '') as RigSize)
+const rigSize = computed<RigSize>(() => {
+  if (!isModular) return rigKey.value.replace('Rig_', '') as RigSize
+  const key = resolvePartRig(entity.value!.appearance!.body)
+  return (key[0]!.toUpperCase() + key.slice(1)) as RigSize
+})
 
 function useSingleGltfRig() {
-  const { nodes } = useGLTF(entity.value?.model ?? '', { draco: true })
+  const { state, nodes } = useGLTF(entity.value?.model ?? '', { draco: true })
   // Legacy single-GLB extra: ghost arm demo material.
   watch(nodes, (nodesValue) => {
     if (nodesValue?.Hero_ArmRight) {
@@ -57,14 +63,19 @@ function useSingleGltfRig() {
       })
     }
   }, { immediate: true })
-  return computed(() => nodes.value?.[rigKey.value])
+  return {
+    rig: computed(() => nodes.value?.[rigKey.value]),
+    animations: computed(() => state.value?.animations ?? []),
+  }
 }
+
+const singleGltf = isModular ? undefined : useSingleGltfRig()
 
 const rig = isModular
   ? useModularRig(() => entity.value?.appearance, useModularArmor(() => props.entityId)).rig
-  : useSingleGltfRig()
+  : singleGltf!.rig
 
-const { actions, currentAnimName, play, stop } = useCharacterAnimations(rig, rigSize.value)
+const { actions, currentAnimName, play, stop } = useCharacterAnimations(rig, rigSize.value, singleGltf?.animations)
 
 function meleeAttack() {
   play(AnimationName.MELEE_1H_ATTACK_CHOP)

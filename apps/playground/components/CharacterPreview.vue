@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { computed, reactive, watch, watchEffect } from 'vue'
 import { useGLTF } from '@tresjs/cientos'
-import { Color, DataTexture, Group, MeshToonMaterial, NearestFilter, RedFormat, Skeleton, SRGBColorSpace, TextureLoader } from 'three'
-import type { Bone, Material, Mesh, MeshStandardMaterial, Object3D, SkinnedMesh, Texture } from 'three'
+import { BufferGeometry, Color, DataTexture, DoubleSide, EdgesGeometry, Float32BufferAttribute, Group, LineBasicMaterial, LineSegments, Mesh, MeshStandardMaterial, MeshToonMaterial, NearestFilter, RedFormat, Skeleton, SphereGeometry, SRGBColorSpace, TextureLoader, Vector3 } from 'three'
+import type { Bone, Material, Object3D, SkinnedMesh, Texture } from 'three'
 import { AnimationName, useCharacterAnimations } from '@artificer-forge/engine/runtime'
-import { BEARDS, BODIES, EYEBROWS, HAIR, HEADS, HORNS, RIG_MEDIUM } from '../utils/characterParts'
+import { BEARDS, BODIES, EYEBROWS, HAIR, HEADS, HORNS, RIGS } from '../utils/characterParts'
 import { createHornMaterials, HORN_PATTERN_INDEX, type HornPattern } from '@artificer-forge/vfx'
 
-// Dumb renderer for the modular-character rebind approach. Loads the canonical
-// bare skeleton (rig_medium.glb) and assembles parts onto it:
+// Dumb renderer for the modular-character rebind approach. Loads the bare
+// skeleton named by the selected body (rig_medium/rig_small) and assembles
+// parts onto it:
 //  - hair/beard/eyebrows are SKINNED → rebound (by bone name) to the shared skeleton
 //  - the head is a RIGID mesh parented to the `head` bone (like a weapon attachment)
 // Each mesh keeps a standard and a MeshToonMaterial variant; `toon` swaps between
@@ -35,7 +36,8 @@ const props = withDefaults(defineProps<{
   hornPattern?: HornPattern
   hornWeight?: number
   toon: boolean
-}>(), { armor: () => [], horns: null, hornColorA: '#2b2230', hornColorB: '#8a6d5c', hornPattern: 'gradient', hornWeight: 0.5 })
+  skeleton?: boolean
+}>(), { armor: () => [], horns: null, hornColorA: '#2b2230', hornColorB: '#8a6d5c', hornPattern: 'gradient', hornWeight: 0.5, skeleton: false })
 
 type Slot = 'body' | 'head' | 'hair' | 'beard' | 'eyebrows' | 'horns'
 const SKINNED_SLOTS: Slot[] = ['body', 'hair', 'beard', 'eyebrows', 'horns']
@@ -43,7 +45,7 @@ const SKINNED_SLOTS: Slot[] = ['body', 'hair', 'beard', 'eyebrows', 'horns']
 // --- Preload every manifest part up front (one useGLTF per asset, like the anim
 // packs). Armor assets come from item YAML (modular.assets) and load lazily on
 // first equip — their loaders join the same map.
-const rigLoader = useGLTF(RIG_MEDIUM)
+const rigLoaders = new Map(Object.entries(RIGS).map(([key, path]) => [key, useGLTF(path)]))
 const partLoaders = new Map<string, ReturnType<typeof useGLTF>>(
   [...BODIES, ...HEADS, ...HAIR, ...BEARDS, ...EYEBROWS, ...HORNS].map(p => [p.id, useGLTF(p.path, { draco: true })]),
 )
@@ -53,20 +55,106 @@ function armorLoader(piece: ArmorPiece) {
   return partLoaders.get(piece.id)!
 }
 
-const rigRoot = computed(() => rigLoader.nodes.value.Rig_Medium as Object3D | undefined)
+// The selected body names the skeleton it binds to (small races → rig_small).
+const rigKey = computed(() => (props.body && BODIES.find(b => b.id === props.body)?.rig) ?? 'medium')
 
-// Animate the shared skeleton; rebound parts follow because they reference its bones.
-const { play, actions } = useCharacterAnimations(rigRoot, 'Medium')
-watch(() => Object.keys(actions).length, (n) => {
-  if (n) play(AnimationName.IDLE_A)
-}, { immediate: true })
+function rigRootOf(key: string): Object3D | undefined {
+  const nodes = rigLoaders.get(key)?.nodes.value ?? {}
+  return Object.values(nodes).find(o => (o as Object3D).name?.startsWith('Rig_')) as Object3D | undefined
+}
+
+const rigRoot = computed(() => rigRootOf(rigKey.value))
+
+// --- Octahedral bone overlay (Blender-style) ---
+// Unit-length diamond along +Y (base point, 4-vertex ring at 20% height, tip);
+// uniform scale = bone length, so width tracks length like Blender's display.
+const boneVizGeometry = (() => {
+  const r = 0.1
+  const h = 0.2
+  const verts = [0, 0, 0, r, h, 0, 0, h, r, -r, h, 0, 0, h, -r, 0, 1, 0]
+  const idx = [0, 2, 1, 0, 3, 2, 0, 4, 3, 0, 1, 4, 5, 1, 2, 5, 2, 3, 5, 3, 4, 5, 4, 1]
+  const geo = new BufferGeometry()
+  geo.setAttribute('position', new Float32BufferAttribute(verts, 3))
+  geo.setIndex(idx)
+  geo.computeVertexNormals()
+  return geo
+})()
+const boneVizEdgeGeometry = new EdgesGeometry(boneVizGeometry)
+const boneVizJointGeometry = new SphereGeometry(1, 12, 8)
+// Blender-ish: shaded near-solid gray octahedra with dark edges and joint
+// spheres. Depth test off so bones read through the meshes; high renderOrder
+// draws them after everything else.
+const boneVizFill = new MeshStandardMaterial({ color: 0xB9BEC7, roughness: 0.65, transparent: true, opacity: 0.85, depthTest: false, depthWrite: false, side: DoubleSide })
+const boneVizEdge = new LineBasicMaterial({ color: 0x3A3F47, transparent: true, opacity: 0.9, depthTest: false, depthWrite: false })
+
+// KayKit rigs carry IK targets and foot-roll control bones (kneeIK, handIK,
+// control-heel-roll…) parented straight to root — drawing connections to those
+// paints meter-long spikes across the body, so they're excluded.
+const BONE_VIZ_SKIP = /ik|control/i
+const UP = new Vector3(0, 1, 0)
+const boneViz: Object3D[] = []
+
+function clearBoneViz() {
+  boneViz.forEach(o => o.parent?.remove(o))
+  boneViz.length = 0
+}
+
+function makeBoneViz(length: number, dir: Vector3): Group {
+  const g = new Group()
+  g.name = 'BoneViz'
+  const fill = new Mesh(boneVizGeometry, boneVizFill)
+  const edges = new LineSegments(boneVizEdgeGeometry, boneVizEdge)
+  edges.renderOrder = 1000
+  const base = new Mesh(boneVizJointGeometry, boneVizFill)
+  base.scale.setScalar(0.09)
+  const tip = new Mesh(boneVizJointGeometry, boneVizFill)
+  tip.scale.setScalar(0.06)
+  tip.position.y = 1
+  for (const m of [fill, base, tip]) m.renderOrder = 999
+  g.add(fill, edges, base, tip)
+  g.quaternion.setFromUnitVectors(UP, dir)
+  g.scale.setScalar(length)
+  return g
+}
+
+// One octahedron per bone→child-bone connection (a multi-child bone like hips
+// gets one per child), parented to the bone itself so it follows animation with
+// zero per-frame work. glTF drops Blender's tail data, so a leaf bone's true
+// span is unknowable — approximate it with the incoming connection's length
+// (head ≈ chest→head distance), falling back to a small stub.
+watchEffect(() => {
+  clearBoneViz()
+  if (!props.skeleton || !rigRoot.value) return
+  rigRoot.value.traverse((o) => {
+    const bone = o as Bone
+    if (!bone.isBone || BONE_VIZ_SKIP.test(bone.name)) return
+    const childBones = bone.children.filter(c => (c as Bone).isBone && !BONE_VIZ_SKIP.test(c.name))
+    const dirs = childBones.length
+      ? childBones.map(c => c.position.clone())
+      : [new Vector3(0, Math.max(bone.position.length(), 0.05), 0)]
+    for (const dir of dirs) {
+      const len = dir.length()
+      if (len < 1e-5) continue
+      const viz = makeBoneViz(len, dir.normalize())
+      bone.add(viz)
+      boneViz.push(viz)
+    }
+  })
+})
+
+// Animate the shared skeleton; rebound parts follow because they reference its
+// bones. rigSize is a setup-time argument, so each skeleton gets its own
+// animation instance — only the active rig is mounted/rendered.
+const mediumRoot = computed(() => rigRootOf('medium'))
+const smallRoot = computed(() => rigRootOf('small'))
+for (const anims of [useCharacterAnimations(mediumRoot, 'Medium'), useCharacterAnimations(smallRoot, 'Small')]) {
+  watch(() => Object.keys(anims.actions).length, (n) => {
+    if (n) anims.play(AnimationName.IDLE_A)
+  }, { immediate: true })
+}
 
 // --- Shared skeleton bones, by name (absorbs cross-file joint-order divergence) ---
 const boneByName = new Map<string, Bone>()
-watch(rigRoot, (root) => {
-  boneByName.clear()
-  root?.traverse((o) => { if ((o as Bone).isBone) boneByName.set(o.name, o as Bone) })
-}, { immediate: true })
 
 // Few-step gradient ramp → hard cel bands instead of a smooth toon falloff.
 const gradientMap = (() => {
@@ -168,7 +256,20 @@ function applyLook(obj: Object3D, toon: boolean, skin: Color, hair: Color) {
 // Each prepared mesh is extracted from its source scene exactly once, rebound and
 // its materials set up. Re-selecting just re-adds the cached object.
 const prepared = new Map<string, Object3D>()
-const attached = reactive<Record<Slot, string | null>>({ body: null, head: null, hair: null, beard: null, eyebrows: null })
+const attached = reactive<Record<Slot, string | null>>({ body: null, head: null, hair: null, beard: null, eyebrows: null, horns: null })
+const armorAttached = new Set<string>()
+
+// Rig (re)load/switch: rebind everything — prepared meshes are bound to the
+// previous skeleton's bones, so tear the assembly down and let the assembly
+// watchEffect rebuild it against the fresh bone map.
+watch(rigRoot, (root) => {
+  boneByName.clear()
+  for (const obj of prepared.values()) obj.parent?.remove(obj)
+  prepared.clear()
+  ;(Object.keys(attached) as Slot[]).forEach((slot) => { attached[slot] = null })
+  armorAttached.clear()
+  root?.traverse((o) => { if ((o as Bone).isBone) boneByName.set(o.name, o as Bone) })
+}, { immediate: true })
 
 function prepareSkinned(id: string): Object3D | null {
   const cached = prepared.get(id)
@@ -251,21 +352,30 @@ function detach(slot: Slot) {
   attached[slot] = null
 }
 
+// Heads ship both ways: KayKit medium-rig heads are RIGID props authored in
+// head-bone space (attach to the bone); small-rig heads (GOB_) are SKINNED like
+// any other part, authored in rig space (rebind to the shared skeleton).
+// Rigid-attaching a skinned head would stack the head bone's world transform on
+// top of geometry already at head height — the head floats a full torso up.
+function isSkinnedPart(id: string): boolean {
+  const nodes = partLoaders.get(id)?.nodes.value ?? {}
+  return Object.values(nodes).some(o => (o as SkinnedMesh).isSkinnedMesh)
+}
+
 function syncSlot(slot: Slot, id: string | null) {
   if (attached[slot] === id && (!id || prepared.get(id)?.parent)) return
   detach(slot)
   if (!id) return
-  const obj = slot === 'head' ? prepareHead(id) : prepareSkinned(id)
+  const rigidHead = slot === 'head' && !isSkinnedPart(id)
+  const obj = rigidHead ? prepareHead(id) : prepareSkinned(id)
   if (!obj) return // asset not ready yet — watchEffect re-runs when it loads
-  const parent = slot === 'head' ? boneByName.get('head') : rigRoot.value
+  const parent = rigidHead ? boneByName.get('head') : rigRoot.value
   parent?.add(obj)
   attached[slot] = id
   if (slot === 'horns') updateHornBounds(obj)
 }
 
 // --- Armor: 0..n skinned pieces attached to the rig (set-sync by id) ---
-const armorAttached = new Set<string>()
-
 function syncArmor() {
   const desired = new Set(props.armor.map(a => a.id))
   for (const id of [...armorAttached]) {

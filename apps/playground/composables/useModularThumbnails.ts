@@ -16,6 +16,9 @@ export interface ThumbDescriptor {
   // the head). Non-head thumbnails render on a neutral gray head.
   headId: string
   headPath: string
+  // Skeleton the bake assembles on — small races bake on rig_small (their
+  // skinned parts are authored at small-rig proportions/height).
+  rigPath: string
 }
 
 // Module-scope singleton state: one studio shared by every picker.
@@ -32,7 +35,7 @@ export function thumbKey(slot: ThumbSlot, partId: string, headId: string): strin
 function kick() {
   if (active.value || !queue.length) return
   const next = queue.shift()!
-  let timer: ReturnType<typeof setTimeout>
+  const timer = setTimeout(() => current?.reject(new Error(`thumb bake timed out: ${next.key}`)), 10_000)
   const settle = <T>(fn: (v: T) => void) => (v: T) => {
     clearTimeout(timer)
     fn(v)
@@ -52,7 +55,6 @@ function kick() {
     }),
   }
   active.value = next
-  timer = setTimeout(() => current?.reject(new Error(`thumb bake timed out: ${next.key}`)), 10_000)
 }
 
 export function useModularThumbnails() {

@@ -1,4 +1,4 @@
-import { Box3, type Material, type Mesh, type Object3D, Vector3 } from 'three'
+import { Box3, type Bone, Group, type Material, type Mesh, type Object3D, Skeleton, type SkinnedMesh, Vector3 } from 'three'
 
 // Shared helpers for the modular-character rig, used by the live preview
 // (CharacterPreview) and the offscreen thumbnail studio (ThumbStudio).
@@ -27,6 +27,31 @@ export function tintMaterialNamed(root: Object3D, name: string): Material | unde
     })
   })
   return tint
+}
+
+// Parts ship both ways: medium-rig heads are RIGID props authored in head-bone
+// space, small-rig (GOB_) heads are SKINNED like any other part.
+export function hasSkinnedMesh(root: Object3D): boolean {
+  let found = false
+  root.traverse((o) => { if ((o as SkinnedMesh).isSkinnedMesh) found = true })
+  return found
+}
+
+// Clone every SkinnedMesh under `src` and rebind each to the live rig bones by
+// name, keeping the part's own joint order + bind inverses (joint order is not
+// consistent across part files). Cloning the bare node via SkeletonUtils would
+// leave undefined bones (they live outside the subtree) and crash at render.
+export function rebindClone(src: Object3D, boneByName: Map<string, Bone>): Group {
+  const group = new Group()
+  src.traverse((o) => {
+    const srcMesh = o as SkinnedMesh
+    if (!srcMesh.isSkinnedMesh) return
+    const mesh = srcMesh.clone() as SkinnedMesh // shares geometry/materials with the cache
+    mesh.bind(new Skeleton(srcMesh.skeleton.bones.map(b => boneByName.get(b.name) ?? b), srcMesh.skeleton.boneInverses), srcMesh.bindMatrix)
+    mesh.frustumCulled = false // skinned bounds don't follow the shared skeleton
+    group.add(mesh)
+  })
+  return group
 }
 
 // Locate the head mesh in an assembled rig. Prefer a name match; used to frame

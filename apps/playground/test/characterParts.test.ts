@@ -32,6 +32,32 @@ describe('parsePart', () => {
     expect(parsePart('TIF_Horns_A', 'horns')!.race).toEqual(['tiefling'])
   })
 
+  it('GOB parts are goblin-only', () => {
+    expect(parsePart('GOB_M_Head_A', 'heads')).toEqual({
+      id: 'GOB_M_Head_A',
+      label: 'Goblin Male A',
+      path: '/models/characters/heads/GOB_M_Head_A.glb',
+      sex: 'M',
+      race: ['goblin'],
+    })
+  })
+
+  it('bodies carry a rig key from the size token, defaulting to medium', () => {
+    expect(parsePart('GOB_M_SMALL_Body_A', 'bodies')!.rig).toBe('small')
+    expect(parsePart('HUM_F_MEDIUM_Body_A', 'bodies')!.rig).toBe('medium')
+    expect(parsePart('HUM_M_Body_X', 'bodies')!.rig).toBe('medium')
+  })
+
+  it('non-body parts get no rig key (Medium in a beard name is a variant)', () => {
+    expect(parsePart('GEN_Beard_Medium_A', 'beards')!.rig).toBeUndefined()
+    expect(parsePart('GOB_M_Head_A', 'heads')!.rig).toBeUndefined()
+  })
+
+  it('drops the size token from body labels', () => {
+    expect(parsePart('GOB_F_SMALL_Body_A', 'bodies')!.label).toBe('Goblin Female A')
+    expect(parsePart('HUM_M_MEDIUM_Body_A', 'bodies')!.label).toBe('Human Male A')
+  })
+
   it('rejects stems outside the naming convention', () => {
     expect(parsePart('leather_sandals', 'hair')).toBeNull()
     expect(parsePart('rig_medium', 'bodies')).toBeNull()
@@ -39,7 +65,7 @@ describe('parsePart', () => {
 
   it('applies overrides over parsed fields', () => {
     const body = parsePart('HUM_M_MEDIUM_Body_A', 'bodies', PART_OVERRIDES)!
-    expect(body.race).toBeUndefined()
+    expect(body.race).toEqual(['human', 'elf', 'tiefling'])
   })
 })
 
@@ -85,9 +111,18 @@ describe('forRaceSex', () => {
     expect(forRaceSex(horns, 'elf', 'F')).toHaveLength(0)
   })
 
-  it('race-agnostic parts pass through for every race', () => {
+  it('race-agnostic parts pass through for every medium-rig race', () => {
     const generic: PartEntry[] = [{ id: 'GEN_Hair_X', label: 'X', path: '/x.glb' }]
     expect(forRaceSex(generic, 'tiefling', 'M')).toHaveLength(1)
     expect(forRaceSex(generic, 'human', 'F')).toHaveLength(1)
+    expect(forRaceSex(generic, 'elf', 'M')).toHaveLength(1)
+  })
+
+  it('small-rig races only get parts explicitly tagged for them (no GEN parts)', () => {
+    const hair = ['GEN_M_Hair_Short_A', 'GEN_M_Hair_Long_B', 'GOB_M_Hair_Short_A']
+      .map(s => parsePart(s, 'hair')!)
+    expect(forRaceSex(hair, 'goblin', 'M').map(p => p.id)).toEqual(['GOB_M_Hair_Short_A'])
+    const beards = ['GEN_Beard_Long_A', 'GEN_Beard_Short_A'].map(s => parsePart(s, 'beards')!)
+    expect(forRaceSex(beards, 'goblin', 'M')).toHaveLength(0)
   })
 })

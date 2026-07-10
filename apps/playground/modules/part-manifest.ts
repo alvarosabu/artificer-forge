@@ -18,8 +18,12 @@ export default defineNuxtModule({
     const charactersDir = resolve('../public/models/characters')
 
     function scan() {
-      const manifest: { rig: string } & Record<SlotFolder, PartEntry[]> = {
-        rig: '/models/characters/rig_medium.glb',
+      const manifest: { rigs: Record<string, string> } & Record<SlotFolder, PartEntry[]> = {
+        // Keyed by PartEntry.rig — a body's size token names the skeleton it binds to.
+        rigs: {
+          medium: '/models/characters/rig_medium.glb',
+          small: '/models/characters/rig_small.glb',
+        },
         bodies: [],
         heads: [],
         hair: [],
@@ -37,7 +41,7 @@ export default defineNuxtModule({
           const stem = file.replace(/\.glb$/, '')
           const part = parsePart(stem, folder, PART_OVERRIDES)
           if (part) manifest[folder].push(part)
-          else console.warn(`[part-manifest] Unparseable part filename, skipped: ${folder}/${file} (expected GEN_/HUM_/ELF_/TIF_-prefixed stem)`)
+          else console.warn(`[part-manifest] Unparseable part filename, skipped: ${folder}/${file} (expected GEN_/HUM_/ELF_/TIF_/GOB_-prefixed stem)`)
         }
       }
       return manifest
@@ -56,7 +60,7 @@ declare module '#build/character-parts.mjs' {
   import type { PartEntry } from '~/utils/partManifest'
 
   const manifest: {
-    rig: string
+    rigs: Record<'medium' | 'small', string>
     bodies: PartEntry[]
     heads: PartEntry[]
     hair: PartEntry[]

@@ -4,9 +4,8 @@ import { useTresContext } from '@tresjs/core'
 import { Color } from 'three'
 import type { Bone, Object3D } from 'three'
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js'
-import { RIG_MEDIUM } from '../utils/characterParts'
 import { loadGltf } from '../utils/sharedGltf'
-import { findHeadMesh, headFrame, THUMB_HAIR, THUMB_HEAD_GRAY, THUMB_HORN, THUMB_SKIN, tintMaterialNamed } from '../utils/modularRig'
+import { findHeadMesh, hasSkinnedMesh, headFrame, rebindClone, THUMB_HAIR, THUMB_HEAD_GRAY, THUMB_HORN, THUMB_SKIN, tintMaterialNamed } from '../utils/modularRig'
 import type { ThumbDescriptor } from '../composables/useModularThumbnails'
 import type { Vec3 } from '@artificer-forge/engine/runtime'
 
@@ -27,7 +26,7 @@ const { renderer } = useTresContext()
 
 const isHead = props.descriptor.slot === 'head'
 
-const rigGltf = await loadGltf(RIG_MEDIUM)
+const rigGltf = await loadGltf(props.descriptor.rigPath)
 const headGltf = await loadGltf(props.descriptor.headPath)
 const partGltf = isHead ? null : await loadGltf(props.descriptor.partPath)
 
@@ -47,11 +46,23 @@ function assemble() {
     return bone
   })()
 
+  // Heads ship both ways: medium-rig heads are RIGID props authored in
+  // head-bone space (attach to the bone); small-rig (GOB_) heads are SKINNED,
+  // authored in rig space (rebind to this rig's bones, add at the root).
   const headSrc = findNamed(headGltf.scene, props.descriptor.headId)
-  if (headSrc && headBone) {
-    const headNode = skeletonClone(headSrc)
-    tintMaterialNamed(headNode, 'Skin')?.color?.set(new Color(isHead ? THUMB_SKIN : THUMB_HEAD_GRAY))
-    headBone.add(headNode)
+  if (headSrc) {
+    let headNode: Object3D | undefined
+    if (hasSkinnedMesh(headSrc)) {
+      const boneByName = new Map<string, Bone>()
+      root.traverse((o) => { if ((o as Bone).isBone) boneByName.set(o.name, o as Bone) })
+      headNode = rebindClone(headSrc, boneByName)
+      root.add(headNode)
+    }
+    else if (headBone) {
+      headNode = skeletonClone(headSrc)
+      headBone.add(headNode)
+    }
+    if (headNode) tintMaterialNamed(headNode, 'Skin')?.color?.set(new Color(isHead ? THUMB_SKIN : THUMB_HEAD_GRAY))
   }
 
   if (partGltf) {

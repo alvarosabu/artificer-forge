@@ -13,7 +13,8 @@ export const HAIR: PartEntry[] = manifest.hair
 export const BEARDS: PartEntry[] = manifest.beards
 export const EYEBROWS: PartEntry[] = manifest.eyebrows
 export const HORNS: PartEntry[] = manifest.horns
-export const RIG_MEDIUM: string = manifest.rig
+/** Skeleton GLBs keyed by PartEntry.rig ('medium' | 'small'). */
+export const RIGS: Record<string, string> = manifest.rigs
 
 // Armor assets are NOT listed here: item YAML (modular.assets) is the source of
 // truth, resolved per body sex by useModularArmor (in-game) and the create page

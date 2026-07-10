@@ -1,6 +1,6 @@
 import { computed, ref, shallowRef, unref, watch, readonly, type DeepReadonly, type MaybeRef, type Ref, type ShallowRef } from 'vue'
 import { useAnimations, useGLTF } from '@tresjs/cientos'
-import { LoopOnce, type AnimationAction, type Object3D } from 'three'
+import { LoopOnce, type AnimationAction, type AnimationClip, type Object3D } from 'three'
 
 export const AnimationName = {
   // MovementBasic
@@ -160,7 +160,7 @@ export interface PlayOptions {
   once?: boolean
 }
 
-export type RigSize = 'Medium' | 'Large'
+export type RigSize = 'Medium' | 'Large' | 'Small'
 
 const ANIM_PACKS = [
   'MovementBasic',
@@ -176,15 +176,17 @@ const ANIM_PACKS = [
 export function useCharacterAnimations(
   rig: MaybeRef<Object3D | undefined>,
   rigSize: RigSize = 'Medium',
+  embeddedAnimations?: MaybeRef<AnimationClip[] | undefined>,
 ) {
   const animBase = `/models/animations/Rig_${rigSize}/Rig_${rigSize}_`
 
   const animStates = ANIM_PACKS.map(pack => useGLTF(`${animBase}${pack}.glb`).state)
 
-  // Raw animations from all packs
-  const rawAnimations = computed(() =>
-    animStates.flatMap(state => state.value?.animations || []),
-  )
+  // Animation packs + clips embedded in the character GLB
+  const rawAnimations = computed(() => [
+    ...animStates.flatMap(state => state.value?.animations || []),
+    ...(unref(embeddedAnimations) ?? []),
+  ])
 
   // Only provide animations to useAnimations when rig is ready
   const safeAnimations = computed(() => {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, watchEffect } from 'vue'
-import { HEADS } from '../utils/characterParts'
-import type { PartEntry } from '../utils/partManifest'
+import { HEADS, RIGS } from '../utils/characterParts'
+import { RACE_RIG, type PartEntry } from '../utils/partManifest'
 import { type ThumbDescriptor, type ThumbSlot, thumbKey, useModularThumbnails } from '../composables/useModularThumbnails'
 
 // Collapsible grid of part thumbnails. Each cell bakes (once) via the shared
@@ -22,13 +22,21 @@ const emit = defineEmits<{ 'update:modelValue': [string | null] }>()
 
 const { thumbUrl, ensureThumb } = useModularThumbnails()
 
-const headPath = computed(() => HEADS.find(h => h.id === props.headId)?.path ?? '')
+const headEntry = computed(() => HEADS.find(h => h.id === props.headId))
+const headPath = computed(() => headEntry.value?.path ?? '')
+
+// The base head names the skeleton the bake assembles on (head slot: the part
+// IS the head). Race-agnostic (GEN_) parts only fit medium-rig races.
+function rigPathFor(part: PartEntry): string {
+  const race = (props.partSlot === 'head' ? part.race : headEntry.value?.race)?.[0]
+  return RIGS[race ? RACE_RIG[race] : 'medium']!
+}
 
 function descFor(part: PartEntry): ThumbDescriptor {
   if (props.partSlot === 'head') {
-    return { key: thumbKey('head', part.id, part.id), slot: 'head', partId: part.id, partPath: part.path, headId: part.id, headPath: part.path }
+    return { key: thumbKey('head', part.id, part.id), slot: 'head', partId: part.id, partPath: part.path, headId: part.id, headPath: part.path, rigPath: rigPathFor(part) }
   }
-  return { key: thumbKey(props.partSlot, part.id, props.headId), slot: props.partSlot, partId: part.id, partPath: part.path, headId: props.headId, headPath: headPath.value }
+  return { key: thumbKey(props.partSlot, part.id, props.headId), slot: props.partSlot, partId: part.id, partPath: part.path, headId: props.headId, headPath: headPath.value, rigPath: rigPathFor(part) }
 }
 
 // Kick off bakes for every part in this picker (re-runs when the base head changes).

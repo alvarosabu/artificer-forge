@@ -57,8 +57,11 @@ const equippedSlots = computed(() =>
 // coverage mask shrinks, so every body segment flips back visible.
 // Sexed items resolve their fitted variant from modular.assets (item YAML is
 // the source of truth), so switching body type re-dresses.
+// Goblins preview bare regardless: all gear is fitted to the medium body and
+// would deform on the small skeleton.
+const noFittedGear = computed(() => state.race === 'goblin')
 const armor = computed(() =>
-  state.nude
+  state.nude || noFittedGear.value
     ? []
     : equippedSlots.value.flatMap(({ slot, item }) => {
         const path = item.modular?.assets?.[state.sex] ?? item.modular?.assets?.any
@@ -73,6 +76,7 @@ const RACES = [
   { id: 'human', label: 'Human', enabled: true },
   { id: 'elf', label: 'Elf', enabled: true },
   { id: 'tiefling', label: 'Tiefling', enabled: true },
+  { id: 'goblin', label: 'Goblin', enabled: true },
   { id: 'drow', label: 'Drow', enabled: false },
   { id: 'dwarf', label: 'Dwarf', enabled: false },
   { id: 'dragonborn', label: 'Dragonborn', enabled: false },
@@ -83,10 +87,13 @@ const RACE_HINTS: Record<Race, string> = {
   human: 'The most common face in the realm — humans adapt to anything.',
   elf: 'Keen senses and keener memories — elves outlive the kingdoms they wander.',
   tiefling: 'Infernal blood runs warm — horns and crimson skin mark the bargain of an ancestor.',
+  goblin: 'Small, quick and chronically underestimated — a goblin\'s grin means the plan already started.',
 }
 
+const PLAYABLE_RACES: Race[] = ['human', 'elf', 'tiefling', 'goblin']
+
 function selectRace(id: string) {
-  if (id === 'human' || id === 'elf' || id === 'tiefling') state.race = id
+  if ((PLAYABLE_RACES as string[]).includes(id)) state.race = id as Race
 }
 
 const HORN_PATTERNS = [
@@ -170,6 +177,7 @@ function downloadTemplate() {
           :horn-pattern="state.hornPattern"
           :horn-weight="state.hornWeight"
           :toon="state.toon"
+          :skeleton="state.skeleton"
         />
       </Suspense>
     </TresCanvas>
@@ -336,6 +344,15 @@ function downloadTemplate() {
           <span>Toon shader</span>
           <span class="shade-state">{{ state.toon ? 'On' : 'Off' }}</span>
         </button>
+        <button
+          type="button"
+          class="shade-toggle"
+          :class="{ 'shade-toggle--active': state.skeleton }"
+          @click="state.skeleton = !state.skeleton"
+        >
+          <span>Show skeleton</span>
+          <span class="shade-state">{{ state.skeleton ? 'On' : 'Off' }}</span>
+        </button>
       </section>
 
       <section class="panel-section">
@@ -344,11 +361,13 @@ function downloadTemplate() {
           type="button"
           class="shade-toggle"
           :class="{ 'shade-toggle--active': state.nude }"
+          :disabled="noFittedGear"
           @click="state.nude = !state.nude"
         >
           <span>Hide clothing</span>
           <span class="shade-state">{{ state.nude ? 'On' : 'Off' }}</span>
         </button>
+        <p v-if="noFittedGear" class="section-hint">No goblin-fitted gear yet — previewing bare.</p>
       </section>
 
       <section class="panel-section colors">

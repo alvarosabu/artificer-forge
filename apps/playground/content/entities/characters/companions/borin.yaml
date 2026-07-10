@@ -1,0 +1,54 @@
+templateId: borin
+type: character
+name: Borin the Artificer
+class: artificer
+level: 1
+race: goblin
+sex: M
+
+stats:
+  hp: 34
+  maxHp: 34
+  ac: 15
+  strength: 12
+  dexterity: 10
+  constitution: 16
+  intelligence: 16
+  wisdom: 12
+  charisma: 8
+  maxActions: 1
+  maxBonusActions: 1
+
+team: player
+controllable: true
+
+ai:
+  behavior: companion
+  followDistance: 3
+
+# Reused knight art until a goblin portrait exists.
+portrait: /img/portraits/knight_portrait.png
+portraitBackground: /img/portraits/bgs/midnight.png
+
+# Modular small-rig character: body binds to rig_small, animated by the
+# Rig_Small packs. No goblin-fitted gear yet, so he plays bare.
+appearance:
+  body: GOB_M_SMALL_Body_A
+  head: GOB_M_Head_A
+  hair: GOB_M_Hair_Short_A
+  beard: null
+  eyebrows: GOB_M_Eyebrows_Thick_A
+  horns: null
+  skinColor: '#7C9C46'
+  hairColor: '#3b2417'
+
+equipmentSlots:
+  - mainHand
+  - offHand
+  - helmet
+  - armor
+  - gauntlets
+  - boots
+  - amulet
+  - ring1
+  - ring2
