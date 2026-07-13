@@ -61,6 +61,7 @@ export default defineContentConfig({
           hair: z.string().nullable().optional(),
           beard: z.string().nullable().optional(),
           eyebrows: z.string().nullable().optional(),
+          accessory: z.string().nullable().optional(),
           horns: z.string().nullable().optional(),
           skinColor: z.string(),
           hairColor: z.string(),
@@ -141,6 +142,9 @@ export default defineContentConfig({
             'leg', 'legL', 'legR',
             'foot', 'footL', 'footR',
           ])),
+          // Skeleton the fitted meshes are skinned to; absent = medium.
+          // Pieces only dress bodies on the same rig (see utils/gearDefaults).
+          rig: z.enum(['medium', 'small']).optional(),
           // Fitted mesh per body sex; `any` = unisex asset. Resolution:
           // assets[entity.sex] ?? assets.any (miss = piece renders nothing).
           assets: z.object({

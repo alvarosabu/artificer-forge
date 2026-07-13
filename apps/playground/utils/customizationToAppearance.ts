@@ -16,6 +16,7 @@ export function customizationToAppearance(state: CustomizationState): { race: Ra
       hair: state.hair,
       beard: state.beard,
       eyebrows: state.eyebrows,
+      accessory: state.accessory,
       horns: state.horns,
       skinColor: state.skinColor,
       hairColor: state.hairColor,

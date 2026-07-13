@@ -1,0 +1,17 @@
+templateId: wild-raider-pants
+type: item
+subtype: trousers
+name: Wild Raider Pants
+modular:
+  slot: trousers
+  rig: small
+  hides: [hips]
+  assets:
+    M: /models/characters/trousers/ARM_M_Wild_Raider_Pants.glb
+    F: /models/characters/trousers/ARM_F_Wild_Raider_Pants.glb
+texture:
+  base: /models/characters/textures/wild_raider_texture.png
+armor:
+  physical: 2
+weight: 2
+value: 12

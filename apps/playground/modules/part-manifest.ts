@@ -30,6 +30,7 @@ export default defineNuxtModule({
         beards: [],
         eyebrows: [],
         horns: [],
+        accessories: [],
       }
       for (const folder of SLOT_FOLDERS) {
         let files: string[] = []
@@ -67,6 +68,7 @@ declare module '#build/character-parts.mjs' {
     beards: PartEntry[]
     eyebrows: PartEntry[]
     horns: PartEntry[]
+    accessories: PartEntry[]
   }
   export default manifest
 }

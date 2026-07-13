@@ -7,8 +7,8 @@ modular:
   hides: [torso]
   # Sexed fitted variants, resolved per body sex: assets[sex] ?? assets.any.
   assets:
-    M: /models/characters/armors/ARM_M_MEDIUM_Leather_Jerkin.glb
-    F: /models/characters/armors/ARM_F_MEDIUM_Leather_Jerkin.glb
+    M: /models/characters/armors/ARM_M_Leather_Jerkin.glb
+    F: /models/characters/armors/ARM_F_Leather_Jerkin.glb
 texture:
   base: /models/characters/textures/leather_jerkin_texture.png
   tints:

@@ -13,6 +13,7 @@ export const HAIR: PartEntry[] = manifest.hair
 export const BEARDS: PartEntry[] = manifest.beards
 export const EYEBROWS: PartEntry[] = manifest.eyebrows
 export const HORNS: PartEntry[] = manifest.horns
+export const ACCESSORIES: PartEntry[] = manifest.accessories
 /** Skeleton GLBs keyed by PartEntry.rig ('medium' | 'small'). */
 export const RIGS: Record<string, string> = manifest.rigs
 

@@ -39,8 +39,8 @@ export interface ArmorPiece {
   tint?: string | null
 }
 
-type Slot = 'body' | 'head' | 'hair' | 'beard' | 'eyebrows' | 'horns'
-const SKINNED_SLOTS: Slot[] = ['body', 'hair', 'beard', 'eyebrows', 'horns']
+type Slot = 'body' | 'head' | 'hair' | 'beard' | 'eyebrows' | 'accessory' | 'horns'
+const SKINNED_SLOTS: Slot[] = ['body', 'hair', 'beard', 'eyebrows', 'accessory', 'horns']
 
 // Tint atlases are shared (textures are immutable here) — cache across instances.
 // glTF authors UVs for flipY=false; base color is sRGB.
@@ -254,7 +254,7 @@ export function useModularRig(
   }
 
   // --- Slot + armor attachment (set-sync, declarative) ---
-  const attached = reactive<Record<Slot, string | null>>({ body: null, head: null, hair: null, beard: null, eyebrows: null, horns: null })
+  const attached = reactive<Record<Slot, string | null>>({ body: null, head: null, hair: null, beard: null, eyebrows: null, accessory: null, horns: null })
   const armorAttached = new Set<string>()
 
   function detach(slot: Slot) {

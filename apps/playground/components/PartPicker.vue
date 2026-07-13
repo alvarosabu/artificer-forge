@@ -55,14 +55,21 @@ const selectedLabel = computed(() => {
 </script>
 
 <template>
-  <details class="picker" :open="defaultOpen">
-    <summary class="picker-head">
+  <UCollapsible class="picker" :default-open="defaultOpen" :unmount-on-hide="false">
+    <UButton
+      block
+      color="neutral"
+      variant="ghost"
+      trailing-icon="i-lucide-chevron-down"
+      class="group justify-start px-3 py-2.5 rounded-none"
+      :ui="{ trailingIcon: 'size-3.5 text-muted transition-transform duration-200 group-data-[state=open]:rotate-180' }"
+    >
       <span class="picker-title">{{ title }}</span>
       <span class="picker-current">{{ selectedLabel }}</span>
-      <svg class="picker-chevron" viewBox="0 0 24 24" width="14" height="14"><path fill="none" stroke="currentColor" stroke-width="2" d="m6 9 6 6 6-6" /></svg>
-    </summary>
+    </UButton>
 
-    <div class="grid">
+    <template #content>
+      <div class="grid">
       <button
         v-if="noneLabel"
         type="button"
@@ -83,12 +90,13 @@ const selectedLabel = computed(() => {
         :title="part.label"
         @click="emit('update:modelValue', part.id)"
       >
-        <img v-if="urlFor(part)" :src="urlFor(part)" :alt="part.label" class="cell-img">
-        <span v-else class="cell-loading" />
-        <span class="cell-label">{{ part.label }}</span>
-      </button>
-    </div>
-  </details>
+          <img v-if="urlFor(part)" :src="urlFor(part)" :alt="part.label" class="cell-img">
+          <span v-else class="cell-loading" />
+          <span class="cell-label">{{ part.label }}</span>
+        </button>
+      </div>
+    </template>
+  </UCollapsible>
 </template>
 
 <style scoped>
@@ -98,21 +106,8 @@ const selectedLabel = computed(() => {
   background: rgba(255, 255, 255, 0.02);
   overflow: hidden;
 }
-.picker + .picker { margin-top: 0.6rem; }
-.picker-head {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem 0.75rem;
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-}
-.picker-head::-webkit-details-marker { display: none; }
 .picker-title { font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: #c5a560; font-weight: 600; }
-.picker-current { margin-left: auto; font-size: 0.72rem; color: #cfcabb; max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.picker-chevron { color: #8b8674; transition: transform 0.18s; flex-shrink: 0; }
-.picker[open] .picker-chevron { transform: rotate(180deg); }
+.picker-current { margin-left: auto; font-size: 0.72rem; font-weight: 400; color: #cfcabb; max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .grid {
   display: grid;

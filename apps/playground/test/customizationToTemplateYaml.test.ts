@@ -10,6 +10,7 @@ const STATE: CustomizationState = {
   hair: 'GEN_F_Hair_Long_A',
   beard: null,
   eyebrows: 'GEN_Eyebrows_Thin_A',
+  accessory: 'GOB_Piercing_A',
   horns: 'TIF_Horns_B',
   hornColorA: '#2b2230',
   hornColorB: '#8a6d5c',
@@ -21,6 +22,7 @@ const STATE: CustomizationState = {
   hairColor: '#3b2417',
   toon: true,
   nude: true,
+  skeleton: false,
 }
 
 describe('customizationToTemplateYaml', () => {
@@ -58,6 +60,7 @@ describe('customizationToTemplateYaml', () => {
     const { yaml } = customizationToTemplateYaml(STATE, 'Tav')
     expect(yaml).toContain('  body: HUM_F_MEDIUM_Body_A')
     expect(yaml).toContain('  beard: null')
+    expect(yaml).toContain('  accessory: GOB_Piercing_A')
     expect(yaml).toContain("  skinColor: '#CE4C47'")
     expect(yaml).toContain("  hairColor: '#3b2417'")
     expect(yaml).toContain("  hornColorA: '#2b2230'")

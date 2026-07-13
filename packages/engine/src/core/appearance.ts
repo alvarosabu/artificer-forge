@@ -27,6 +27,8 @@ export interface CharacterAppearance {
   hair: string | null
   beard: string | null
   eyebrows: string | null
+  /** Cosmetic accessory (piercing, earring…). Optional: pre-accessory templates omit it. */
+  accessory?: string | null
   horns: string | null
   skinColor: string
   hairColor: string

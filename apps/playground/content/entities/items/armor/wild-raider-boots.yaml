@@ -1,0 +1,17 @@
+templateId: wild-raider-boots
+type: item
+subtype: boots
+name: Wild Raider Boots
+modular:
+  slot: boots
+  rig: small
+  hides: [foot]
+  assets:
+    M: /models/characters/boots/ARM_M_Wild_Raider_Boots.glb
+    F: /models/characters/boots/ARM_F_Wild_Raider_Boots.glb
+texture:
+  base: /models/characters/textures/wild_raider_texture.png
+armor:
+  physical: 1
+weight: 1
+value: 10

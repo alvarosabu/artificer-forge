@@ -7,15 +7,16 @@ import CharacterPreview from '../../../components/CharacterPreview.vue'
 import ColorField from '../../../components/ColorField.vue'
 import PartPicker from '../../../components/PartPicker.vue'
 import ThumbStudio from '../../../components/ThumbStudio.vue'
+import { AnimationName } from '@artificer-forge/engine/runtime'
 import { useCharacterCustomization } from '../../../composables/useCharacterCustomization'
-import type { EquipSlot } from '../../../composables/useCharacterCustomization'
 import { customizationToTemplateYaml } from '../../../utils/customizationToTemplateYaml'
 import { HEADS } from '../../../utils/characterParts'
 import { forRaceSex, type Race } from '../../../utils/partManifest'
+import { fitsRig, type EquipSlot } from '../../../utils/gearDefaults'
 
 useHead({ title: 'Create Character — Lab' })
 
-const { state, heads, hairOptions, beardOptions, eyebrowOptions, hornOptions } = useCharacterCustomization()
+const { state, heads, hairOptions, beardOptions, eyebrowOptions, hornOptions, accessoryOptions } = useCharacterCustomization()
 
 // The horn material is TSL (node-based), which only runs on WebGPURenderer.
 // Same factory pattern as pages/shaders/*; falls back to a WebGL backend on
@@ -33,7 +34,7 @@ interface TintEntry { id: string, label: string, map: string }
 interface ItemTemplate {
   templateId: string
   name: string
-  modular?: { hides: string[], assets?: Partial<Record<'M' | 'F' | 'any', string>> }
+  modular?: { hides: string[], assets?: Partial<Record<'M' | 'F' | 'any', string>>, rig?: 'medium' | 'small' }
   texture?: { base: string, tints?: TintEntry[] }
 }
 
@@ -56,16 +57,14 @@ const equippedSlots = computed(() =>
 // Nude preview passes no armor: CharacterPreview detaches the pieces and the
 // coverage mask shrinks, so every body segment flips back visible.
 // Sexed items resolve their fitted variant from modular.assets (item YAML is
-// the source of truth), so switching body type re-dresses.
-// Goblins preview bare regardless: all gear is fitted to the medium body and
-// would deform on the small skeleton.
-const noFittedGear = computed(() => state.race === 'goblin')
+// the source of truth), so switching body type re-dresses. Pieces skinned to
+// another rig (fitsRig) are skipped — they'd deform on the wrong skeleton.
 const armor = computed(() =>
-  state.nude || noFittedGear.value
+  state.nude
     ? []
     : equippedSlots.value.flatMap(({ slot, item }) => {
         const path = item.modular?.assets?.[state.sex] ?? item.modular?.assets?.any
-        if (!item.modular || !path) return []
+        if (!item.modular || !path || !fitsRig(item.modular, state.race)) return []
         const tintId = state.equipmentTint[slot]
         const tint = tintId ? item.texture?.tints?.find(t => t.id === tintId)?.map ?? null : null
         return [{ id: path.split('/').pop()!.replace(/\.glb$/, ''), path, hides: item.modular.hides, tint }]
@@ -102,6 +101,20 @@ const HORN_PATTERNS = [
   { id: 'solid', label: 'Solid' },
 ] as const
 
+// Active/inactive styling for Nuxt UI toggle-style buttons.
+// Idle buttons get .toggle-idle to match the PartPicker collapsible colors
+// instead of the slate `neutral` palette.
+function toggleProps(active: boolean) {
+  return active
+    ? { color: 'primary', variant: 'soft' } as const
+    : { color: 'neutral', variant: 'outline', class: 'toggle-idle' } as const
+}
+
+// Preview-only: which clip the character performs in the viewport. Not part of
+// the customization state — it never lands in the exported template.
+const ANIMATION_OPTIONS = Object.values(AnimationName).sort()
+const previewAnimation = ref<string>(AnimationName.IDLE_A)
+
 // Base head that hair/beard/eyebrow thumbnails sit on — the current selection,
 // falling back to the race+sex default head.
 const baseHeadId = computed(() =>
@@ -133,7 +146,8 @@ function downloadTemplate() {
 </script>
 
 <template>
-  <div class="creator">
+  <!-- .dark scopes Nuxt UI variants to dark styling regardless of system color mode -->
+  <div class="creator dark">
     <TresCanvas
       clear-color="#0e1014"
       window-size
@@ -169,6 +183,7 @@ function downloadTemplate() {
           :hair="state.hair"
           :beard="state.beard"
           :eyebrows="state.eyebrows"
+          :accessory="state.accessory"
           :horns="state.horns"
           :skin-color="state.skinColor"
           :hair-color="state.hairColor"
@@ -178,6 +193,7 @@ function downloadTemplate() {
           :horn-weight="state.hornWeight"
           :toon="state.toon"
           :skeleton="state.skeleton"
+          :animation="previewAnimation"
         />
       </Suspense>
     </TresCanvas>
@@ -189,45 +205,45 @@ function downloadTemplate() {
         <h1 class="panel-title">Create Character</h1>
       </header>
 
-      <section class="panel-section">
+      <section>
         <h2 class="section-label">Race</h2>
-        <div class="race-grid">
-          <button
+        <div class="grid grid-cols-3 gap-1.5">
+          <UButton
             v-for="race in RACES"
             :key="race.id"
-            type="button"
+            v-bind="toggleProps(state.race === race.id)"
             :disabled="!race.enabled"
-            class="race-cell"
-            :class="{ 'race-cell--active': state.race === race.id, 'race-cell--locked': !race.enabled }"
+            size="sm"
+            class="flex-col justify-center gap-0.5 py-2 text-xs"
             @click="selectRace(race.id)"
           >
-            <span>{{ race.label }}</span>
-            <span v-if="!race.enabled" class="race-soon">soon</span>
-          </button>
+            {{ race.label }}
+            <span v-if="!race.enabled" class="text-[0.55rem] uppercase tracking-widest opacity-60">soon</span>
+          </UButton>
         </div>
         <p class="section-hint">{{ RACE_HINTS[state.race] }}</p>
       </section>
 
-      <section class="panel-section">
+      <section>
         <h2 class="section-label">Body Type</h2>
-        <div class="sex-toggle">
-          <button
-            type="button"
-            class="sex-btn"
-            :class="{ 'sex-btn--active': state.sex === 'M' }"
+        <UFieldGroup class="w-full">
+          <UButton
+            v-bind="toggleProps(state.sex === 'M')"
+            block
+            icon="i-lucide-mars"
             @click="state.sex = 'M'"
           >
             Masculine
-          </button>
-          <button
-            type="button"
-            class="sex-btn"
-            :class="{ 'sex-btn--active': state.sex === 'F' }"
+          </UButton>
+          <UButton
+            v-bind="toggleProps(state.sex === 'F')"
+            block
+            icon="i-lucide-venus"
             @click="state.sex = 'F'"
           >
             Feminine
-          </button>
-        </div>
+          </UButton>
+        </UFieldGroup>
       </section>
     </aside>
 
@@ -268,6 +284,16 @@ function downloadTemplate() {
         :head-id="baseHeadId"
         none-label="None"
       />
+      <!-- Hidden while the race/sex combo has no accessories (a lone None tile is noise) -->
+      <PartPicker
+        v-if="accessoryOptions.length"
+        v-model="state.accessory"
+        title="Accessory"
+        part-slot="accessory"
+        :parts="accessoryOptions"
+        :head-id="baseHeadId"
+        none-label="None"
+      />
       <PartPicker
         v-if="state.race === 'tiefling'"
         v-model="state.horns"
@@ -280,140 +306,141 @@ function downloadTemplate() {
       />
 
       <!-- Tiefling-only: TSL horn material controls -->
-      <section
-        v-if="state.race === 'tiefling'"
-        class="panel-section"
-      >
+      <section v-if="state.race === 'tiefling'">
         <h2 class="section-label">Horn Material</h2>
-        <div class="pattern-toggle">
-          <button
+        <UFieldGroup class="w-full">
+          <UButton
             v-for="p in HORN_PATTERNS"
             :key="p.id"
-            type="button"
-            class="sex-btn"
-            :class="{ 'sex-btn--active': state.hornPattern === p.id }"
+            v-bind="toggleProps(state.hornPattern === p.id)"
+            block
             @click="state.hornPattern = p.id"
           >
             {{ p.label }}
-          </button>
-        </div>
-        <div class="color-row horn-colors">
+          </UButton>
+        </UFieldGroup>
+        <div class="flex gap-2 mt-2.5">
           <UPopover>
-            <button type="button" class="swatch">
+            <UButton color="neutral" variant="outline" class="toggle-idle">
               <span class="swatch-chip" :style="{ background: state.hornColorA }" />
-              <span>Horn A</span>
-            </button>
+              Horn A
+            </UButton>
             <template #content>
               <ColorField v-model="state.hornColorA" />
             </template>
           </UPopover>
           <UPopover v-if="state.hornPattern !== 'solid'">
-            <button type="button" class="swatch">
+            <UButton color="neutral" variant="outline" class="toggle-idle">
               <span class="swatch-chip" :style="{ background: state.hornColorB }" />
-              <span>Horn B</span>
-            </button>
+              Horn B
+            </UButton>
             <template #content>
               <ColorField v-model="state.hornColorB" />
             </template>
           </UPopover>
         </div>
-        <label
-          v-if="state.hornPattern !== 'solid'"
-          class="weight-field"
-        >
-          <span class="weight-label">Color A weight</span>
-          <input
-            v-model.number="state.hornWeight"
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            class="weight-slider"
+        <div v-if="state.hornPattern !== 'solid'" class="mt-3">
+          <p class="field-label">Color A weight</p>
+          <USlider
+            v-model="state.hornWeight"
+            :min="0"
+            :max="1"
+            :step="0.01"
+            size="sm"
+          />
+        </div>
+      </section>
+
+      <section>
+        <h2 class="section-label">Animation</h2>
+        <!-- Menu content teleports to <body>, escaping the page's `.dark` scope —
+             re-apply it on the portal so the popup matches the panels. -->
+        <USelectMenu
+          v-model="previewAnimation"
+          :items="ANIMATION_OPTIONS"
+          :search-input="{ placeholder: 'Search animations…', icon: 'i-lucide-search' }"
+          :ui="{ content: 'dark' }"
+          icon="i-lucide-person-standing"
+          color="neutral"
+          variant="outline"
+          class="w-full toggle-idle"
+        />
+      </section>
+
+      <section>
+        <h2 class="section-label">Display</h2>
+        <div class="grid grid-cols-3 gap-1.5">
+          <UButton
+            v-bind="toggleProps(state.toon)"
+            icon="i-lucide-paintbrush"
+            class="flex-col justify-center gap-1 py-2.5 text-xs"
+            @click="state.toon = !state.toon"
           >
-        </label>
+            Toon
+          </UButton>
+          <UButton
+            v-bind="toggleProps(state.skeleton)"
+            icon="i-lucide-bone"
+            class="flex-col justify-center gap-1 py-2.5 text-xs"
+            @click="state.skeleton = !state.skeleton"
+          >
+            Skeleton
+          </UButton>
+          <UButton
+            v-bind="toggleProps(state.nude)"
+            icon="i-lucide-shirt"
+            class="flex-col justify-center gap-1 py-2.5 text-xs"
+            @click="state.nude = !state.nude"
+          >
+            No gear
+          </UButton>
+        </div>
       </section>
 
-      <section class="panel-section">
-        <h2 class="section-label">Shading</h2>
-        <button
-          type="button"
-          class="shade-toggle"
-          :class="{ 'shade-toggle--active': state.toon }"
-          @click="state.toon = !state.toon"
-        >
-          <span>Toon shader</span>
-          <span class="shade-state">{{ state.toon ? 'On' : 'Off' }}</span>
-        </button>
-        <button
-          type="button"
-          class="shade-toggle"
-          :class="{ 'shade-toggle--active': state.skeleton }"
-          @click="state.skeleton = !state.skeleton"
-        >
-          <span>Show skeleton</span>
-          <span class="shade-state">{{ state.skeleton ? 'On' : 'Off' }}</span>
-        </button>
-      </section>
-
-      <section class="panel-section">
-        <h2 class="section-label">Gear</h2>
-        <button
-          type="button"
-          class="shade-toggle"
-          :class="{ 'shade-toggle--active': state.nude }"
-          :disabled="noFittedGear"
-          @click="state.nude = !state.nude"
-        >
-          <span>Hide clothing</span>
-          <span class="shade-state">{{ state.nude ? 'On' : 'Off' }}</span>
-        </button>
-        <p v-if="noFittedGear" class="section-hint">No goblin-fitted gear yet — previewing bare.</p>
-      </section>
-
-      <section class="panel-section colors">
+      <section>
         <h2 class="section-label">Colors</h2>
-        <div class="color-row">
+        <div class="flex gap-2">
           <UPopover>
-            <button type="button" class="swatch">
+            <UButton color="neutral" variant="outline" class="toggle-idle">
               <span class="swatch-chip" :style="{ background: state.skinColor }" />
-              <span>Skin</span>
-            </button>
+              Skin
+            </UButton>
             <template #content>
               <ColorField v-model="state.skinColor" />
             </template>
           </UPopover>
 
           <UPopover>
-            <button type="button" class="swatch">
+            <UButton color="neutral" variant="outline" class="toggle-idle">
               <span class="swatch-chip" :style="{ background: state.hairColor }" />
-              <span>Hair</span>
-            </button>
+              Hair
+            </UButton>
             <template #content>
               <ColorField v-model="state.hairColor" />
             </template>
           </UPopover>
         </div>
       </section>
-
     </aside>
 
     <!-- BOTTOM: name + download as entity template YAML -->
     <div class="export-bar">
-      <input
+      <UInput
         v-model="characterName"
-        type="text"
-        class="export-name"
         placeholder="Character name"
         maxlength="40"
+        :ui="{ base: 'text-center' }"
         @keyup.enter="downloadTemplate"
-      >
-      <button
-        type="button"
-        class="export-btn"
+      />
+      <UButton
+        block
+        color="primary"
+        variant="subtle"
+        class="uppercase tracking-wider font-semibold"
         @click="downloadTemplate"
       >
         Download Template
-      </button>
+      </UButton>
     </div>
 
     <!-- Off-screen thumbnail baker (own GL context) -->
@@ -435,6 +462,9 @@ function downloadTemplate() {
   bottom: 1.5rem;
   width: 20rem;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
   padding: 1.25rem;
   border-radius: 0.75rem;
   border: 1px solid rgba(197, 165, 96, 0.35);
@@ -443,42 +473,32 @@ function downloadTemplate() {
   backdrop-filter: blur(6px);
   color: #e7e2d4;
 }
+.panel > * { flex-shrink: 0; }
 .panel--left { left: 1.5rem; }
 .panel--right { right: 1.5rem; }
-.panel-head { text-align: center; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(197, 165, 96, 0.25); margin-bottom: 1rem; }
+.panel-head { text-align: center; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(197, 165, 96, 0.25); }
 .panel-eyebrow { font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; color: #c5a560; }
 .panel-title { font-size: 1.25rem; font-weight: 600; letter-spacing: 0.02em; }
-.panel-section { margin-bottom: 1.1rem; }
 .section-label { font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: #c5a560; margin-bottom: 0.5rem; }
-.section-label--wide { padding-bottom: 0.6rem; border-bottom: 1px solid rgba(197, 165, 96, 0.2); margin-bottom: 0.75rem; }
+.section-label--wide { padding-bottom: 0.6rem; border-bottom: 1px solid rgba(197, 165, 96, 0.2); margin-bottom: 0; }
 .section-hint { font-size: 0.72rem; line-height: 1.4; color: #9a958a; margin-top: 0.5rem; }
-.race-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
-.race-cell {
-  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 0.15rem; padding: 0.5rem 0.25rem; border-radius: 0.4rem; font-size: 0.72rem;
-  border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.03); color: #cfcabb;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+.field-label { font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; color: #9a958a; margin-bottom: 0.4rem; }
+.swatch-chip { width: 1.1rem; height: 1.1rem; border-radius: 0.25rem; border: 1px solid rgba(255, 255, 255, 0.25); }
+/* Idle toggle/swatch buttons: same gold-tinted surface as the PartPicker
+   collapsibles, overriding the slate neutral outline variant (bg + ring).
+   :deep() variant needed for USelectMenu, which forwards the class to its
+   inner trigger where the scope attribute doesn't land. */
+.toggle-idle,
+:deep(.toggle-idle) {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+  --tw-ring-color: rgba(197, 165, 96, 0.18) !important;
+  color: #cfcabb !important;
 }
-.race-cell--active { border-color: #c5a560; background: rgba(197, 165, 96, 0.12); color: #f4edd8; box-shadow: 0 0 0 1px rgba(197,165,96,0.4) inset; }
-.race-cell--locked { opacity: 0.4; cursor: not-allowed; }
-.race-soon { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.1em; color: #7d7869; }
-.sex-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
-.sex-btn { padding: 0.45rem; border-radius: 0.4rem; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); color: #cfcabb; cursor: pointer; }
-.sex-btn--active { border-color: #c5a560; background: rgba(197,165,96,0.12); color: #f4edd8; }
-.colors { margin-top: 1rem; }
-.color-row { display: flex; gap: 0.6rem; }
-.swatch { display: flex; align-items: center; gap: 0.45rem; padding: 0.4rem 0.7rem; border-radius: 0.4rem; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); color: #e7e2d4; cursor: pointer; }
-.swatch-chip { width: 1.1rem; height: 1.1rem; border-radius: 0.25rem; border: 1px solid rgba(255,255,255,0.25); }
-.shade-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0.5rem 0.75rem; border-radius: 0.4rem; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); color: #e7e2d4; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
-.shade-toggle--active { border-color: #c5a560; background: rgba(197,165,96,0.14); color: #f4edd8; }
-.shade-state { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #9a958a; }
-.shade-toggle--active .shade-state { color: #c5a560; }
-.pattern-toggle { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
-.horn-colors { margin-top: 0.6rem; }
-.weight-field { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.6rem; }
-.weight-label { font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; color: #9a958a; }
-.weight-slider { width: 100%; accent-color: #c5a560; }
+.toggle-idle:hover:not(:disabled),
+:deep(.toggle-idle:hover:not(:disabled)) {
+  background-color: rgba(197, 165, 96, 0.08) !important;
+  --tw-ring-color: rgba(197, 165, 96, 0.4) !important;
+}
 .export-bar {
   position: absolute; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
   display: flex; flex-direction: column; gap: 0.5rem; width: 16rem;
@@ -488,17 +508,4 @@ function downloadTemplate() {
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(6px);
 }
-.export-name {
-  padding: 0.45rem 0.7rem; border-radius: 0.4rem; font-size: 0.85rem; text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.03); color: #e7e2d4;
-}
-.export-name::placeholder { color: #7d7869; }
-.export-name:focus { outline: none; border-color: rgba(197, 165, 96, 0.6); }
-.export-btn {
-  padding: 0.55rem; border-radius: 0.4rem; font-size: 0.8rem; font-weight: 600;
-  letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;
-  border: 1px solid #c5a560; background: rgba(197, 165, 96, 0.16); color: #f4edd8;
-  transition: background 0.15s;
-}
-.export-btn:hover { background: rgba(197, 165, 96, 0.28); }
 </style>

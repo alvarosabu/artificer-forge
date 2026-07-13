@@ -18,7 +18,7 @@ export interface PartEntry {
 
 export type PartOverride = Partial<Pick<PartEntry, 'label' | 'sex' | 'race'>>
 
-export const SLOT_FOLDERS = ['bodies', 'heads', 'hair', 'beards', 'eyebrows', 'horns'] as const
+export const SLOT_FOLDERS = ['bodies', 'heads', 'hair', 'beards', 'eyebrows', 'horns', 'accessories'] as const
 export type SlotFolder = typeof SLOT_FOLDERS[number]
 
 const RACE_PREFIX: Record<string, Race[] | undefined> = {

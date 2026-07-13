@@ -129,7 +129,7 @@ export interface EntityState {
   // Item template metadata copied from YAML at spawn
   // Modular equip rendering: which body segments the piece hides when worn and
   // the fitted mesh per body sex (`any` = unisex). See useModularArmor.
-  modular?: { slot: ModularSlot, hides: string[], assets?: Partial<Record<Sex | 'any', string>> }
+  modular?: { slot: ModularSlot, hides: string[], assets?: Partial<Record<Sex | 'any', string>>, rig?: 'medium' | 'small' }
   // Palette-atlas tinting: base atlas + alternate recolored atlases.
   texture?: { base: string, tints?: { id: string, label: string, map: string }[] }
   damage?: { dice: string, type: string }

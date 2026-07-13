@@ -1,4 +1,5 @@
-import type { CustomizationState, EquipSlot } from '../composables/useCharacterCustomization'
+import type { CustomizationState } from '../composables/useCharacterCustomization'
+import type { EquipSlot } from './gearDefaults'
 import { customizationToAppearance } from './customizationToAppearance'
 
 // Hand-rolled emitter: the template shape is fixed and we want cedric.yaml-style

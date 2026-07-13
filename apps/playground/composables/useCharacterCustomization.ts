@@ -1,9 +1,8 @@
 import { computed, reactive, watch } from 'vue'
-import { BEARDS, BODIES, EYEBROWS, HAIR, HEADS, HORNS } from '../utils/characterParts'
-import { forRaceSex, type Race, type Sex } from '../utils/partManifest'
+import { ACCESSORIES, BEARDS, BODIES, EYEBROWS, HAIR, HEADS, HORNS } from '../utils/characterParts'
+import { forRaceSex, RACE_RIG, type Race, type Sex } from '../utils/partManifest'
+import { defaultEquipmentFor, type EquipSlot } from '../utils/gearDefaults'
 import type { HornPattern } from '@artificer-forge/vfx'
-
-export type EquipSlot = 'helmet' | 'armor' | 'cloak' | 'trousers' | 'gauntlets' | 'boots'
 
 export interface CustomizationState {
   race: Race
@@ -13,14 +12,15 @@ export interface CustomizationState {
   hair: string | null
   beard: string | null
   eyebrows: string | null
+  accessory: string | null
   // Tiefling-only slot + its TSL material controls (ignored for other races).
   horns: string | null
   hornColorA: string
   hornColorB: string
   hornPattern: HornPattern
   hornWeight: number // 0..1, split point where color A hands over to B
-  // Equipped gear by slot (item templateId). Defaults will later be driven by the
-  // selected class; for now a single starter piece is equipped.
+  // Equipped gear by slot (item templateId). Defaults are rig-keyed starter
+  // sets (utils/gearDefaults.ts); a class system will later refine them.
   equipment: Record<EquipSlot, string | null>
   // Selected palette-atlas tint id per slot; absent = the item's base/default atlas.
   equipmentTint: Partial<Record<EquipSlot, string>>
@@ -63,12 +63,13 @@ export function useCharacterCustomization() {
     hair: defaultHair('human', 'M'),
     beard: null,
     eyebrows: defaultEyebrows('human', 'M'),
+    accessory: null,
     horns: null,
     hornColorA: DEFAULT_HORN_COLOR_A,
     hornColorB: DEFAULT_HORN_COLOR_B,
     hornPattern: 'gradient',
     hornWeight: 0.5,
-    equipment: { helmet: null, armor: 'leather-jerkin', cloak: null, trousers: 'common-pants', gauntlets: null, boots: 'leather-sandals' },
+    equipment: defaultEquipmentFor('human'),
     equipmentTint: {},
     skinColor: DEFAULT_SKIN_COLOR,
     hairColor: DEFAULT_HAIR_COLOR,
@@ -83,12 +84,14 @@ export function useCharacterCustomization() {
   const beardOptions = computed(() => (state.sex === 'M' ? forRaceSex(BEARDS, state.race, 'M') : []))
   const eyebrowOptions = computed(() => forRaceSex(EYEBROWS, state.race, state.sex))
   const hornOptions = computed(() => forRaceSex(HORNS, state.race, state.sex))
+  const accessoryOptions = computed(() => forRaceSex(ACCESSORIES, state.race, state.sex))
 
   // Keep the current part if it's still offered, else fall back to a default.
   function revalidateParts() {
     if (!state.hair || !hairOptions.value.some(h => h.id === state.hair)) state.hair = defaultHair(state.race, state.sex)
     if (state.eyebrows && !eyebrowOptions.value.some(e => e.id === state.eyebrows)) state.eyebrows = defaultEyebrows(state.race, state.sex)
     if (state.beard && !beardOptions.value.some(b => b.id === state.beard)) state.beard = null
+    if (state.accessory && !accessoryOptions.value.some(a => a.id === state.accessory)) state.accessory = null
   }
 
   // Switching sex re-points sex-specific slots to valid options.
@@ -102,13 +105,19 @@ export function useCharacterCustomization() {
   // Medium races share bodies/hair (GEN_ parts); small races bring their own,
   // so body and race-locked parts re-resolve. Skin snaps to the race default,
   // horns exist only while tiefling is selected.
-  watch(() => state.race, (race) => {
+  watch(() => state.race, (race, prev) => {
     state.body = defaultBody(race, state.sex)
     state.head = defaultHead(race, state.sex)
     revalidateParts()
     state.skinColor = RACE_DEFAULT_SKIN[race]
     state.horns = race === 'tiefling' ? HORNS[0]?.id ?? null : null
+    // Gear is skinned per rig — crossing the rig boundary re-dresses with the
+    // other rig's starter set. Same-rig switches keep the current gear.
+    if (RACE_RIG[race] !== RACE_RIG[prev]) {
+      state.equipment = defaultEquipmentFor(race)
+      state.equipmentTint = {}
+    }
   })
 
-  return { state, bodyOptions, heads, hairOptions, beardOptions, eyebrowOptions, hornOptions }
+  return { state, bodyOptions, heads, hairOptions, beardOptions, eyebrowOptions, hornOptions, accessoryOptions }
 }

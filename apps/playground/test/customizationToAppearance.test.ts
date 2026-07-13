@@ -10,6 +10,7 @@ const STATE: CustomizationState = {
   hair: 'GEN_F_Hair_Long_A',
   beard: null,
   eyebrows: 'GEN_Eyebrows_Thin_A',
+  accessory: 'GOB_Piercing_A',
   horns: 'TIF_Horns_B',
   hornColorA: '#2b2230',
   hornColorB: '#8a6d5c',
@@ -21,6 +22,7 @@ const STATE: CustomizationState = {
   hairColor: '#3b2417',
   toon: true,
   nude: true,
+  skeleton: false,
 }
 
 describe('customizationToAppearance', () => {
@@ -34,6 +36,7 @@ describe('customizationToAppearance', () => {
       hair: 'GEN_F_Hair_Long_A',
       beard: null,
       eyebrows: 'GEN_Eyebrows_Thin_A',
+      accessory: 'GOB_Piercing_A',
       horns: 'TIF_Horns_B',
       skinColor: '#CE4C47',
       hairColor: '#3b2417',

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, reactive, watch, watchEffect } from 'vue'
+import { computed, reactive, ref, watch, watchEffect } from 'vue'
 import { useGLTF } from '@tresjs/cientos'
 import { BufferGeometry, Color, DataTexture, DoubleSide, EdgesGeometry, Float32BufferAttribute, Group, LineBasicMaterial, LineSegments, Mesh, MeshStandardMaterial, MeshToonMaterial, NearestFilter, RedFormat, Skeleton, SphereGeometry, SRGBColorSpace, TextureLoader, Vector3 } from 'three'
 import type { Bone, Material, Object3D, SkinnedMesh, Texture } from 'three'
-import { AnimationName, useCharacterAnimations } from '@artificer-forge/engine/runtime'
-import { BEARDS, BODIES, EYEBROWS, HAIR, HEADS, HORNS, RIGS } from '../utils/characterParts'
+import { AnimationName, useCharacterAnimations, type AnimationNameType } from '@artificer-forge/engine/runtime'
+import { ACCESSORIES, BEARDS, BODIES, EYEBROWS, HAIR, HEADS, HORNS, RIGS } from '../utils/characterParts'
 import { createHornMaterials, HORN_PATTERN_INDEX, type HornPattern } from '@artificer-forge/vfx'
 
 // Dumb renderer for the modular-character rebind approach. Loads the bare
@@ -27,6 +27,7 @@ const props = withDefaults(defineProps<{
   hair: string | null
   beard: string | null
   eyebrows: string | null
+  accessory?: string | null
   horns?: string | null
   armor?: ArmorPiece[]
   skinColor: string
@@ -37,17 +38,20 @@ const props = withDefaults(defineProps<{
   hornWeight?: number
   toon: boolean
   skeleton?: boolean
-}>(), { armor: () => [], horns: null, hornColorA: '#2b2230', hornColorB: '#8a6d5c', hornPattern: 'gradient', hornWeight: 0.5, skeleton: false })
+  // Preview animation clip (AnimationName value); unknown names no-op until
+  // the pack holding them loads.
+  animation?: string
+}>(), { armor: () => [], accessory: null, horns: null, hornColorA: '#2b2230', hornColorB: '#8a6d5c', hornPattern: 'gradient', hornWeight: 0.5, skeleton: false, animation: AnimationName.IDLE_A })
 
-type Slot = 'body' | 'head' | 'hair' | 'beard' | 'eyebrows' | 'horns'
-const SKINNED_SLOTS: Slot[] = ['body', 'hair', 'beard', 'eyebrows', 'horns']
+type Slot = 'body' | 'head' | 'hair' | 'beard' | 'eyebrows' | 'accessory' | 'horns'
+const SKINNED_SLOTS: Slot[] = ['body', 'hair', 'beard', 'eyebrows', 'accessory', 'horns']
 
 // --- Preload every manifest part up front (one useGLTF per asset, like the anim
 // packs). Armor assets come from item YAML (modular.assets) and load lazily on
 // first equip — their loaders join the same map.
 const rigLoaders = new Map(Object.entries(RIGS).map(([key, path]) => [key, useGLTF(path)]))
 const partLoaders = new Map<string, ReturnType<typeof useGLTF>>(
-  [...BODIES, ...HEADS, ...HAIR, ...BEARDS, ...EYEBROWS, ...HORNS].map(p => [p.id, useGLTF(p.path, { draco: true })]),
+  [...BODIES, ...HEADS, ...HAIR, ...BEARDS, ...EYEBROWS, ...HORNS, ...ACCESSORIES].map(p => [p.id, useGLTF(p.path, { draco: true })]),
 )
 
 function armorLoader(piece: ArmorPiece) {
@@ -148,8 +152,9 @@ watchEffect(() => {
 const mediumRoot = computed(() => rigRootOf('medium'))
 const smallRoot = computed(() => rigRootOf('small'))
 for (const anims of [useCharacterAnimations(mediumRoot, 'Medium'), useCharacterAnimations(smallRoot, 'Small')]) {
-  watch(() => Object.keys(anims.actions).length, (n) => {
-    if (n) anims.play(AnimationName.IDLE_A)
+  // Track pack loads too: a clip picked before its pack lands plays on retry.
+  watch([() => Object.keys(anims.actions).length, () => props.animation], ([n]) => {
+    if (n) anims.play(props.animation as AnimationNameType)
   }, { immediate: true })
 }
 
@@ -256,8 +261,13 @@ function applyLook(obj: Object3D, toon: boolean, skin: Color, hair: Color) {
 // Each prepared mesh is extracted from its source scene exactly once, rebound and
 // its materials set up. Re-selecting just re-adds the cached object.
 const prepared = new Map<string, Object3D>()
-const attached = reactive<Record<Slot, string | null>>({ body: null, head: null, hair: null, beard: null, eyebrows: null, horns: null })
+const attached = reactive<Record<Slot, string | null>>({ body: null, head: null, hair: null, beard: null, eyebrows: null, accessory: null, horns: null })
 const armorAttached = new Set<string>()
+// Bumped when an armor piece finishes its async load and attaches — the look
+// and atlas-tint effects track it, else a piece landing after the slots have
+// settled keeps its untinted clone (armorAttached is deliberately non-reactive
+// so the assembly effect doesn't re-trigger itself).
+const armorRevision = ref(0)
 
 // Rig (re)load/switch: rebind everything — prepared meshes are bound to the
 // previous skeleton's bones, so tear the assembly down and let the assembly
@@ -391,6 +401,7 @@ function syncArmor() {
     if (!obj) continue // asset not ready yet — watchEffect re-runs when it loads
     rigRoot.value!.add(obj)
     armorAttached.add(piece.id)
+    armorRevision.value++
   }
 }
 
@@ -432,8 +443,10 @@ watchEffect(() => {
   applyCoverage()
 })
 
-// Apply shading mode + tints to every attached part (re-runs on toon/color/slot change).
+// Apply shading mode + tints to every attached part (re-runs on toon/color/slot
+// change and when a late-loading armor piece attaches).
 watchEffect(() => {
+  void armorRevision.value
   const skin = new Color(props.skinColor)
   const hair = new Color(props.hairColor)
   const toon = props.toon
@@ -458,6 +471,7 @@ watchEffect(() => {
 
 // Apply each armor piece's palette-atlas tint (re-runs on tint change / attach).
 watchEffect(() => {
+  void armorRevision.value
   props.armor.forEach((piece) => {
     const obj = prepared.get(piece.id)
     if (obj) applyArmorTint(obj, piece.tint ? loadAtlas(piece.tint) : null)

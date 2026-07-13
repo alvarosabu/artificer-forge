@@ -5,7 +5,7 @@ import { reactive, shallowRef } from 'vue'
 // dataURL. Bakes are serialized (one GL context, one subject at a time) and
 // cached by key, so grids stay cheap regardless of how many parts they show.
 
-export type ThumbSlot = 'head' | 'hair' | 'beard' | 'eyebrows' | 'horns'
+export type ThumbSlot = 'head' | 'hair' | 'beard' | 'eyebrows' | 'accessory' | 'horns'
 
 export interface ThumbDescriptor {
   key: string // cache key — stable per (slot, part, base head)
