@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Object3D, Vector3 } from 'three'
-import { Character, Floor, Foliage, useGameStore, useSceneRefs } from '@artificer-forge/engine/runtime'
+import { Character, Floor, Foliage, Grass, useGameStore, useSceneRefs } from '@artificer-forge/engine/runtime'
 const references = [
   { position: [2, 0, -3] as [number, number, number], scale: 1.0 },
   { position: [-4, 0, 1] as [number, number, number], scale: 0.8 },
@@ -38,6 +38,11 @@ const { foliageColorA, foliageColorB } = useControls('foliage', {
   colorB: { value: '#d8cf3b', type: 'color' },
 }, { uuid })
 
+const { grassColorA, grassColorB } = useControls('grass', {
+  colorA: { value: '#b4b536', type: 'color' },
+  colorB: { value: '#d8cf3b', type: 'color' },
+}, { uuid })
+
 
 const { lightX, lightY, lightZ } = useControls('light', {
   x: { value: 5, type: 'number' },
@@ -69,10 +74,10 @@ onMounted(async () => {
     :key="entity.id"
     :entity-id="entity.id"
   />
-  <TresMesh :rotation-x="-Math.PI / 2" :position="[0, 0.01, 0]" receive-shadow>
+  <!-- <TresMesh :rotation-x="-Math.PI / 2" :position="[0, 0.01, 0]" receive-shadow>
     <TresPlaneGeometry :args="[20, 20]" />
     <TresMeshStandardMaterial />
-  </TresMesh>
+  </TresMesh> -->
   <Floor />
   <Foliage
     :references="references"
@@ -83,4 +88,5 @@ onMounted(async () => {
     :amount="80"
     :size="0.8"
   />
+  <Grass :subdivisions="200" :size="30" :color-a="grassColorA" :color-b="grassColorB" />
 </template>

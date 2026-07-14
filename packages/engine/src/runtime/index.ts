@@ -4,6 +4,8 @@
 export { default as Floor } from './components/Floor.vue'
 export { default as Foliage } from './components/foliage/Foliage.vue'
 export * from './components/foliage/foliage'
+export { default as Grass } from './components/grass/Grass.vue'
+export * from './components/grass/grass'
 
 // Stores
 export * from './stores/game'
