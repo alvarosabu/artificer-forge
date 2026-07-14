@@ -6,9 +6,11 @@ export { default as Foliage } from './components/foliage/Foliage.vue'
 export * from './components/foliage/foliage'
 export { default as Grass } from './components/grass/Grass.vue'
 export * from './components/grass/grass'
+export * from './components/wind/wind'
 
 // Stores
 export * from './stores/game'
+export * from './stores/environment'
 export * from './stores/damageTypes'
 export * from './stores/statusEffects'
 export * from './stores/surface'

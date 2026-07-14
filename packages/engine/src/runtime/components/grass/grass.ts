@@ -3,6 +3,7 @@ import { BufferAttribute, BufferGeometry, Color, DoubleSide, Sphere, Vector2, Ve
 import { atan, attribute, PI, cameraPosition, Fn, mix, mx_noise_float, rotateUV, step, uniform, uniformArray, varying, vec3, vertexIndex } from 'three/tsl'
 import { MeshBasicNodeMaterial } from 'three/webgpu'
 import type { ColorRepresentation, Node, UniformNode } from 'three/webgpu'
+import { createWindUniforms, windOffset, type WindSettings, type WindUniforms } from '../wind/wind'
 
 const bladeWidth = uniform(0.1)
 const bladeHeight = uniform(0.6)
@@ -14,7 +15,7 @@ const bladeShape = uniformArray<'vec2'>([
   new Vector2(-1, 0),
 ], 'vec2')
 
-export interface GrassOptions {
+export interface GrassOptions extends WindSettings {
     subdivisions: number
     size: number
     colorA: TresColor
@@ -55,10 +56,11 @@ export function createGrassGeometry(options: GrassOptions) {
   return geometry
 }
 
-export function buildGrassMaterial( options: { colorAUniform: UniformNode<'color', Color>, colorBUniform: UniformNode<'color', Color> } ): MeshBasicNodeMaterial {
+export function buildGrassMaterial( options: { colorAUniform: UniformNode<'color', Color>, colorBUniform: UniformNode<'color', Color>, windUniforms: WindUniforms } ): MeshBasicNodeMaterial {
     const material = new MeshBasicNodeMaterial()
     material.side = DoubleSide
-    const { colorAUniform, colorBUniform } = options
+    const { colorAUniform, colorBUniform, windUniforms } = options
+    const grassWindOffset = windOffset(windUniforms)
     const groundColor = Fn(([worldXZ]: [Node<'vec2'>]) => {
         const variation = mx_noise_float(worldXZ.mul(0.02)).mul(0.5).add(0.5)   // remap [-1,1] → [0,1]
         return mix(colorAUniform, colorBUniform, variation)
@@ -91,6 +93,14 @@ export function buildGrassMaterial( options: { colorAUniform: UniformNode<'color
         ).sub(PI.div(2))
         pos.xz.assign(rotateUV(pos.xz, angle, anchor))
 
+        // wind: tips only, taller blades sway more
+        const wind = grassWindOffset(anchor).mul(tipness).mul(height).mul(2).toVar()
+        pos.addAssign(vec3(wind.x, 0, wind.y))
+        // blades bend rather than stretch: drop the tip by the arc
+        // approximation |w|²/2h, clamped so extreme gusts don't flatten them
+        const droop = wind.dot(wind).div(height.mul(2)).min(height.mul(0.35))
+        pos.y.subAssign(droop.mul(tipness))
+
         return pos
     })()
     const shadowIntensity = uniform(0.5)
@@ -110,8 +120,9 @@ export function createGrass(options: GrassOptions) {
     const geometry = createGrassGeometry(options)
     const colorAUniform = uniform(new Color(options.colorA as ColorRepresentation))
     const colorBUniform = uniform(new Color(options.colorB as ColorRepresentation))
-    
-    const material = buildGrassMaterial({ colorAUniform, colorBUniform })
+    const windUniforms = createWindUniforms(options)
+
+    const material = buildGrassMaterial({ colorAUniform, colorBUniform, windUniforms })
     const uniforms = {
         bladeWidth,
         bladeHeight,
@@ -119,6 +130,7 @@ export function createGrass(options: GrassOptions) {
         bladeShape,
         colorA: colorAUniform,
         colorB: colorBUniform,
+        wind: windUniforms,
     }
     return { geometry, material, uniforms, dispose: () => {
         geometry.dispose()

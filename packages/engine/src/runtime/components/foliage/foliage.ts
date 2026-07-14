@@ -1,10 +1,11 @@
 import { TresColor } from "@tresjs/core"
 import { BufferGeometry, Color, DoubleSide, InstancedBufferAttribute, Object3D, PlaneGeometry, Quaternion, Spherical, StaticDrawUsage, Texture, Vector3 } from "three"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js"
-import { Fn, instance, mix, normalWorld, positionLocal, texture, uniform, uv, vec4 } from "three/tsl"
+import { Fn, instance, mix, normalWorld, positionLocal, rotateUV, texture, uniform, uv, vec2, vec4 } from "three/tsl"
 import { MeshStandardNodeMaterial } from "three/webgpu"
+import { createWindUniforms, windOffset, type WindSettings, type WindUniforms } from "../wind/wind"
 
-export interface FoliageOptions {
+export interface FoliageOptions extends WindSettings {
     references: Object3D[]
     amount: number
     size: number
@@ -114,15 +115,30 @@ function buildClusterGeometry(rng: () => number, amount: number, size: number): 
     return mergeGeometries(planes)
 }
 
+// Wind flutters the leaves by rotating the alpha-texture UVs (no positional
+// movement, keeps the cluster silhouette stable). Shadow pass keeps plain UVs.
+export function applyFoliageTexture(material: MeshStandardNodeMaterial, tex: Texture, wind: WindUniforms) {
+    const foliageWindOffset = windOffset(wind)
+    const rotatedUv = rotateUV(uv(), foliageWindOffset(positionLocal.xz).length().mul(2.2), vec2(0.5))
+    material.opacityNode = texture(tex, rotatedUv).r
+    material.castShadowNode = Fn(() => {
+        const alphaColor = texture(tex, uv()).r
+        alphaColor.lessThan(0.5).discard()
+        return vec4(0, 1, 1, 1)  // WebGPU shadow pass convention — not RGBA color
+    })()
+    material.needsUpdate = true
+}
+
 function buildFoliageMaterial(options: {
     colorAUniform: ReturnType<typeof uniform>,
     colorBUniform: ReturnType<typeof uniform>,
     lightingDirUniform: ReturnType<typeof uniform>,
     foliageTexture?: Texture | null,
     instanceMatrix: InstancedBufferAttribute,
+    windUniforms: WindUniforms,
 }) {
     const material = new MeshStandardNodeMaterial()
-    const { colorAUniform, colorBUniform, lightingDirUniform, foliageTexture, instanceMatrix } = options
+    const { colorAUniform, colorBUniform, lightingDirUniform, foliageTexture, instanceMatrix, windUniforms } = options
 
     material.side = DoubleSide
     material.depthWrite = true
@@ -148,15 +164,8 @@ function buildFoliageMaterial(options: {
       )
 
     if (foliageTexture) {
-        material.opacityNode = texture(foliageTexture, uv()).r
-        material.castShadowNode = Fn(() => {
-            const alphaColor = texture(foliageTexture!, uv()).r  // default UVs, no rotation
-            alphaColor.lessThan(0.5).discard()
-            return vec4(0, 1, 1, 1)  // WebGPU shadow pass convention — not RGBA color
-        })()
+        applyFoliageTexture(material, foliageTexture, windUniforms)
     }
-
-  
 
     return material
 }
@@ -182,6 +191,7 @@ export function createFoliage(options: FoliageOptions) {
     const colorAUniform = uniform(new Color(colorA as Color))
     const colorBUniform = uniform(new Color(colorB as Color))
     const lightingDirUniform = uniform((lightingDirection ?? DEFAULT_LIGHTING_DIR).clone())
+    const windUniforms = createWindUniforms(options)
 
     const material = buildFoliageMaterial({
         colorAUniform,
@@ -189,12 +199,13 @@ export function createFoliage(options: FoliageOptions) {
         lightingDirUniform,
         foliageTexture,
         instanceMatrix,
+        windUniforms,
     })
 
     return {
         geometry,
         material,
-        uniforms: { colorA: colorAUniform, colorB: colorBUniform, lightingDir: lightingDirUniform },
+        uniforms: { colorA: colorAUniform, colorB: colorBUniform, lightingDir: lightingDirUniform, wind: windUniforms },
         count: references.length,
         dispose: () => {
             geometry.dispose()

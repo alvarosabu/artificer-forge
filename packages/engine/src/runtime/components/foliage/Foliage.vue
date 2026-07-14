@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { watch } from 'vue'
 import { Color } from 'three'
-import { Fn, texture, uv, vec4 } from 'three/tsl'
-import { createFoliage, FoliageOptions } from './foliage'
+import { useLoop } from '@tresjs/core'
+import { applyFoliageTexture, createFoliage, FoliageOptions } from './foliage'
+import { DEFAULT_WIND_ANGLE, DEFAULT_WIND_STRENGTH } from '../wind/wind'
 
 const props = withDefaults(defineProps<FoliageOptions>(), {
     references: () => [],
@@ -11,6 +12,8 @@ const props = withDefaults(defineProps<FoliageOptions>(), {
     amount: 80,
     size: 0.8,
     seed: 'foliage',
+    windAngle: DEFAULT_WIND_ANGLE,
+    windStrength: DEFAULT_WIND_STRENGTH,
 })
 
 const { geometry, material, uniforms, count } = createFoliage(props)
@@ -18,17 +21,19 @@ const { geometry, material, uniforms, count } = createFoliage(props)
 watch(() => props.colorA, (val) => uniforms.colorA.value.set(new Color(val as Color)))
 watch(() => props.colorB, (val) => uniforms.colorB.value.set(new Color(val as Color)))
 watch(() => props.lightingDirection, (val) => { if (val) uniforms.lightingDir.value.copy(val) })
+watch(() => props.windAngle, (angle) => uniforms.wind.direction.value.set(Math.sin(angle), Math.cos(angle)))
+watch(() => props.windStrength, (val) => { uniforms.wind.strength.value = val })
 
 watch(() => props.foliageTexture, (tex) => {
     if (!tex) return
-    material.opacityNode = texture(tex, uv()).r
-    material.castShadowNode = Fn(() => {
-        const alphaColor = texture(tex, uv()).r  // default UVs, no rotation
-        alphaColor.lessThan(0.5).discard()
-        return vec4(0, 1, 1, 1)  // WebGPU shadow pass convention — not RGBA color
-    })()
-    material.needsUpdate = true
+    applyFoliageTexture(material, tex, uniforms.wind)
 }, { immediate: true, deep: true })
+
+// localTime accumulates scaled by strength so wind speed responds to the slider
+const { onBeforeRender } = useLoop()
+onBeforeRender(({ delta }) => {
+    uniforms.wind.localTime.value += delta * uniforms.wind.timeFrequency.value * uniforms.wind.strength.value
+})
 </script>
 
 <template>

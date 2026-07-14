@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Object3D, Vector3 } from 'three'
-import { Character, Floor, Foliage, Grass, useGameStore, useSceneRefs } from '@artificer-forge/engine/runtime'
+import { Character, Floor, Foliage, Grass, useEnvironmentStore, useGameStore, useSceneRefs } from '@artificer-forge/engine/runtime'
 const references = [
   { position: [2, 0, -3] as [number, number, number], scale: 1.0 },
   { position: [-4, 0, 1] as [number, number, number], scale: 0.8 },
@@ -43,6 +43,21 @@ const { grassColorA, grassColorB } = useControls('grass', {
   colorB: { value: '#d8cf3b', type: 'color' },
 }, { uuid })
 
+
+const environment = useEnvironmentStore()
+
+const { windAngle, windStrength, windVariability } = useControls('wind', {
+  angle: { value: environment.baseWindAngle, min: -Math.PI, max: Math.PI, step: 0.01, type: 'range' },
+  strength: { value: environment.baseWindStrength, min: 0, max: 1, step: 0.01, type: 'range' },
+  variability: { value: environment.windVariability, min: 0, max: 2, step: 0.01, type: 'range' },
+}, { uuid })
+
+watch(windAngle, (v) => environment.setWind({ angle: v }))
+watch(windStrength, (v) => environment.setWind({ strength: v }))
+watch(windVariability, (v) => environment.setWind({ variability: v }))
+
+const { onBeforeRender } = useLoop()
+onBeforeRender(({ delta }) => environment.tickWind(delta))
 
 const { lightX, lightY, lightZ } = useControls('light', {
   x: { value: 5, type: 'number' },
@@ -87,6 +102,15 @@ onMounted(async () => {
     :lighting-direction="lightingDirection"
     :amount="80"
     :size="0.8"
+    :wind-angle="environment.windAngle"
+    :wind-strength="environment.windStrength"
   />
-  <Grass :subdivisions="200" :size="30" :color-a="grassColorA" :color-b="grassColorB" />
+  <Grass
+    :subdivisions="200"
+    :size="30"
+    :color-a="grassColorA"
+    :color-b="grassColorB"
+    :wind-angle="environment.windAngle"
+    :wind-strength="environment.windStrength"
+  />
 </template>
