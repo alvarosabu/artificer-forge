@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createWindLineGeometry, remapClamp, windLineHandles } from './windLines'
+import { Color } from 'three'
+import { createWindLineGeometry, createWindLines, remapClamp, windLineHandles } from './windLines'
 
 describe('remapClamp', () => {
   it('maps midpoint linearly', () => {
@@ -42,5 +43,20 @@ describe('createWindLineGeometry', () => {
     expect(ratio.getX(pointCount * 2 - 1)).toBe(1)
     // (pointCount - 1) segments × 2 triangles × 3 indices
     expect(geometry.getIndex()!.count).toBe((pointCount - 1) * 6)
+  })
+})
+
+describe('createWindLines', () => {
+  it('builds a hidden pool sharing one geometry, one material per line', () => {
+    const { lines, uniforms, dispose } = createWindLines({ count: 3, color: '#ffffff', thickness: 0.1 })
+    expect(lines).toHaveLength(3)
+    expect(lines.every(l => !l.active && !l.mesh.visible)).toBe(true)
+    expect(lines.every(l => l.mesh.geometry === lines[0].mesh.geometry)).toBe(true)
+    expect(lines[0].mesh.material).not.toBe(lines[1].mesh.material)
+    expect(lines.every(l => l.progress.value === 0)).toBe(true)
+    expect(lines.every(l => l.mesh.renderOrder === 1)).toBe(true)
+    expect(uniforms.color.value).toEqual(new Color('#ffffff'))
+    expect(uniforms.thickness.value).toBe(0.1)
+    dispose()
   })
 })

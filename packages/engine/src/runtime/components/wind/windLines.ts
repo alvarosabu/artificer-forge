@@ -1,4 +1,8 @@
-import { BufferAttribute, BufferGeometry, CatmullRomCurve3, Vector3 } from 'three'
+import { TresColor } from '@tresjs/core'
+import { BufferAttribute, BufferGeometry, CatmullRomCurve3, Color, Mesh, Vector3 } from 'three'
+import { attribute, cameraProjectionMatrix, cameraViewMatrix, float, Fn, modelWorldMatrix, positionGeometry, uniform, vec3, vec4, vertexIndex } from 'three/tsl'
+import { MeshBasicNodeMaterial } from 'three/webgpu'
+import type { ColorRepresentation, UniformNode } from 'three/webgpu'
 
 export function remapClamp(v: number, inLo: number, inHi: number, outLo: number, outHi: number) {
   const t = Math.min(1, Math.max(0, (v - inLo) / (inHi - inLo)))
@@ -44,4 +48,77 @@ export function createWindLineGeometry(options: WindLineGeometryOptions = {}) {
   geometry.setAttribute('ratio', new BufferAttribute(ratios, 1))
   geometry.setIndex(new BufferAttribute(indices, 1))
   return geometry
+}
+
+// constant world-space extrusion tangent (diagonal up/back). Works for the
+// game's constrained camera; a free-orbit camera needs a screen-space offset.
+const RIBBON_TANGENT = vec3(0, 1, -1).normalize()
+
+export function createWindLineMaterial(options: { colorUniform: UniformNode<'color', Color>, thicknessUniform: UniformNode<'float', number> }) {
+  const progress = uniform(0)
+  const material = new MeshBasicNodeMaterial()
+  material.transparent = true
+  material.colorNode = options.colorUniform
+
+  material.vertexNode = Fn(() => {
+    const worldPosition = modelWorldMatrix.mul(vec4(positionGeometry, 1)).toVar()
+    const ratio = attribute<'float'>('ratio', 'float')
+
+    // taper: full thickness mid-line, zero at both ends
+    const baseThickness = ratio.sub(0.5).abs().mul(2).oneMinus().smoothstep(0, 1)
+    // traveling window: progress remapped to -1..2 so the ±1-wide window fully
+    // enters and exits the 0..1 ratio range (change width → re-derive remap)
+    const remappedProgress = progress.mul(3).sub(1)
+    const progressThickness = ratio.sub(remappedProgress).abs().oneMinus().smoothstep(0, 1)
+    const finalThickness = options.thicknessUniform.mul(baseThickness).mul(progressThickness)
+
+    // vertex parity picks the side: even → +0.5, odd → -0.5
+    const side = float(0.5).sub(vertexIndex.toFloat().mod(2))
+    worldPosition.addAssign(vec4(RIBBON_TANGENT.mul(side.mul(finalThickness)), 0))
+
+    return cameraProjectionMatrix.mul(cameraViewMatrix.mul(worldPosition))
+  })()
+
+  return { material, progress }
+}
+
+export interface WindLinesOptions extends WindLineGeometryOptions {
+  count?: number
+  color?: TresColor
+  thickness?: number
+}
+
+export interface WindLineInstance {
+  mesh: Mesh
+  progress: UniformNode<'float', number>
+  elapsed: number
+  duration: number
+  startX: number
+  startZ: number
+  angle: number
+  active: boolean
+}
+
+export function createWindLines(options: WindLinesOptions = {}) {
+  const { count = 4, color = '#ffffff', thickness = 0.1 } = options
+  const geometry = createWindLineGeometry(options)
+  const colorUniform = uniform(new Color(color as ColorRepresentation))
+  const thicknessUniform = uniform(thickness)
+
+  const lines: WindLineInstance[] = Array.from({ length: count }, () => {
+    const { material, progress } = createWindLineMaterial({ colorUniform, thicknessUniform })
+    const mesh = new Mesh(geometry, material)
+    mesh.visible = false
+    mesh.renderOrder = 1 // draw after opaques; alpha stays 1, thickness does the fading
+    return { mesh, progress, elapsed: 0, duration: 0, startX: 0, startZ: 0, angle: 0, active: false }
+  })
+
+  return {
+    lines,
+    uniforms: { color: colorUniform, thickness: thicknessUniform },
+    dispose: () => {
+      geometry.dispose()
+      for (const line of lines) (line.mesh.material as MeshBasicNodeMaterial).dispose()
+    },
+  }
 }
