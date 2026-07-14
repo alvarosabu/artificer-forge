@@ -122,3 +122,46 @@ export function createWindLines(options: WindLinesOptions = {}) {
     },
   }
 }
+
+export interface WindLineSpawnContext {
+  originX: number
+  originZ: number
+  radius: number
+  height: number
+  windAngle: number
+  intensity: number
+}
+
+// grabs the first idle line; a full pool drops the spawn (backpressure, no queue)
+export function spawnWindLine(lines: WindLineInstance[], ctx: WindLineSpawnContext, random: () => number = Math.random) {
+  const line = lines.find(l => !l.active)
+  if (!line) return false
+
+  // strong wind → fast streaks
+  line.duration = remapClamp(ctx.intensity, 0, 1, 8, 2)
+  line.elapsed = 0
+  line.angle = ctx.windAngle
+  line.startX = ctx.originX + (random() * 2 - 1) * ctx.radius
+  line.startZ = ctx.originZ + (random() * 2 - 1) * ctx.radius
+  line.mesh.position.set(line.startX, ctx.height, line.startZ)
+  line.mesh.rotation.y = ctx.windAngle
+  line.progress.value = 0
+  line.mesh.visible = true
+  line.active = true
+  return true
+}
+
+export function updateWindLines(lines: WindLineInstance[], delta: number, translation: number) {
+  for (const line of lines) {
+    if (!line.active) continue
+    line.elapsed += delta
+    const t = Math.min(1, line.elapsed / line.duration)
+    line.progress.value = t
+    line.mesh.position.x = line.startX + Math.sin(line.angle) * translation * t
+    line.mesh.position.z = line.startZ + Math.cos(line.angle) * translation * t
+    if (t >= 1) {
+      line.active = false
+      line.mesh.visible = false // zero thickness already hides it; this skips the draw call
+    }
+  }
+}
