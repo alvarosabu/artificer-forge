@@ -7,6 +7,8 @@ export * from './components/foliage/foliage'
 export { default as Grass } from './components/grass/Grass.vue'
 export * from './components/grass/grass'
 export * from './components/wind/wind'
+export { default as WindLines } from './components/wind/WindLines.vue'
+export * from './components/wind/windLines'
 
 // Stores
 export * from './stores/game'
