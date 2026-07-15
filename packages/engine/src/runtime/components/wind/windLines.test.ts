@@ -48,7 +48,7 @@ describe('createWindLineGeometry', () => {
 
 describe('createWindLines', () => {
   it('builds a hidden pool sharing one geometry, one material per line', () => {
-    const { lines, uniforms, dispose } = createWindLines({ count: 3, color: '#ffffff', thickness: 0.1 })
+    const { lines, uniforms, dispose } = createWindLines({ count: 3, color: '#ffffff', thickness: 0.1, opacity: 0.4 })
     expect(lines).toHaveLength(3)
     expect(lines.every(l => !l.active && !l.mesh.visible)).toBe(true)
     expect(lines.every(l => l.mesh.geometry === lines[0].mesh.geometry)).toBe(true)
@@ -57,6 +57,8 @@ describe('createWindLines', () => {
     expect(lines.every(l => l.mesh.renderOrder === 1)).toBe(true)
     expect(uniforms.color.value).toEqual(new Color('#ffffff'))
     expect(uniforms.thickness.value).toBe(0.1)
+    expect(uniforms.opacity.value).toBe(0.4)
+    expect(lines.every(l => (l.mesh.material as any).transparent)).toBe(true)
     dispose()
   })
 })

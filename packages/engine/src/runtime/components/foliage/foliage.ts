@@ -1,9 +1,10 @@
 import { TresColor } from "@tresjs/core"
 import { BufferGeometry, Color, DoubleSide, InstancedBufferAttribute, Object3D, PlaneGeometry, Quaternion, Spherical, StaticDrawUsage, Texture, Vector3 } from "three"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js"
-import { Fn, instance, mix, normalWorld, positionLocal, rotateUV, texture, uniform, uv, vec2, vec4 } from "three/tsl"
+import { Fn, instance, mix, normalWorld, positionLocal, rotateUV, texture, uniform, uv, vec2, vec3, vec4 } from "three/tsl"
 import { MeshStandardNodeMaterial } from "three/webgpu"
 import { createWindUniforms, windOffset, type WindSettings, type WindUniforms } from "../wind/wind"
+import { trampleUv, type TrampleMap } from "../trample/trample"
 
 export interface FoliageOptions extends WindSettings {
     references: Object3D[]
@@ -15,6 +16,7 @@ export interface FoliageOptions extends WindSettings {
     foliageTexture?: Texture | null
     lightingDirection?: Vector3
     cameraForward?: Vector3
+    trample?: TrampleMap | null
 }
 
 const DEFAULT_LIGHTING_DIR = new Vector3(1, 1, 0).normalize()
@@ -136,9 +138,10 @@ function buildFoliageMaterial(options: {
     foliageTexture?: Texture | null,
     instanceMatrix: InstancedBufferAttribute,
     windUniforms: WindUniforms,
+    trample?: TrampleMap | null,
 }) {
     const material = new MeshStandardNodeMaterial()
-    const { colorAUniform, colorBUniform, lightingDirUniform, foliageTexture, instanceMatrix, windUniforms } = options
+    const { colorAUniform, colorBUniform, lightingDirUniform, foliageTexture, instanceMatrix, windUniforms, trample } = options
 
     material.side = DoubleSide
     material.depthWrite = true
@@ -148,7 +151,14 @@ function buildFoliageMaterial(options: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     material.positionNode = Fn(({ object }: { object: any }) => {
         instance(object.count, instanceMatrix).toStack()
-        return positionLocal
+        if (!trample) return positionLocal
+        // instance() assigns the transform to positionLocal at build time, AFTER any
+        // statements authored here — so no toVar()/assign on it (a var would snapshot the
+        // pre-instance value). A pure expression evaluates at the output, post-instance,
+        // where xz is world space (instance matrices carry the world translation).
+        const trampleAmt = texture(trample.texture, trampleUv(trample.uniforms, positionLocal.xz)).r
+        // squash the cluster toward the ground (y=0: references sit at ground level) where trampled
+        return vec3(positionLocal.x, positionLocal.y.mul(trampleAmt.mul(0.6).oneMinus()), positionLocal.z)
     })()
 
     material.colorNode = Fn(() => {
@@ -181,6 +191,7 @@ export function createFoliage(options: FoliageOptions) {
         lightingDirection,
         seed,
         cameraForward = new Vector3(0, 0, -1),
+        trample,
     } = options
     const rng = mulberry32(hashSeed(seed || ''))
     const geometry = buildClusterGeometry(rng, amount, size)
@@ -200,6 +211,7 @@ export function createFoliage(options: FoliageOptions) {
         foliageTexture,
         instanceMatrix,
         windUniforms,
+        trample,
     })
 
     return {

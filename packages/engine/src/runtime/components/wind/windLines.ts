@@ -54,11 +54,12 @@ export function createWindLineGeometry(options: WindLineGeometryOptions = {}) {
 // game's constrained camera; a free-orbit camera needs a screen-space offset.
 const RIBBON_TANGENT = vec3(0, 1, -1).normalize()
 
-export function createWindLineMaterial(options: { colorUniform: UniformNode<'color', Color>, thicknessUniform: UniformNode<'float', number> }) {
+export function createWindLineMaterial(options: { colorUniform: UniformNode<'color', Color>, thicknessUniform: UniformNode<'float', number>, opacityUniform: UniformNode<'float', number> }) {
   const progress = uniform(0)
   const material = new MeshBasicNodeMaterial()
   material.transparent = true
   material.colorNode = options.colorUniform
+  material.opacityNode = options.opacityUniform
 
   material.vertexNode = Fn(() => {
     const worldPosition = modelWorldMatrix.mul(vec4(positionGeometry, 1)).toVar()
@@ -86,6 +87,7 @@ export interface WindLinesOptions extends WindLineGeometryOptions {
   count?: number
   color?: TresColor
   thickness?: number
+  opacity?: number
 }
 
 export interface WindLineInstance {
@@ -100,22 +102,23 @@ export interface WindLineInstance {
 }
 
 export function createWindLines(options: WindLinesOptions = {}) {
-  const { count = 4, color = '#ffffff', thickness = 0.1 } = options
+  const { count = 4, color = '#ffffff', thickness = 0.1, opacity = 0.35 } = options
   const geometry = createWindLineGeometry(options)
   const colorUniform = uniform(new Color(color as ColorRepresentation))
   const thicknessUniform = uniform(thickness)
+  const opacityUniform = uniform(opacity)
 
   const lines: WindLineInstance[] = Array.from({ length: count }, () => {
-    const { material, progress } = createWindLineMaterial({ colorUniform, thicknessUniform })
+    const { material, progress } = createWindLineMaterial({ colorUniform, thicknessUniform, opacityUniform })
     const mesh = new Mesh(geometry, material)
     mesh.visible = false
-    mesh.renderOrder = 1 // draw after opaques; alpha stays 1, thickness does the fading
+    mesh.renderOrder = 1 // draw after opaques; thickness does the travel fading, opacity is constant
     return { mesh, progress, elapsed: 0, duration: 0, startX: 0, startZ: 0, angle: 0, active: false }
   })
 
   return {
     lines,
-    uniforms: { color: colorUniform, thickness: thicknessUniform },
+    uniforms: { color: colorUniform, thickness: thicknessUniform, opacity: opacityUniform },
     dispose: () => {
       geometry.dispose()
       for (const line of lines) (line.mesh.material as MeshBasicNodeMaterial).dispose()

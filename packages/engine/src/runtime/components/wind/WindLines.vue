@@ -21,6 +21,7 @@ const props = withDefaults(defineProps<WindLinesProps>(), {
   count: 4,
   color: '#ffffff',
   thickness: 0.1,
+  opacity: 0.35,
   length: 10,
   handlesCount: 4,
   amplitude: 1,
@@ -40,6 +41,7 @@ const { lines, uniforms, dispose } = createWindLines(props)
 
 watch(() => props.color, val => uniforms.color.value.set(new Color(val as ColorRepresentation)))
 watch(() => props.thickness, (val) => { uniforms.thickness.value = val })
+watch(() => props.opacity, (val) => { uniforms.opacity.value = val })
 
 // recursive-setTimeout of the source becomes elapsed-time accumulation:
 // no timer to leak on unmount, pauses with the render loop

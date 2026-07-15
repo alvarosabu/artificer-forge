@@ -215,9 +215,15 @@ function detachFromHand(slot: 'mainHand' | 'offHand') {
   extraAttachments[slot] = null
 }
 
+// live position: the store only syncs on arrival, so trail/trample effects read this
+function getPosition() {
+  return characterRef.value?.position ?? null
+}
+
 defineExpose({
   play,
   stop,
+  getPosition,
   currentAnimName,
   actions,
   AnimationName,
