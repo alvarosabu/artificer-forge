@@ -48,6 +48,11 @@ export function createGradingContext(options: GradingContextOptions) {
       // core shadow ramp (stylizedOutput reads these)
       shadowEdgeLow: uniform(-0.25),
       shadowEdgeHigh: uniform(0.5),
+      // mid-tone zone (stylizedOutput's hasMidTone): sits between lit and core shadow
+      midEdgeLow: uniform(-0.7),
+      midEdgeHigh: uniform(-0.25),
+      // how far the mid tone leans toward the shadow color (0 = lit, 1 = shadow)
+      midStrength: uniform(0.45),
   }
 
   const dist = viewportUV.sub(uniforms.radialCenter).length()

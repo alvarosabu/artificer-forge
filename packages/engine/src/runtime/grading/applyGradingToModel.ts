@@ -30,7 +30,7 @@ export function applyGradingToModel(root: Object3D, grading: GradingContext) {
             const std = source as MeshStandardMaterial
             const tint = uniform(new Color(std.color ?? '#ffffff'))
             const baseColor = std.map ? texture(std.map).rgb.mul(tint) : tint
-            material.outputNode = stylizedOutput(baseColor, grading)
+            material.outputNode = stylizedOutput(baseColor, grading, { hasMidTone: true })
 
             graded.set(source, material)
         }

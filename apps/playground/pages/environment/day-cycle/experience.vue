@@ -100,6 +100,21 @@ watch(fogEnd!, (v) => { grading.uniforms.radialEnd.value = v })
 watch(fogSceneNear!, (v) => { grading.range.sceneNear = v })
 watch(fogSceneFar!, (v) => { grading.range.sceneFar = v })
 
+// ramp shape, not per-preset — drive the uniforms directly like the fog shape
+const { rampShadowLow, rampShadowHigh, rampMidLow, rampMidHigh, rampMidStrength } = useControls('shadow ramp', {
+  shadowLow: { value: -0.25, min: -1, max: 1, step: 0.01, type: 'range' },
+  shadowHigh: { value: 0.5, min: -1, max: 1, step: 0.01, type: 'range' },
+  midLow: { value: -0.7, min: -1, max: 1, step: 0.01, type: 'range' },
+  midHigh: { value: -0.25, min: -1, max: 1, step: 0.01, type: 'range' },
+  midStrength: { value: 0.45, min: 0, max: 1, step: 0.01, type: 'range' },
+}, { uuid })
+
+watch(rampShadowLow!, (v) => { grading.uniforms.shadowEdgeLow.value = v })
+watch(rampShadowHigh!, (v) => { grading.uniforms.shadowEdgeHigh.value = v })
+watch(rampMidLow!, (v) => { grading.uniforms.midEdgeLow.value = v })
+watch(rampMidHigh!, (v) => { grading.uniforms.midEdgeHigh.value = v })
+watch(rampMidStrength!, (v) => { grading.uniforms.midStrength.value = v })
+
 
 
 const { windAngle, windStrength, windVariability } = useControls('wind', {

@@ -5,6 +5,8 @@ import { GradingContext } from "./grading"
 export interface StylizedOutputOptions {
     hasFog?: boolean
     hasCoreShadows?: boolean
+    /** 3-zone ramp (lit / mid / shadow) instead of 2 — for smooth geometry that reads flat on two tones */
+    hasMidTone?: boolean
     /** world-space normal for the core shadow; defaults to normalWorld */
     normalNode?: Node<'vec3'>
     alphaNode?: Node<'float'>
@@ -20,7 +22,7 @@ export function stylizedOutput(baseColor: any, grading: GradingContext, options:
         alphaNode = float(1),
     } = options
     
-    const { lightColor, lightIntensity, lightDirection, shadowEdgeLow, shadowEdgeHigh, shadowColor } = grading.uniforms
+    const { lightColor, lightIntensity, lightDirection, shadowEdgeLow, shadowEdgeHigh, shadowColor, midEdgeLow, midEdgeHigh, midStrength } = grading.uniforms
 
     // Fn wrapper: discard() is a statement — it only registers on an active TSL stack
     return Fn(() => {
@@ -29,8 +31,14 @@ export function stylizedOutput(baseColor: any, grading: GradingContext, options:
 
         // core shadow: surfaces facing away from the light mix toward a COLOR, not darkness
         if (hasCoreShadows) {
-            const shadowMix = normalNode.dot(lightDirection).smoothstep(shadowEdgeLow, shadowEdgeHigh)
-            out = mix(out, baseColor.mul(shadowColor), shadowMix)
+            const facing = normalNode.dot(lightDirection)
+            const shadow = baseColor.mul(shadowColor)
+            if (options.hasMidTone) {
+                // half-shadow band between lit and core shadow — extra form on smooth geometry
+                const mid = mix(out, shadow, midStrength)
+                out = mix(out, mid, facing.smoothstep(midEdgeLow, midEdgeHigh))
+            }
+            out = mix(out, shadow, facing.smoothstep(shadowEdgeLow, shadowEdgeHigh))
         }
 
         if (hasFog) out = grading.fogStrength.mix(out, grading.fogColor)
