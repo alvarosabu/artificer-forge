@@ -2,7 +2,7 @@
 import { watch } from 'vue'
 import { Color } from 'three'
 import { useLoop } from '@tresjs/core'
-import { applyFoliageTexture, createFoliage, FoliageOptions } from './foliage'
+import { createFoliage, FoliageOptions } from './foliage'
 import { DEFAULT_WIND_ANGLE, DEFAULT_WIND_STRENGTH } from '../wind/wind'
 
 const props = withDefaults(defineProps<FoliageOptions>(), {
@@ -16,7 +16,7 @@ const props = withDefaults(defineProps<FoliageOptions>(), {
     windStrength: DEFAULT_WIND_STRENGTH,
 })
 
-const { geometry, material, uniforms, count } = createFoliage(props)
+const { geometry, material, uniforms, count, setTexture } = createFoliage(props)
 
 watch(() => props.colorA, (val) => uniforms.colorA.value.set(new Color(val as Color)))
 watch(() => props.colorB, (val) => uniforms.colorB.value.set(new Color(val as Color)))
@@ -26,7 +26,7 @@ watch(() => props.windStrength, (val) => { uniforms.wind.strength.value = val })
 
 watch(() => props.foliageTexture, (tex) => {
     if (!tex) return
-    applyFoliageTexture(material, tex, uniforms.wind)
+    setTexture(tex)
 }, { immediate: true, deep: true })
 
 // localTime accumulates scaled by strength so wind speed responds to the slider

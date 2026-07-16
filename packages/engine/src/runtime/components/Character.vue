@@ -15,6 +15,8 @@ import { useStatusEffectParticles } from '../useStatusEffectParticles'
 import { useStatusEffectAnimations } from '../useStatusEffectAnimations'
 import { useStatusEffectTexts } from '../useStatusEffectTexts'
 import { usePortraitRenderer } from '../portrait/usePortraitRenderer'
+import type { GradingContext } from '../grading/grading'
+import { applyGradingToModel } from '../grading/applyGradingToModel'
 import { useCombatStore } from '../stores/combat'
 import { useGameStore } from '../stores/game'
 import Nameplate from './Nameplate.vue'
@@ -26,8 +28,11 @@ const combatStore = useCombatStore()
 
 const props = withDefaults(defineProps<{
   entityId: string
+  /** opt-in stylized grading (the trample pattern): swaps GLB materials for the graded finish */
+  grading?: GradingContext | null
 }>(), {
   entityId: '',
+  grading: null,
 })
 
 const gameStore = useGameStore()
@@ -56,7 +61,11 @@ const maxArmor = computed(() => gameStore.derivedMaxArmor(props.entityId))
 const { activeWeaponSlot } = useActionBar()
 const isLeader = computed(() => gameStore.party.leader === props.entityId)
 const effectiveWeaponSlot = computed<'mainHand' | 'offHand' | 'none' | undefined>(() => isLeader.value ? activeWeaponSlot.value : undefined)
-useEquipment(rig, equipment, effectiveWeaponSlot)
+useEquipment(rig, equipment, effectiveWeaponSlot, {
+  onAttach: (object) => {
+    if (props.grading) applyGradingToModel(object, props.grading)
+  },
+})
 useStatusEffectOverlay(rig, computed(() => props.entityId))
 useStatusEffectParticles(rig, computed(() => props.entityId))
 useStatusEffectAnimations(computed(() => props.entityId), play)
@@ -110,6 +119,8 @@ watch(rig, (rigValue) => {
         child.castShadow = true
       }
     })
+    // before the ghost-arm watch below, so its material override wins
+    if (props.grading) applyGradingToModel(rigValue, props.grading)
   }
 }, { immediate: true })
 

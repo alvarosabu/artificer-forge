@@ -2,10 +2,10 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { DEFAULT_WIND_ANGLE, DEFAULT_WIND_STRENGTH } from '../components/wind/wind'
 import { Color, Vector3 } from 'three'
-import { GradingProps } from '../grading/grading'
+import type { GradingProps } from '../grading/grading'
 
 /**
- * Global environment state (wind now, fog/time-of-day/rain later).
+ * Global environment state (wind + grading now, rain later).
  * Smart layers (experiences, weather systems) write here; scene components
  * stay dumb and receive these values as props.
  *
@@ -80,5 +80,14 @@ export const useEnvironmentStore = defineStore('environment', () => {
         windVariability,
         setWind,
         tickWind,
+        lightDirection,
+        lightColor,
+        lightIntensity,
+        shadowColor,
+        fogColorA,
+        fogColorB,
+        fogNearRatio,
+        fogFarRatio,
+        setGrading,
     }
 })

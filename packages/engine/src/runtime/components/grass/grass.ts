@@ -6,6 +6,8 @@ import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js'
 import type { ColorRepresentation, TextureNode, UniformNode } from 'three/webgpu'
 import { createWindUniforms, windOffset, type WindSettings, type WindUniforms } from '../wind/wind'
 import { trampleUv, type TrampleMap } from '../../trample/trample'
+import type { GradingContext } from '../../grading/grading'
+import { stylizedOutput } from '../../grading/stylizedOutput'
 
 const bladeWidth = uniform(0.1)
 const bladeHeight = uniform(0.6)
@@ -31,6 +33,7 @@ export interface GrassOptions extends WindSettings {
     colorB: TresColor
     diffuseMap?: Texture | null
     trample?: TrampleMap | null
+    grading?: GradingContext | null
 }
 
 export function createGrassGeometry(options: GrassOptions) {
@@ -75,10 +78,17 @@ export function createGrassGeometry(options: GrassOptions) {
   return geometry
 }
 
-export function buildGrassMaterial(options: { colorAUniform: UniformNode<'color', Color>, colorBUniform: UniformNode<'color', Color>, windUniforms: WindUniforms, diffuseMapNode?: TextureNode | null, trample?: TrampleMap | null }): MeshBasicNodeMaterial {
+export function buildGrassMaterial(options: { 
+  colorAUniform: UniformNode<'color', Color>, 
+  colorBUniform: UniformNode<'color', Color>, 
+  windUniforms: WindUniforms, 
+  diffuseMapNode?: TextureNode | null, 
+  trample?: TrampleMap | null,
+  grading?: GradingContext | null
+}): MeshBasicNodeMaterial {
     const material = new MeshBasicNodeMaterial()
     material.side = DoubleSide
-    const { colorAUniform, colorBUniform, windUniforms, diffuseMapNode, trample } = options
+    const { colorAUniform, colorBUniform, windUniforms, diffuseMapNode, trample, grading } = options
     const grassWindOffset = windOffset(windUniforms)
 
     const anchor = attribute<'vec2'>('anchor', 'vec2')
@@ -133,12 +143,21 @@ export function buildGrassMaterial(options: { colorAUniform: UniformNode<'color'
         return pos
     })()
 
-    material.colorNode = Fn(() => {
-        // sampled at the anchor only → constant across the blade (flat color per blade)
-        const base = varying(diffuseMapNode ?? groundColor)
-        const ao = varying(windWeight).oneMinus().mul(shadowIntensity)
-        return mix(base, base.mul(0.35), ao)  // 0.35 = shadow darkness, tune in leches
-    })()
+    const baseColor = Fn(() => {
+      // sampled at the anchor only → constant across the blade (flat color per blade)
+      const base = varying(diffuseMapNode ? diffuseMapNode.rgb : groundColor)
+      const ao = varying(windWeight).oneMinus().mul(shadowIntensity)
+      return mix(base, base.mul(0.35), ao)  // 0.35 = shadow darkness, tune in leches
+  })()
+
+    if (grading) {
+        // blade normals after wind/trample bending are noisy — skip core shadows,
+        // the baked AO above already grounds the blades. Revisit by eye.
+        material.outputNode = stylizedOutput(baseColor, grading, { hasCoreShadows: false })
+    }
+    else {
+        material.colorNode = baseColor
+    }
     return material
 }
 
@@ -153,7 +172,7 @@ export function createGrass(options: GrassOptions) {
       ? texture(options.diffuseMap, attribute<'vec2'>('anchor', 'vec2').div(options.size).add(0.5))
       : null
 
-    const material = buildGrassMaterial({ colorAUniform, colorBUniform, windUniforms, diffuseMapNode, trample: options.trample })
+    const material = buildGrassMaterial({ colorAUniform, colorBUniform, windUniforms, diffuseMapNode, trample: options.trample, grading: options.grading })
     const uniforms = {
         bladeWidth,
         bladeHeight,
@@ -163,6 +182,7 @@ export function createGrass(options: GrassOptions) {
         colorB: colorBUniform,
         diffuseMap: diffuseMapNode,
         wind: windUniforms,
+        grading: options.grading,
     }
     return { geometry, material, uniforms, dispose: () => {
         geometry.dispose()

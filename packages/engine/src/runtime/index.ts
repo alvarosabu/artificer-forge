@@ -10,6 +10,10 @@ export * from './trample/trample'
 export * from './components/wind/wind'
 export { default as WindLines } from './components/wind/WindLines.vue'
 export * from './components/wind/windLines'
+export * from './grading/grading'
+export * from './grading/presetTrack'
+export * from './grading/stylizedOutput'
+export * from './grading/applyGradingToModel'
 
 // Stores
 export * from './stores/game'

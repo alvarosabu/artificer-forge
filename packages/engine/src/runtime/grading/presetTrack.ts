@@ -2,25 +2,26 @@ import { Color, Vector3 } from 'three'
 
 type PresetValue = Color | Vector3 | number
 export type Preset = Record<string, PresetValue>
+/** constraint that also accepts interfaces like GradingProps (no index signature required, unlike Preset) */
+type PresetLike<T> = { [K in keyof T]: PresetValue }
 
 function wrap01(v: number) {
   return ((v % 1) + 1) % 1
 }
 
-function clonePreset<T extends Preset>(a: T): T {
+function clonePreset<T extends PresetLike<T>>(a: T): T {
   const out = {} as Record<string, PresetValue>
-  for (const key in a) {
-    const v = a[key]
+  for (const [key, v] of Object.entries<PresetValue>(a)) {
     out[key] = typeof v === 'number' ? v : v.clone()
   }
   return out as T
 }
 
-export function lerpPresets<T extends Preset>(a: T, b: T, t: number, target: T = clonePreset(a)): T {
+export function lerpPresets<T extends PresetLike<T>>(a: T, b: T, t: number, target: T = clonePreset(a)): T {
+  const br = b as Record<string, PresetValue>
   const out = target as Record<string, PresetValue>
-  for (const key in a) {
-    const va = a[key]
-    const vb = b[key]
+  for (const [key, va] of Object.entries<PresetValue>(a)) {
+    const vb = br[key]!
     if (typeof va === 'number') out[key] = va + ((vb as number) - va) * t
     else if (va instanceof Color) (out[key] as Color).lerpColors(va, vb as Color, t)
     else (out[key] as Vector3).lerpVectors(va, vb as Vector3, t)
@@ -32,25 +33,25 @@ export function lerpPresets<T extends Preset>(a: T, b: T, t: number, target: T =
  * Interpolates presets along a 0-1 loop. Knows nothing about day or night:
  * a weather system or a dungeon mood track uses the exact same primitive.
  */
-export function createPresetTrack<T extends Preset>(presets: T[], stops: number[]) {
+export function createPresetTrack<T extends PresetLike<T>>(presets: T[], stops: number[]) {
   if (presets.length === 0 || presets.length !== stops.length)
     throw new Error('presets/stops must be same non-zero length')
   for (let i = 1; i < stops.length; i++) {
-    if (stops[i] <= stops[i - 1]) throw new Error('stops must be strictly ascending')
+    if (stops[i]! <= stops[i - 1]!) throw new Error('stops must be strictly ascending')
   }
-  if (stops[0] < 0 || stops[stops.length - 1] >= 1) throw new Error('stops must be within [0, 1)')
+  if (stops[0]! < 0 || stops[stops.length - 1]! >= 1) throw new Error('stops must be within [0, 1)')
 
   function sample(phase: number, target?: T): T {
     const p = wrap01(phase)
     // segment start: last stop <= p, else the last segment wraps around
     let i = stops.length - 1
     for (let s = 0; s < stops.length; s++) {
-      if (stops[s] <= p) i = s
+      if (stops[s]! <= p) i = s
     }
     const j = (i + 1) % stops.length
-    const span = wrap01(stops[j] - stops[i]) || 1 // single-preset track → span 1
-    const t = wrap01(p - stops[i]) / span
-    return lerpPresets(presets[i], presets[j], t, target)
+    const span = wrap01(stops[j]! - stops[i]!) || 1 // single-preset track → span 1
+    const t = wrap01(p - stops[i]!) / span
+    return lerpPresets(presets[i]!, presets[j]!, t, target)
   }
 
   return { sample }
