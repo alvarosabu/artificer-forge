@@ -4,7 +4,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { Fn, instance, mix, normalWorld, positionLocal, rotateUV, texture, uniform, uv, vec2, vec3, vec4 } from "three/tsl"
 import { MeshStandardNodeMaterial } from "three/webgpu"
 import { createWindUniforms, windOffset, type WindSettings, type WindUniforms } from "../wind/wind"
-import { trampleUv, type TrampleMap } from "../trample/trample"
+import { trampleUv, type TrampleMap } from "../../trample/trample"
 
 export interface FoliageOptions extends WindSettings {
     references: Object3D[]

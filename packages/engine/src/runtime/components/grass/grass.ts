@@ -5,7 +5,7 @@ import { MeshBasicNodeMaterial } from 'three/webgpu'
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js'
 import type { ColorRepresentation, TextureNode, UniformNode } from 'three/webgpu'
 import { createWindUniforms, windOffset, type WindSettings, type WindUniforms } from '../wind/wind'
-import { trampleUv, type TrampleMap } from '../trample/trample'
+import { trampleUv, type TrampleMap } from '../../trample/trample'
 
 const bladeWidth = uniform(0.1)
 const bladeHeight = uniform(0.6)

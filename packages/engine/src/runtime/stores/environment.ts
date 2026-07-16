@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { DEFAULT_WIND_ANGLE, DEFAULT_WIND_STRENGTH } from '../components/wind/wind'
+import { Color, Vector3 } from 'three'
+import { GradingProps } from '../grading/grading'
 
 /**
  * Global environment state (wind now, fog/time-of-day/rain later).
@@ -14,15 +16,36 @@ import { DEFAULT_WIND_ANGLE, DEFAULT_WIND_STRENGTH } from '../components/wind/wi
  * windVariability to 0) for static wind.
  */
 export const useEnvironmentStore = defineStore('environment', () => {
+    // Wind
     const windAngle = ref(DEFAULT_WIND_ANGLE)
     const windStrength = ref(DEFAULT_WIND_STRENGTH)
-
     const baseWindAngle = ref(DEFAULT_WIND_ANGLE)
     const baseWindStrength = ref(DEFAULT_WIND_STRENGTH)
     const windVariability = ref(1)
-
     let windTime = 0
 
+    // Grading
+    const lightDirection = ref(new Vector3(-1, -1, -1).normalize())
+    const lightColor = ref(new Color('#ffffff'))
+    const lightIntensity = ref(1)
+    const shadowColor = ref(new Color('#000000'))
+    const fogColorA = ref(new Color('#88aaff'))
+    const fogColorB = ref(new Color('#4455aa'))
+    const fogNearRatio = ref(0.3)
+    const fogFarRatio = ref(1)
+
+    function setGrading(props: Partial<GradingProps>) {
+
+        if (props.lightDirection) lightDirection.value.copy(props.lightDirection)
+        if (props.lightColor) lightColor.value.copy(props.lightColor)
+        if (props.lightIntensity !== undefined) lightIntensity.value = props.lightIntensity
+        if (props.shadowColor) shadowColor.value.copy(props.shadowColor)
+        if (props.fogColorA) fogColorA.value.copy(props.fogColorA)
+        if (props.fogColorB) fogColorB.value.copy(props.fogColorB)
+        if (props.fogNearRatio !== undefined) fogNearRatio.value = props.fogNearRatio
+        if (props.fogFarRatio !== undefined) fogFarRatio.value = props.fogFarRatio
+    }
+    
     function setWind(settings: { angle?: number, strength?: number, variability?: number }) {
         if (settings.angle !== undefined) {
             baseWindAngle.value = settings.angle
