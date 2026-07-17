@@ -3,7 +3,7 @@ import { watch } from 'vue'
 import { Color } from 'three'
 import { useLoop } from '@tresjs/core'
 import { createFoliage, FoliageOptions } from './foliage'
-import { DEFAULT_WIND_ANGLE, DEFAULT_WIND_STRENGTH } from '../wind/wind'
+import { advanceWindTime, DEFAULT_WIND_ANGLE, DEFAULT_WIND_STRENGTH } from '../wind/wind'
 
 const props = withDefaults(defineProps<FoliageOptions>(), {
     references: () => [],
@@ -29,11 +29,8 @@ watch(() => props.foliageTexture, (tex) => {
     setTexture(tex)
 }, { immediate: true, deep: true })
 
-// localTime accumulates scaled by strength so wind speed responds to the slider
 const { onBeforeRender } = useLoop()
-onBeforeRender(({ delta }) => {
-    uniforms.wind.localTime.value += delta * uniforms.wind.timeFrequency.value * uniforms.wind.strength.value
-})
+onBeforeRender(({ delta }) => advanceWindTime(uniforms.wind, delta))
 </script>
 
 <template>

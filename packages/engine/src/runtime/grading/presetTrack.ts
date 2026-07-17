@@ -5,7 +5,7 @@ export type Preset = Record<string, PresetValue>
 /** constraint that also accepts interfaces like GradingProps (no index signature required, unlike Preset) */
 type PresetLike<T> = { [K in keyof T]: PresetValue }
 
-function wrap01(v: number) {
+export function wrap01(v: number) {
   return ((v % 1) + 1) % 1
 }
 

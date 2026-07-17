@@ -29,10 +29,6 @@ const characterEntities = computed(() => {
 
 const { state: foliageTexture } = useTexture('/textures/foliage/foliage.png')
 
-watch(foliageTexture, (tex) => {
-  console.log('[Experience] watch fired, tex:', tex)
-}, { immediate: true, deep: true })
-
 const { uuid } = useSharedLechesControls()
 
 const { foliageColorA, foliageColorB } = useControls('foliage', {
@@ -170,10 +166,6 @@ onMounted(async () => {
     :key="entity.id"
     :entity-id="entity.id"
   />
-  <!-- <TresMesh :rotation-x="-Math.PI / 2" :position="[0, 0.01, 0]" receive-shadow>
-    <TresPlaneGeometry :args="[20, 20]" />
-    <TresMeshStandardMaterial />
-  </TresMesh> -->
   <Floor />
   <Foliage
     :references="references"

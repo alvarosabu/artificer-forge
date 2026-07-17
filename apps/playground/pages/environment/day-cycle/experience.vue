@@ -4,7 +4,7 @@ import { until } from '@vueuse/core'
 import { Object3D, SRGBColorSpace } from 'three'
 import type { AmbientLight, AnimationAction, DirectionalLight } from 'three'
 import { AnimationName, Character, createGradingContext, createTrampleMap, Floor, Foliage, Grass, useEnvironmentStore, useGameStore, useSceneRefs, WindLines } from '@artificer-forge/engine/runtime'
-import type { DayCycleName } from '~/utils/dayCiclePresets'
+import type { DayCycleName } from '~/utils/dayCyclePresets'
 
 
 const references = [
@@ -31,10 +31,6 @@ const characterEntities = computed(() => {
 })
 
 const { state: foliageTexture } = useTexture('/textures/foliage/foliage.png')
-
-watch(foliageTexture, (tex) => {
-  console.log('[Experience] watch fired, tex:', tex)
-}, { immediate: true, deep: true })
 
 const { uuid } = useSharedLechesControls()
 
@@ -310,10 +306,6 @@ onMounted(async () => {
     :entity-id="entity.id"
     :grading="grading"
   />
-  <!-- <TresMesh :rotation-x="-Math.PI / 2" :position="[0, 0.01, 0]" receive-shadow>
-    <TresPlaneGeometry :args="[20, 20]" />
-    <TresMeshStandardMaterial />
-  </TresMesh> -->
   <Floor :grading="grading" />
   <Foliage
     :references="references"

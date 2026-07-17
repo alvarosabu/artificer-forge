@@ -1,6 +1,6 @@
 import { Spherical } from "three"
-import { createPhaseTween, createPresetTrack, useEnvironmentStore, type GradingProps } from "@artificer-forge/engine/runtime"
-import { DAY_CYCLE_NAMES, DAY_CYCLE_STOPS, DAY_CYCLE_TRACK, type DayCycleName } from "~/utils/dayCiclePresets"
+import { createPhaseTween, createPresetTrack, useEnvironmentStore, wrap01, type GradingProps } from "@artificer-forge/engine/runtime"
+import { DAY_CYCLE_NAMES, DAY_CYCLE_STOPS, DAY_CYCLE_TRACK, type DayCycleName } from "~/utils/dayCyclePresets"
 
 // sun peaks (lowest phi) at phase 0, the day stop: cos(-(0 + 0.5) * 2π) = -1
 const SUN_PHASE_OFFSET = 0.5
@@ -57,7 +57,7 @@ export function useDayCycle() {
         const next = tween.tick(delta)
         // manual transitions win; auto resumes from wherever the tween landed
         if (next !== null) phase.value = next
-        else if (auto.running) phase.value = ((phase.value + delta / auto.duration) % 1 + 1) % 1
+        else if (auto.running) phase.value = wrap01(phase.value + delta / auto.duration)
         // sample every frame (cheap) so manual scrubbing works without a tween
         track.sample(phase.value, current)
         updateSun() // AFTER sample: the orbit overrides the presets' lightDirection

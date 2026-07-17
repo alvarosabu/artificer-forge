@@ -25,6 +25,11 @@ export function createWindUniforms(settings: WindSettings = {}) {
 
 export type WindUniforms = ReturnType<typeof createWindUniforms>
 
+// localTime accumulates scaled by strength so wind speed responds to the slider
+export function advanceWindTime(wind: WindUniforms, delta: number) {
+    wind.localTime.value += delta * wind.timeFrequency.value * wind.strength.value
+}
+
 // 2 octaves of scrolled perlin. mx_noise_float is already centered on 0,
 // so no [0,1] → [-0.5,0.5] remap. Octaves MUST keep different frequencies
 // and time scales (0.2/1× vs 0.1/0.2×) or the wind reads as one marching wave.
