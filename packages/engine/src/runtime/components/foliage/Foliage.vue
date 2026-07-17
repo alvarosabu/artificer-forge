@@ -40,6 +40,7 @@ onBeforeRender(({ delta }) => {
     <TresInstancedMesh
         :args="[geometry, material, count]"
         cast-shadow
+        receive-shadow
         :frustum-culled="false"
     />
 </template>

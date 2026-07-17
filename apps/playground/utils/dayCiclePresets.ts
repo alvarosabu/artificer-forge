@@ -4,7 +4,8 @@ import type { GradingProps } from '@artificer-forge/engine/runtime'
 export const DAY_CYCLE_NAMES = ['day', 'dusk', 'night', 'dawn'] as const
 export type DayCycleName = typeof DAY_CYCLE_NAMES[number]
 
-export const DAY_CYCLE_STOPS = [0, 0.25, 0.5, 0.75]
+// canonical phase for jumping to a named look (start of its plateau/keyframe)
+export const DAY_CYCLE_STOPS = [0, 0.25, 0.35, 0.8]
 
 const sun = new Vector3(-1, -1, -1).normalize()
 
@@ -50,3 +51,12 @@ export const dayCyclePresets: GradingProps[] = [
         fogFarRatio: 1.25,
     },
 ]
+
+// Bruno's keyframe shape: day and night are HELD (repeated at two stops) so an
+// auto loop dwells on the stable looks instead of spending it all mid-lerp.
+// Repeated entries reference the SAME preset object — live edits stay in sync
+const [day, dusk, night, dawn] = dayCyclePresets as [GradingProps, GradingProps, GradingProps, GradingProps]
+export const DAY_CYCLE_TRACK = {
+    presets: [day, day, dusk, night, night, dawn, day],
+    stops: [0, 0.15, 0.25, 0.35, 0.6, 0.8, 0.9],
+}

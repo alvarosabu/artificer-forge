@@ -5,6 +5,8 @@ import { GradingContext } from "./grading"
 export interface StylizedOutputOptions {
     hasFog?: boolean
     hasCoreShadows?: boolean
+    /** catched shadow-map factor from createDropShadowCatcher (1 = lit, 0 = shadowed) — folds into the shadow band */
+    dropShadowNode?: Node<'float'>
     /** 3-zone ramp (lit / mid / shadow) instead of 2 — for smooth geometry that reads flat on two tones */
     hasMidTone?: boolean
     /** fresnel rim light tinted by lightColor — BOTW-style silhouette pop */
@@ -13,9 +15,31 @@ export interface StylizedOutputOptions {
     hasSpecular?: boolean
     /** world-space normal for the core shadow; defaults to normalWorld */
     normalNode?: Node<'vec3'>
+    /** occlusion term, 1 = open / 0 = occluded — folds into the shadow band (tints toward shadowColor, never black) */
+    aoNode?: Node<'float'>
     alphaNode?: Node<'float'>
     /** discard threshold applied AFTER fog (cutout edges must not pop against fog) */
     alphaTest?: number
+}
+
+/**
+ * Shadow-map catcher: assign `receivedShadowNode` to the material and pass
+ * `shadowFactor` as stylizedOutput's dropShadowNode. Shadow sampling only runs
+ * inside a LIT material's lighting pipeline, so adopters must be
+ * MeshLambertNodeMaterial — the lambert lighting result itself is discarded by
+ * the finish's outputNode; the material is lit ONLY so this catcher executes.
+ * Returning 1 neutralizes the built-in black multiply; the finish re-applies
+ * the shadow as a tint toward shadowColor instead.
+ */
+export function createDropShadowCatcher() {
+    const shadowFactor = float(1).toVar()
+    return {
+        shadowFactor,
+        receivedShadowNode: Fn(([shadow]: [any]) => {
+            shadowFactor.mulAssign(shadow.r)
+            return float(1)
+        }),
+    }
 }
 
 export function stylizedOutput(baseColor: any, grading: GradingContext, options: StylizedOutputOptions = {}): Node<'vec4'> {
@@ -26,7 +50,7 @@ export function stylizedOutput(baseColor: any, grading: GradingContext, options:
         alphaNode = float(1),
     } = options
     
-    const { lightColor, lightIntensity, lightDirection, shadowEdgeLow, shadowEdgeHigh, shadowColor, midEdgeLow, midEdgeHigh, midStrength, rimStrength, rimPower, specStrength, specShininess, rampHardness } = grading.uniforms
+    const { lightColor, lightIntensity, lightDirection, shadowEdgeLow, shadowEdgeHigh, shadowColor, midEdgeLow, midEdgeHigh, midStrength, rimStrength, rimPower, specStrength, specShininess, rampHardness, aoStrength } = grading.uniforms
 
     // Fn wrapper: discard() is a statement — it only registers on an active TSL stack
     return Fn(() => {
@@ -38,12 +62,17 @@ export function stylizedOutput(baseColor: any, grading: GradingContext, options:
         // center (Wind Waker cel) — uniform-driven so it tunes live, no rebuild
         const ramp = (low: Node<'float'>, high: Node<'float'>) =>
             mix(facing.smoothstep(low, high), step(low.add(high).mul(0.5), facing), rampHardness)
-        const shadowMix = ramp(shadowEdgeLow, shadowEdgeHigh)
+        let shadowMix = hasCoreShadows ? ramp(shadowEdgeLow, shadowEdgeHigh) : float(0)
+        // fake AO: occluded pixels fall into the SAME shadow band — palette stays
+        // two-tone and AO re-grades with the cycle (a black multiply wouldn't)
+        if (options.aoNode) shadowMix = shadowMix.max(options.aoNode.oneMinus().mul(aoStrength))
+        // drop shadows (shadow map) join the same band — cast shadows match core shadows
+        if (options.dropShadowNode) shadowMix = shadowMix.max(options.dropShadowNode.oneMinus())
 
         // core shadow: surfaces facing away from the light mix toward a COLOR, not darkness
-        if (hasCoreShadows) {
+        if (hasCoreShadows || options.aoNode || options.dropShadowNode) {
             const shadow = baseColor.mul(shadowColor)
-            if (options.hasMidTone) {
+            if (hasCoreShadows && options.hasMidTone) {
                 // half-shadow band between lit and core shadow — extra form on smooth geometry
                 const mid = mix(out, shadow, midStrength)
                 out = mix(out, mid, ramp(midEdgeLow, midEdgeHigh))

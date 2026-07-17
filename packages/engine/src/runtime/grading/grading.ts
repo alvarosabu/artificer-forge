@@ -58,6 +58,9 @@ export function createGradingContext(options: GradingContextOptions) {
       // rim light (stylizedOutput's hasRim): fresnel edge glow tinted by lightColor
       rimStrength: uniform(0.25),
       rimPower: uniform(3),
+      // fake AO (stylizedOutput's aoNode): global scale for how far occlusion
+      // pushes into the shadow band — 0 disables AO everywhere
+      aoStrength: uniform(1),
       // stepped toon specular (stylizedOutput's hasSpecular) — strength 0 by default:
       // without gloss masks the highlight hits skin/cloth too and reads plastic
       specStrength: uniform(0),

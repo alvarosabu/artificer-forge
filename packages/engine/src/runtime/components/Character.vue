@@ -117,6 +117,9 @@ watch(rig, (rigValue) => {
     rigValue.traverse((child: Mesh) => {
       if(child.isMesh) {
         child.castShadow = true
+        // NOT receiveShadow: at grazing sun angles the hair/head self-shadow
+        // stripes the face (bias can't fix near-parallel incidence) — toon
+        // characters cast only; the finish's core shadow does their shading
       }
     })
     // before the ghost-arm watch below, so its material override wins

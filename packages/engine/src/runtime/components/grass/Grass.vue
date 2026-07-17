@@ -35,5 +35,5 @@ onUnmounted(dispose)
 </script>
 
 <template>
-  <TresMesh :geometry="geometry" :material="material" name="Grass" />
+  <TresMesh :geometry="geometry" :material="material" name="Grass" receive-shadow />
 </template>

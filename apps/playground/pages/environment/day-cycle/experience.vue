@@ -68,7 +68,18 @@ watch(scene, (s) => {
     s.backgroundNode = grading.fogColor    // sky IS the fog gradient
 }, { immediate: true })
 
-const { cyclePreset } = useControls('cycle', {
+// one folder for the whole cycle: preset jump, auto time passing, sun orbit
+// shape (useDayCycle reads sun/auto every tick, plain mutation works)
+const {
+  dayCyclePreset,
+  dayCycleAuto,
+  dayCycleDuration,
+  dayCycleOrbit,
+  dayCycleTheta,
+  dayCyclePhi,
+  dayCycleThetaAmplitude,
+  dayCyclePhiAmplitude,
+} = useControls('dayCycle', {
   preset: {
     value: 'day',
     options: [
@@ -78,10 +89,23 @@ const { cyclePreset } = useControls('cycle', {
       { text: '🌅 Dawn', alias: 'dawn', value: 'dawn' },
     ],
   },
+  auto: { value: dayCycle.auto.running, type: 'boolean' },
+  duration: { value: dayCycle.auto.duration, min: 10, max: 600, step: 1, type: 'range' },
+  orbit: { value: dayCycle.sun.orbit, type: 'boolean' },
+  theta: { value: dayCycle.sun.theta, min: -Math.PI, max: Math.PI, step: 0.01, type: 'range' },
+  phi: { value: dayCycle.sun.phi, min: 0.05, max: 1.45, step: 0.01, type: 'range' },
+  thetaAmplitude: { value: dayCycle.sun.thetaAmplitude, min: 0, max: Math.PI, step: 0.01, type: 'range' },
+  phiAmplitude: { value: dayCycle.sun.phiAmplitude, min: 0, max: Math.PI, step: 0.01, type: 'range' },
 }, { uuid })
 
-watch(cyclePreset!, name => dayCycle.transitionTo(name as DayCycleName))
-
+watch(dayCyclePreset!, name => dayCycle.transitionTo(name as DayCycleName))
+watch(dayCycleAuto!, (v) => { dayCycle.auto.running = v })
+watch(dayCycleDuration!, (v) => { dayCycle.auto.duration = v })
+watch(dayCycleOrbit!, (v) => { dayCycle.sun.orbit = v })
+watch(dayCycleTheta!, (v) => { dayCycle.sun.theta = v })
+watch(dayCyclePhi!, (v) => { dayCycle.sun.phi = v })
+watch(dayCycleThetaAmplitude!, (v) => { dayCycle.sun.thetaAmplitude = v })
+watch(dayCyclePhiAmplitude!, (v) => { dayCycle.sun.phiAmplitude = v })
 // screen-space gradient shape — not per-preset, so safe to drive the uniforms
 // directly (sync() only writes colors + near/far each frame)
 const { fogCenterX, fogCenterY, fogStart, fogEnd, fogSceneNear, fogSceneFar } = useControls('fog', {
@@ -118,17 +142,19 @@ watch(rampMidHigh!, (v) => { grading.uniforms.midEdgeHigh.value = v })
 watch(rampMidStrength!, (v) => { grading.uniforms.midStrength.value = v })
 watch(rampHardness!, (v) => { grading.uniforms.rampHardness.value = v })
 
-const { toonRimStrength, toonRimPower, toonSpecStrength, toonSpecShininess } = useControls('toon', {
+const { toonRimStrength, toonRimPower, toonSpecStrength, toonSpecShininess, toonAoStrength } = useControls('toon', {
   rimStrength: { value: 0.25, min: 0, max: 1, step: 0.01, type: 'range' },
   rimPower: { value: 3, min: 0.5, max: 8, step: 0.1, type: 'range' },
   specStrength: { value: 0, min: 0, max: 1, step: 0.01, type: 'range' },
   specShininess: { value: 32, min: 2, max: 128, step: 1, type: 'range' },
+  aoStrength: { value: 1, min: 0, max: 1, step: 0.01, type: 'range' },
 }, { uuid })
 
 watch(toonRimStrength!, (v) => { grading.uniforms.rimStrength.value = v })
 watch(toonRimPower!, (v) => { grading.uniforms.rimPower.value = v })
 watch(toonSpecStrength!, (v) => { grading.uniforms.specStrength.value = v })
 watch(toonSpecShininess!, (v) => { grading.uniforms.specShininess.value = v })
+watch(toonAoStrength!, (v) => { grading.uniforms.aoStrength.value = v })
 
 
 
@@ -192,6 +218,10 @@ function syncLights() {
   if (directional) {
     directional.color.copy(environment.lightColor)
     directional.intensity = 1.2 * environment.lightIntensity
+    // the sun must aim exactly along grading.lightDirection or drop shadows and
+    // the finish's core shadow would disagree; distance 20 keeps the ortho
+    // shadow frustum (near 1 / far 60) around the scene
+    directional.position.copy(environment.lightDirection).multiplyScalar(-20)
   }
 }
 
@@ -212,11 +242,34 @@ onBeforeRender(({ delta }) => {
   if (leaderPos) trampleMap.setInteractor(leaderPos.x, leaderPos.z)
 })
 
-const { lightX, lightY, lightZ } = useControls('light', {
-  x: { value: 5, type: 'number' },
-  y: { value: 5, type: 'number' },
-  z: { value: 5, type: 'number' },
+// drop-shadow map tuning (Bruno's defaults); position/direction is not tunable —
+// it's locked to grading.lightDirection in syncLights
+const { shadowsAmplitude, shadowsBias, shadowsNormalBias, shadowsRadius } = useControls('shadows', {
+  amplitude: { value: 15, min: 1, max: 50, step: 0.5, type: 'range' },
+  bias: { value: -0.001, min: -0.02, max: 0.02, step: 0.0001, type: 'range' },
+  normalBias: { value: 0.1, min: -0.3, max: 0.3, step: 0.01, type: 'range' },
+  radius: { value: 3, min: 0, max: 10, step: 0.1, type: 'range' },
 }, { uuid })
+
+function applyShadowConfig() {
+  const light = directionalLightRef.value
+  if (!light) return
+  const amplitude = toValue(shadowsAmplitude!)
+  const cam = light.shadow.camera
+  cam.top = amplitude
+  cam.right = amplitude
+  cam.bottom = -amplitude
+  cam.left = -amplitude
+  cam.near = 1
+  cam.far = 60
+  cam.updateProjectionMatrix()
+  light.shadow.mapSize.set(2048, 2048)
+  light.shadow.bias = toValue(shadowsBias!)
+  light.shadow.normalBias = toValue(shadowsNormalBias!)
+  light.shadow.radius = toValue(shadowsRadius!)
+}
+
+watch([directionalLightRef, shadowsAmplitude!, shadowsBias!, shadowsNormalBias!, shadowsRadius!], applyShadowConfig)
 
 onMounted(async () => {
   const playerId = await gameStore.spawnFromTemplate('hero', { x: 0, y: 0, z: 0 })
@@ -247,7 +300,6 @@ onMounted(async () => {
   <TresAmbientLight ref="ambientLightRef" :intensity="0.5" />
   <TresDirectionalLight
     ref="directionalLightRef"
-    :position="[lightX, lightY, lightZ]"
     :intensity="1.2"
     cast-shadow
   />

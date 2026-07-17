@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { DoubleSide, PlaneGeometry, Vector3 } from 'three'
-import { NodeMaterial, Node } from 'three/webgpu'
+import { MeshLambertNodeMaterial, NodeMaterial, Node } from 'three/webgpu'
 import {
   clamp,
   smoothstep,
@@ -16,7 +16,7 @@ import {
 } from 'three/tsl'
 import { TresPointerEvent } from '@tresjs/core'
 import type { GradingContext } from '../grading/grading'
-import { stylizedOutput } from '../grading/stylizedOutput'
+import { createDropShadowCatcher, stylizedOutput } from '../grading/stylizedOutput'
 
 interface GridLine {
   color: Node<'color'>
@@ -79,7 +79,8 @@ function createGridMaterial(
   fadeStart = 40,
   fadeEnd = 80,
 ) {
-  const material = new NodeMaterial()
+  // graded floor is the main drop-shadow receiver — Lambert base so the catcher runs
+  const material = grading ? new MeshLambertNodeMaterial() : new NodeMaterial()
   material.side = DoubleSide
 
   const scaleNode = uniform(globalScale)
@@ -107,7 +108,9 @@ function createGridMaterial(
     // hardcoded clear-color assumption on this path
     material.transparent = false
     material.depthWrite = true
-    material.outputNode = stylizedOutput(gridColor, grading, { hasCoreShadows: false })
+    const dropShadow = createDropShadowCatcher()
+    material.receivedShadowNode = dropShadow.receivedShadowNode
+    material.outputNode = stylizedOutput(gridColor, grading, { hasCoreShadows: false, dropShadowNode: dropShadow.shadowFactor })
   }
   else {
     material.transparent = true

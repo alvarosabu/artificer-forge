@@ -1,13 +1,13 @@
 import { TresColor } from '@tresjs/core'
 import { BufferAttribute, Color, DoubleSide, InstancedBufferAttribute, InstancedBufferGeometry, Sphere, Texture, Vector3 } from 'three'
 import { attribute, Fn, mix, positionGeometry, rotateUV, texture, uniform, varying, vec2, vec3 } from 'three/tsl'
-import { MeshBasicNodeMaterial } from 'three/webgpu'
+import { MeshBasicNodeMaterial, MeshLambertNodeMaterial } from 'three/webgpu'
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js'
 import type { ColorRepresentation, TextureNode, UniformNode } from 'three/webgpu'
 import { createWindUniforms, windOffset, type WindSettings, type WindUniforms } from '../wind/wind'
 import { trampleUv, type TrampleMap } from '../../trample/trample'
 import type { GradingContext } from '../../grading/grading'
-import { stylizedOutput } from '../../grading/stylizedOutput'
+import { createDropShadowCatcher, stylizedOutput } from '../../grading/stylizedOutput'
 
 const bladeWidth = uniform(0.1)
 const bladeHeight = uniform(0.6)
@@ -85,10 +85,11 @@ export function buildGrassMaterial(options: {
   diffuseMapNode?: TextureNode | null, 
   trample?: TrampleMap | null,
   grading?: GradingContext | null
-}): MeshBasicNodeMaterial {
-    const material = new MeshBasicNodeMaterial()
-    material.side = DoubleSide
+}): MeshBasicNodeMaterial | MeshLambertNodeMaterial {
     const { colorAUniform, colorBUniform, windUniforms, diffuseMapNode, trample, grading } = options
+    // graded blades catch drop shadows — Lambert base only so the catcher runs
+    const material = grading ? new MeshLambertNodeMaterial() : new MeshBasicNodeMaterial()
+    material.side = DoubleSide
     const grassWindOffset = windOffset(windUniforms)
 
     const anchor = attribute<'vec2'>('anchor', 'vec2')
@@ -143,20 +144,21 @@ export function buildGrassMaterial(options: {
         return pos
     })()
 
-    const baseColor = Fn(() => {
-      // sampled at the anchor only → constant across the blade (flat color per blade)
-      const base = varying(diffuseMapNode ? diffuseMapNode.rgb : groundColor)
-      const ao = varying(windWeight).oneMinus().mul(shadowIntensity)
-      return mix(base, base.mul(0.35), ao)  // 0.35 = shadow darkness, tune in leches
-  })()
+    // sampled at the anchor only → constant across the blade (flat color per blade)
+    const base = varying(diffuseMapNode ? diffuseMapNode.rgb : groundColor)
 
     if (grading) {
-        // blade normals after wind/trample bending are noisy — skip core shadows,
-        // the baked AO above already grounds the blades. Revisit by eye.
-        material.outputNode = stylizedOutput(baseColor, grading, { hasCoreShadows: false })
+        // blade normals after wind/trample bending are noisy — skip core shadows.
+        // Root darkening routes through the finish's AO (tints toward shadowColor,
+        // re-grades with the cycle) instead of the legacy gray multiply
+        const rootAo = varying(windWeight).oneMinus().mul(shadowIntensity).oneMinus()
+        const dropShadow = createDropShadowCatcher()
+        material.receivedShadowNode = dropShadow.receivedShadowNode
+        material.outputNode = stylizedOutput(base, grading, { hasCoreShadows: false, aoNode: rootAo, dropShadowNode: dropShadow.shadowFactor })
     }
     else {
-        material.colorNode = baseColor
+        const ao = varying(windWeight).oneMinus().mul(shadowIntensity)
+        material.colorNode = mix(base, base.mul(0.35), ao)  // 0.35 = shadow darkness, tune in leches
     }
     return material
 }
