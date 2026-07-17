@@ -13,7 +13,7 @@ export const dayCyclePresets: GradingProps[] = [
         lightDirection: sun.clone(),
         lightColor: new Color('#ffd2c2'),
         lightIntensity: 1.2,
-        shadowColor: new Color('#6d3fff'),
+        shadowColor: new Color('#7fb8c4'), // sky-teal day shadow (shadow = sky ambient); multiplier, so keep it bright + desaturated
         fogColorA: new Color('#00ffff'),
         fogColorB: new Color('#9b89ff'),
         fogNearRatio: 0.315,

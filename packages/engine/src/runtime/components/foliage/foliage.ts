@@ -142,7 +142,9 @@ export function applyFoliageTexture(material: FoliageMaterial, tex: Texture, win
     material.needsUpdate = true
 }
 
-// flat mid color: the finish's cycle-tinted core shadow replaces the old normal ramp
+// normal-ramped base (the pre-grading look): cluster normals are lerped toward the
+// sphere, so the A→B ramp shades the blob softly and separates the leaves — the
+// finish's core shadow alone can't do that when shadowColor is bright
 function gradedFoliageOutput(
     grading: GradingContext,
     colorAUniform: UniformNode<'color', Color>,
@@ -150,7 +152,8 @@ function gradedFoliageOutput(
     tex: Texture | null | undefined,
     wind: WindUniforms,
 ) {
-    const baseColor = mix(colorAUniform, colorBUniform, 0.5)
+    const ramp = normalWorld.dot(grading.uniforms.lightDirection).smoothstep(0, 1)
+    const baseColor = mix(colorAUniform, colorBUniform, ramp)
     const alpha = tex ? texture(tex, foliageAlphaUv(wind)).r : float(1)
     return stylizedOutput(baseColor, grading, {
         hasCoreShadows: true,

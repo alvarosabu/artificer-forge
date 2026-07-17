@@ -45,14 +45,23 @@ export function createGradingContext(options: GradingContextOptions) {
       radialCenter: uniform(new Vector2(0.5, 0.5)),
       radialStart: uniform(0),
       radialEnd: uniform(1),
-      // core shadow ramp (stylizedOutput reads these)
-      shadowEdgeLow: uniform(-0.25),
-      shadowEdgeHigh: uniform(0.5),
+      // core shadow ramp (stylizedOutput reads these) — tight band = visible cel step
+      shadowEdgeLow: uniform(0),
+      shadowEdgeHigh: uniform(0.25),
       // mid-tone zone (stylizedOutput's hasMidTone): sits between lit and core shadow
-      midEdgeLow: uniform(-0.7),
-      midEdgeHigh: uniform(-0.25),
+      midEdgeLow: uniform(-0.35),
+      midEdgeHigh: uniform(-0.15),
       // how far the mid tone leans toward the shadow color (0 = lit, 1 = shadow)
-      midStrength: uniform(0.45),
+      midStrength: uniform(0.5),
+      // 0 = smooth band (current look), 1 = hard step() at the band center (Wind Waker cel)
+      rampHardness: uniform(0),
+      // rim light (stylizedOutput's hasRim): fresnel edge glow tinted by lightColor
+      rimStrength: uniform(0.25),
+      rimPower: uniform(3),
+      // stepped toon specular (stylizedOutput's hasSpecular) — strength 0 by default:
+      // without gloss masks the highlight hits skin/cloth too and reads plastic
+      specStrength: uniform(0),
+      specShininess: uniform(32),
   }
 
   const dist = viewportUV.sub(uniforms.radialCenter).length()
