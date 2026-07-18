@@ -1,10 +1,15 @@
 import { TresColor } from "@tresjs/core"
-import { BufferGeometry, Color, DoubleSide, InstancedBufferAttribute, Object3D, PlaneGeometry, Quaternion, Spherical, StaticDrawUsage, Texture, Vector3 } from "three"
+import { BufferAttribute, BufferGeometry, Color, DoubleSide, InstancedBufferAttribute, Object3D, PlaneGeometry, Quaternion, Spherical, StaticDrawUsage, Texture, Vector3 } from "three"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js"
-import { Fn, instance, mix, normalWorld, positionLocal, texture, uniform, uv, vec4 } from "three/tsl"
-import { MeshStandardNodeMaterial } from "three/webgpu"
+import { attribute, float, Fn, instance, mix, normalWorld, positionLocal, positionWorld, rotateUV, texture, uniform, uv, varying, vec2, vec3, vec4 } from "three/tsl"
+import { MeshLambertNodeMaterial, MeshStandardNodeMaterial } from "three/webgpu"
+import type { UniformNode } from "three/webgpu"
+import { createWindUniforms, windOffset, type WindSettings, type WindUniforms } from "../wind/wind"
+import { trampleUv, type TrampleMap } from "../../trample/trample"
+import type { GradingContext } from "../../grading/grading"
+import { createDropShadowCatcher, stylizedOutput } from "../../grading/stylizedOutput"
 
-export interface FoliageOptions {
+export interface FoliageOptions extends WindSettings {
     references: Object3D[]
     amount: number
     size: number
@@ -12,9 +17,14 @@ export interface FoliageOptions {
     colorB: TresColor
     seed?: string
     foliageTexture?: Texture | null
+    /** legacy ramp/shadow direction — ignored when grading is set (direction lives in grading) */
     lightingDirection?: Vector3
     cameraForward?: Vector3
+    trample?: TrampleMap | null
+    grading?: GradingContext | null
 }
+
+type FoliageMaterial = MeshLambertNodeMaterial | MeshStandardNodeMaterial
 
 const DEFAULT_LIGHTING_DIR = new Vector3(1, 1, 0).normalize()
 
@@ -92,6 +102,8 @@ function buildClusterGeometry(rng: () => number, amount: number, size: number): 
         // Lerp normals 85% toward sphere surface normal — do NOT normalize
         const posArr = plane.attributes.position.array as Float32Array
         const normArr = plane.attributes.normal.array as Float32Array
+        // baked vertex AO: depth into the cluster (0 = core, 1 = surface)
+        const aoArr = new Float32Array(4)
 
         for (let v = 0; v < 4; v++) {
             const vx = posArr[v * 3]
@@ -106,7 +118,13 @@ function buildClusterGeometry(rng: () => number, amount: number, size: number): 
             normArr[v * 3]     = normal.x
             normArr[v * 3 + 1] = normal.y
             normArr[v * 3 + 2] = normal.z
+
+            // radius distribution (1 - rng³) piles planes near the surface, so raw
+            // distance bakes to ~1 everywhere — ramp occlusion 3× faster than depth
+            const depth = Math.max(0, 1 - Math.hypot(vx, vy, vz))
+            aoArr[v] = 1 - Math.min(1, depth * 3)
         }
+        plane.setAttribute('ao', new BufferAttribute(aoArr, 1))
 
         planes.push(plane)
     }
@@ -114,49 +132,105 @@ function buildClusterGeometry(rng: () => number, amount: number, size: number): 
     return mergeGeometries(planes)
 }
 
+// Wind flutters the leaves by rotating the alpha-texture UVs (no positional
+// movement, keeps the cluster silhouette stable). Shadow pass keeps plain UVs.
+function foliageAlphaUv(wind: WindUniforms) {
+    const foliageWindOffset = windOffset(wind)
+    return rotateUV(uv(), foliageWindOffset(positionLocal.xz).length().mul(2.2), vec2(0.5))
+}
+
+export function applyFoliageTexture(material: FoliageMaterial, tex: Texture, wind: WindUniforms, grading?: GradingContext | null) {
+    // graded path skips opacityNode — alpha routes through the stylized finish instead
+    if (!grading) material.opacityNode = texture(tex, foliageAlphaUv(wind)).r
+    material.castShadowNode = Fn(() => {
+        const alphaColor = texture(tex, uv()).r
+        alphaColor.lessThan(0.5).discard()
+        return vec4(0, 1, 1, 1)  // WebGPU shadow pass convention — not RGBA color
+    })()
+    material.needsUpdate = true
+}
+
+// normal-ramped base (the pre-grading look): cluster normals are lerped toward the
+// sphere, so the A→B ramp shades the blob softly and separates the leaves — the
+// finish's core shadow alone can't do that when shadowColor is bright
+function gradedFoliageOutput(
+    grading: GradingContext,
+    colorAUniform: UniformNode<'color', Color>,
+    colorBUniform: UniformNode<'color', Color>,
+    tex: Texture | null | undefined,
+    wind: WindUniforms,
+    dropShadowNode?: ReturnType<typeof createDropShadowCatcher>['shadowFactor'],
+) {
+    const ramp = normalWorld.dot(grading.uniforms.lightDirection).smoothstep(0, 1)
+    const baseColor = mix(colorAUniform, colorBUniform, ramp)
+    const alpha = tex ? texture(tex, foliageAlphaUv(wind)).r : float(1)
+    return stylizedOutput(baseColor, grading, {
+        hasCoreShadows: true,
+        // baked cluster-depth AO: inner leaves sink into the shadow band
+        aoNode: varying(attribute<'float'>('ao', 'float')),
+        dropShadowNode,
+        alphaNode: alpha,
+        alphaTest: 0.3, // replaces material.alphaTest — discarded after fog so cutout edges don't pop
+    })
+}
+
 function buildFoliageMaterial(options: {
-    colorAUniform: ReturnType<typeof uniform>,
-    colorBUniform: ReturnType<typeof uniform>,
-    lightingDirUniform: ReturnType<typeof uniform>,
+    colorAUniform: UniformNode<'color', Color>,
+    colorBUniform: UniformNode<'color', Color>,
+    lightingDirUniform: UniformNode<'vec3', Vector3>,
     foliageTexture?: Texture | null,
     instanceMatrix: InstancedBufferAttribute,
+    windUniforms: WindUniforms,
+    trample?: TrampleMap | null,
+    grading?: GradingContext | null,
+    dropShadow?: ReturnType<typeof createDropShadowCatcher> | null,
 }) {
-    const material = new MeshStandardNodeMaterial()
-    const { colorAUniform, colorBUniform, lightingDirUniform, foliageTexture, instanceMatrix } = options
+    const { colorAUniform, colorBUniform, lightingDirUniform, foliageTexture, instanceMatrix, windUniforms, trample, grading, dropShadow } = options
+    // grading IS the lighting — Lambert base only exists so the drop-shadow catcher runs
+    const material: FoliageMaterial = grading ? new MeshLambertNodeMaterial() : new MeshStandardNodeMaterial()
 
     material.side = DoubleSide
     material.depthWrite = true
     material.transparent = false
-    material.alphaTest = 0.3
+    if (!grading) material.alphaTest = 0.3 // graded path discards inside the finish instead
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     material.positionNode = Fn(({ object }: { object: any }) => {
         instance(object.count, instanceMatrix).toStack()
-        return positionLocal
+        if (!trample) return positionLocal
+        // instance() assigns the transform to positionLocal at build time, AFTER any
+        // statements authored here — so no toVar()/assign on it (a var would snapshot the
+        // pre-instance value). A pure expression evaluates at the output, post-instance,
+        // where xz is world space (instance matrices carry the world translation).
+        const trampleAmt = texture(trample.texture, trampleUv(trample.uniforms, positionLocal.xz)).r
+        // squash the cluster toward the ground (y=0: references sit at ground level) where trampled
+        return vec3(positionLocal.x, positionLocal.y.mul(trampleAmt.mul(0.6).oneMinus()), positionLocal.z)
     })()
 
-    material.colorNode = Fn(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const mixStrength = normalWorld.dot(lightingDirUniform as any).smoothstep(0, 1)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return mix(colorAUniform as any, colorBUniform as any, mixStrength)
-    })()
-
-    material.receivedShadowPositionNode = positionLocal.add(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (lightingDirUniform as any).mul(1)  // shadowOffset uniform, default 1
-      )
-
-    if (foliageTexture) {
-        material.opacityNode = texture(foliageTexture, uv()).r
-        material.castShadowNode = Fn(() => {
-            const alphaColor = texture(foliageTexture!, uv()).r  // default UVs, no rotation
-            alphaColor.lessThan(0.5).discard()
-            return vec4(0, 1, 1, 1)  // WebGPU shadow pass convention — not RGBA color
+    if (grading) {
+        if (dropShadow) {
+            material.receivedShadowNode = dropShadow.receivedShadowNode
+            // billboard planes self-shadow at grazing sun angles — sample the shadow
+            // map 1 unit toward the light (world space: positionLocal would lose the
+            // instance transform). lightDirection points INTO the scene, so subtract
+            material.receivedShadowPositionNode = positionWorld.sub(grading.uniforms.lightDirection)
+        }
+        material.outputNode = gradedFoliageOutput(grading, colorAUniform, colorBUniform, foliageTexture, windUniforms, dropShadow?.shadowFactor)
+    }
+    else {
+        material.colorNode = Fn(() => {
+            const mixStrength = normalWorld.dot(lightingDirUniform).smoothstep(0, 1)
+            return mix(colorAUniform, colorBUniform, mixStrength)
         })()
+
+        material.receivedShadowPositionNode = positionLocal.add(
+            lightingDirUniform.mul(1), // shadowOffset uniform, default 1
+        )
     }
 
-  
+    if (foliageTexture) {
+        applyFoliageTexture(material, foliageTexture, windUniforms, grading)
+    }
 
     return material
 }
@@ -172,6 +246,8 @@ export function createFoliage(options: FoliageOptions) {
         lightingDirection,
         seed,
         cameraForward = new Vector3(0, 0, -1),
+        trample,
+        grading,
     } = options
     const rng = mulberry32(hashSeed(seed || ''))
     const geometry = buildClusterGeometry(rng, amount, size)
@@ -182,6 +258,10 @@ export function createFoliage(options: FoliageOptions) {
     const colorAUniform = uniform(new Color(colorA as Color))
     const colorBUniform = uniform(new Color(colorB as Color))
     const lightingDirUniform = uniform((lightingDirection ?? DEFAULT_LIGHTING_DIR).clone())
+    const windUniforms = createWindUniforms(options)
+    // shared across setTexture rebuilds — the catcher var must stay the one the
+    // material's receivedShadowNode writes into
+    const dropShadow = grading ? createDropShadowCatcher() : null
 
     const material = buildFoliageMaterial({
         colorAUniform,
@@ -189,13 +269,22 @@ export function createFoliage(options: FoliageOptions) {
         lightingDirUniform,
         foliageTexture,
         instanceMatrix,
+        windUniforms,
+        trample,
+        grading,
+        dropShadow,
     })
 
     return {
         geometry,
         material,
-        uniforms: { colorA: colorAUniform, colorB: colorBUniform, lightingDir: lightingDirUniform },
+        uniforms: { colorA: colorAUniform, colorB: colorBUniform, lightingDir: lightingDirUniform, wind: windUniforms },
         count: references.length,
+        // texture can arrive after mount — rewire the alpha for whichever path is active
+        setTexture: (tex: Texture) => {
+            applyFoliageTexture(material, tex, windUniforms, grading)
+            if (grading) material.outputNode = gradedFoliageOutput(grading, colorAUniform, colorBUniform, tex, windUniforms, dropShadow?.shadowFactor)
+        },
         dispose: () => {
             geometry.dispose()
             material.dispose()

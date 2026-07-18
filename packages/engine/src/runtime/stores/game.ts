@@ -151,7 +151,7 @@ export interface EntityTemplate {
 export interface SceneDef {
   sceneId: string
   entities: Array<{ templateId: string, position: Position, rotation?: Position, overrides?: Partial<EntityState> }>
-  spawnPoints: Record<string, unknown>
+  spawnPoints: Record<string, Position>
 }
 
 /**

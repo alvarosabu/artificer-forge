@@ -75,3 +75,7 @@ const template = await queryCollection('entities')
 ## Dev Philosophy
 
 **Playground → stabilize → extract to packages → document in grimoire**
+
+## External References
+
+- **Bruno Simon's portfolio (Folio 2025)**: local checkout at `/Users/alvarosabu/Projects/brunos-portfolio` — ALWAYS read this source (shaders in `sources/Game/`) when checking "how Bruno did it" (grading, sun shade, fog/sky, grass, sun reflection); do not rely on the older public `infinite-world` GitHub repo or memory
