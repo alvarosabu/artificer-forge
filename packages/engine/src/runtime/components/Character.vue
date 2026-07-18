@@ -193,7 +193,6 @@ function handleClick() {
 
 watch(nodes, (nodesValue) => {
   if(nodesValue?.Hero_ArmRight) {
-    console.log('Hero_ArmRight', nodesValue.Hero_ArmRight)
     nodesValue.Hero_ArmRight.traverse((child: Mesh) => {
       if (child.name === 'Ranger_ArmRight_1') {
         child.material = ghostMaterial({
