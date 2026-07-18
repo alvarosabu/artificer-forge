@@ -28,7 +28,7 @@ export type EquipmentSlotKey =
   | 'armor'
   | 'cloak'
   | 'trousers'
-  | 'gauntlets' 
+  | 'gauntlets'
   | 'boots'
   | 'amulet'
   | 'ring1'

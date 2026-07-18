@@ -446,6 +446,15 @@ export function useModularRig(
     disposePrepared()
     for (const m of overrideMaterials.values()) m.dispose()
     overrideMaterials.clear()
+    // Horn materials are shared across this instance's rig swaps (excluded from
+    // disposePrepared), so they're freed only here.
+    if (hornSet) {
+      hornSet.std.dispose()
+      hornSet.toon.dispose()
+      hornSet = null
+    }
+    hornFallback?.dispose()
+    hornFallback = null
   })
 
   return { rig }

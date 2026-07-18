@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { useGameStore, useModularArmor } from '@artificer-forge/engine/runtime'
+import { useGameStore, useModularArmor, type EntityTemplate } from '@artificer-forge/engine/runtime'
 
 const TAV_TEMPLATE = {
   templateId: 'tav',
@@ -23,7 +23,7 @@ const TAV_TEMPLATE = {
   equipment: { armor: 'leather-jerkin', trousers: 'common-pants', boots: 'leather-sandals' },
 }
 
-const ITEMS: Record<string, any> = {
+const ITEMS: Record<string, EntityTemplate> = {
   'leather-jerkin': {
     templateId: 'leather-jerkin',
     type: 'item',
@@ -56,10 +56,11 @@ describe('spawning a modular character template', () => {
     setActivePinia(createPinia())
     useGameStore().configureContent({
       resolveTemplate: async (id: string) => (id === 'tav' ? TAV_TEMPLATE : ITEMS[id] ?? null),
+      resolveScene: async () => null,
       resolveAbility: async () => null,
       resolveDialog: async () => null,
       resolveClass: async () => null,
-    } as any)
+    })
   })
 
   it('copies sex and appearance onto the entity', async () => {

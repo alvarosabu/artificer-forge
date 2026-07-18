@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { TresCanvas, type TresRendererSetupContext } from '@tresjs/core'
+import { TresCanvas } from '@tresjs/core'
 import { OrbitControls } from '@tresjs/cientos'
-import { WebGPURenderer } from 'three/webgpu'
 import CharacterPreview from '../../../components/CharacterPreview.vue'
 import ColorField from '../../../components/ColorField.vue'
 import PartPicker from '../../../components/PartPicker.vue'
 import ThumbStudio from '../../../components/ThumbStudio.vue'
-import { AnimationName } from '@artificer-forge/engine/runtime'
+import { AnimationName, createWebGPURenderer } from '@artificer-forge/engine/runtime'
 import { useCharacterCustomization } from '../../../composables/useCharacterCustomization'
 import { customizationToTemplateYaml } from '../../../utils/customizationToTemplateYaml'
 import { HEADS } from '../../../utils/characterParts'
@@ -17,18 +16,6 @@ import { fitsRig, type EquipSlot } from '../../../utils/gearDefaults'
 useHead({ title: 'Create Character — Lab' })
 
 const { state, heads, hairOptions, beardOptions, eyebrowOptions, hornOptions, accessoryOptions } = useCharacterCustomization()
-
-// The horn material is TSL (node-based), which only runs on WebGPURenderer.
-// Same factory pattern as pages/shaders/*; falls back to a WebGL backend on
-// browsers without WebGPU.
-const createWebGPURenderer = (ctx: TresRendererSetupContext) => {
-  const renderer = new WebGPURenderer({
-    canvas: toValue(ctx.canvas),
-    antialias: true,
-  })
-  renderer.shadowMap.enabled = true
-  return renderer
-}
 
 interface TintEntry { id: string, label: string, map: string }
 interface ItemTemplate {
