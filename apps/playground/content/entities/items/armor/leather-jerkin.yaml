@@ -1,0 +1,20 @@
+templateId: leather-jerkin
+type: item
+subtype: armor
+name: Leather Jerkin
+modular:
+  slot: armor
+  hides: [torso]
+  # Sexed fitted variants, resolved per body sex: assets[sex] ?? assets.any.
+  assets:
+    M: /models/characters/armors/ARM_M_Leather_Jerkin.glb
+    F: /models/characters/armors/ARM_F_Leather_Jerkin.glb
+texture:
+  base: /models/characters/textures/leather_jerkin_texture.png
+  tints:
+    - { id: black, label: Black, map: /models/characters/textures/leather_jerkin_black.png }
+    - { id: crimson, label: Crimson, map: /models/characters/textures/leather_jerkin_crimson.png }
+armor:
+  physical: 8
+weight: 6
+value: 45

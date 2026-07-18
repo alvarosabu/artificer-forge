@@ -1,0 +1,18 @@
+templateId: wild-raider-gauntlets
+type: item
+subtype: gauntlets
+name: Wild Raider Gauntlets
+modular:
+  slot: gauntlets
+  rig: small
+  # Bracers — worn over the forearms, the body's hands stay visible.
+  hides: []
+  assets:
+    M: /models/characters/gauntlets/ARM_M_Wild_Raider_Gauntlets.glb
+    F: /models/characters/gauntlets/ARM_F_Wild_Raider_Gauntlets.glb
+texture:
+  base: /models/characters/textures/wild_raider_texture.png
+armor:
+  physical: 1
+weight: 1
+value: 10

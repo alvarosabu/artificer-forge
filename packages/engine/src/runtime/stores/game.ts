@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, reactive, ref } from 'vue'
-import { carryCapacity, computeDamage, deriveMaxArmor, encumbrance, totalWeight } from '@artificer-forge/engine/core'
+import { carryCapacity, computeDamage, deriveMaxArmor, encumbrance, totalWeight, type CharacterAppearance, type ModularSlot, type Sex } from '@artificer-forge/engine/core'
 import { useDamageTypeStore } from './damageTypes'
 
 // Types
@@ -26,6 +26,8 @@ export type EquipmentSlotKey =
   | 'offHand'
   | 'helmet'
   | 'armor'
+  | 'cloak'
+  | 'trousers'
   | 'gauntlets'
   | 'boots'
   | 'amulet'
@@ -36,6 +38,8 @@ export const ALL_EQUIPMENT_SLOTS: EquipmentSlotKey[] = [
   'helmet',
   'amulet',
   'armor',
+  'cloak',
+  'trousers',
   'gauntlets',
   'boots',
   'ring1',
@@ -75,6 +79,9 @@ export interface EntityState {
   class?: string
   level?: number
   race?: string
+  sex?: Sex
+  // Modular cosmetics — presence switches rendering to modular assembly.
+  appearance?: CharacterAppearance
   faction?: string
   team?: Team
   controllable?: boolean
@@ -120,6 +127,11 @@ export interface EntityState {
   weight?: number                // per unit (kg)
 
   // Item template metadata copied from YAML at spawn
+  // Modular equip rendering: which body segments the piece hides when worn and
+  // the fitted mesh per body sex (`any` = unisex). See useModularArmor.
+  modular?: { slot: ModularSlot, hides: string[], assets?: Partial<Record<Sex | 'any', string>>, rig?: 'medium' | 'small' }
+  // Palette-atlas tinting: base atlas + alternate recolored atlases.
+  texture?: { base: string, tints?: { id: string, label: string, map: string }[] }
   damage?: { dice: string, type: string }
   armor?: { physical?: number, magical?: number }
   properties?: string[]
@@ -287,6 +299,8 @@ export const useGameStore = defineStore('game', () => {
       stackable: template.stackable ?? false,
       maxStack: template.maxStack ?? 1,
       weight: template.weight ?? 0,
+      modular: template.modular,
+      texture: template.texture,
       damage: template.damage,
       armor: template.armor,
       properties: template.properties,
@@ -328,6 +342,8 @@ export const useGameStore = defineStore('game', () => {
       class: template.class,
       level: template.level,
       race: template.race,
+      sex: template.sex,
+      appearance: template.appearance,
       faction: template.faction,
       team: template.team ?? 'neutral',
       controllable: template.controllable,
@@ -666,6 +682,10 @@ export const useGameStore = defineStore('game', () => {
         return item.subtype === 'helmet'
       case 'armor':
         return item.subtype === 'armor'
+      case 'cloak':
+        return item.subtype === 'cloak'
+      case 'trousers':
+        return item.subtype === 'trousers'
       case 'gauntlets':
         return item.subtype === 'gauntlets'
       case 'boots':

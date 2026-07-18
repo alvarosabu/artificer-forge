@@ -21,9 +21,11 @@ const categories: DemoCategory[] = [
     icon: 'i-heroicons-user',
     links: [
       { label: 'Basic', to: '/character/basic' },
+      { label: 'Modular (Tav)', to: '/character/modular' },
       { label: 'Large', to: '/character/large' },
       { label: 'Party', to: '/character/party' },
       { label: 'Character Portrait', to: '/character/portraits' },
+      { label: 'Create Character', to: '/character/create' },
     ],
   },
   {

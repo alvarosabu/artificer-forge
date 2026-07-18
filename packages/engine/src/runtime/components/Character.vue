@@ -6,6 +6,9 @@ import { Mesh, Vector3, type Group } from 'three'
 import { useDamageNumbers, DamageNumber, ghostMaterial } from '@artificer-forge/vfx'
 import { useOutlinePass } from '@artificer-forge/post-processing'
 import { AnimationName, type RigSize, useCharacterAnimations } from '../useCharacterAnimations'
+import { useModularRig } from '../modular/useModularRig'
+import { useModularArmor } from '../modular/useModularArmor'
+import { resolvePartRig } from '../modular/partRegistry'
 import { useCharacterController } from '../useCharacterController'
 import { useContextMenu } from '../useContextMenu'
 import { useActionBar } from '../useActionBar'
@@ -37,14 +40,47 @@ const props = withDefaults(defineProps<{
 
 const gameStore = useGameStore()
 const entity = computed(() => gameStore.getEntity(props.entityId))
-const modelPath = computed(() => entity.value?.model!)
 
-const { nodes } = useGLTF(modelPath.value, { draco: true })
+// Rig source is a setup-time decision: an entity is either modular (assembled
+// from appearance parts, skeleton named by its body part) or single-GLB — it
+// never switches.
+const isModular = !!entity.value?.appearance
 const rigKey = computed(() => entity.value?.rig ?? 'Rig_Medium')
-const rigSize = computed(() => rigKey.value.replace('Rig_', '') as RigSize)
-const rig = computed(() => nodes.value?.[rigKey.value])
+const rigSize = computed<RigSize>(() => {
+  if (!isModular) return rigKey.value.replace('Rig_', '') as RigSize
+  const key = resolvePartRig(entity.value!.appearance!.body)
+  return (key[0]!.toUpperCase() + key.slice(1)) as RigSize
+})
 
-const { actions, currentAnimName, play, stop } = useCharacterAnimations(rig, rigSize.value)
+function useSingleGltfRig() {
+  const { state, nodes } = useGLTF(entity.value?.model ?? '', { draco: true })
+  // Legacy single-GLB extra: ghost arm demo material.
+  watch(nodes, (nodesValue) => {
+    if (nodesValue?.Hero_ArmRight) {
+      nodesValue.Hero_ArmRight.traverse((child: Mesh) => {
+        if (child.name === 'Ranger_ArmRight_1') {
+          child.material = ghostMaterial({
+            color: '#88ccff',
+            glowStrength: 12.0,
+            fresnelPower: 1.2,
+          }).material
+        }
+      })
+    }
+  }, { immediate: true })
+  return {
+    rig: computed(() => nodes.value?.[rigKey.value]),
+    animations: computed(() => state.value?.animations ?? []),
+  }
+}
+
+const singleGltf = isModular ? undefined : useSingleGltfRig()
+
+const rig = isModular
+  ? useModularRig(() => entity.value?.appearance, useModularArmor(() => props.entityId)).rig
+  : singleGltf!.rig
+
+const { actions, currentAnimName, play, stop } = useCharacterAnimations(rig, rigSize.value, singleGltf?.animations)
 
 function meleeAttack() {
   play(AnimationName.MELEE_1H_ATTACK_CHOP)
@@ -191,20 +227,6 @@ function handleClick() {
   }
 }
 
-watch(nodes, (nodesValue) => {
-  if(nodesValue?.Hero_ArmRight) {
-    nodesValue.Hero_ArmRight.traverse((child: Mesh) => {
-      if (child.name === 'Ranger_ArmRight_1') {
-        child.material = ghostMaterial({
-          color: '#88ccff',
-          glowStrength: 12.0,
-          fresnelPower: 1.2,
-        }).material
-      }
-    })
-  }
-}, { immediate: true })
-
 const BONE_NAMES: Record<string, string> = {
   mainHand: 'handslotr',
   offHand: 'handslotl',
@@ -213,8 +235,8 @@ const BONE_NAMES: Record<string, string> = {
 const extraAttachments: Record<string, import('three').Object3D | null> = {}
 
 function attachToHand(slot: 'mainHand' | 'offHand', object: import('three').Object3D) {
-  const boneName = BONE_NAMES[slot]
-  const bone = nodes.value?.[boneName]
+  const boneName = BONE_NAMES[slot]!
+  const bone = rig.value?.getObjectByName(boneName)
   if (!bone) return
   detachFromHand(slot)
   bone.add(object)

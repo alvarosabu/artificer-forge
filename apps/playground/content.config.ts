@@ -50,6 +50,35 @@ export default defineContentConfig({
         level: z.number().optional(),
         race: z.string().optional(),
         // Character fields
+        sex: z.enum(['M', 'F']).optional(),
+        // Modular cosmetics — presence switches rendering from `model` (single
+        // GLB) to modular assembly. Part ids come from the generated part
+        // manifest (modules/part-manifest.ts). Armor is NOT part of appearance:
+        // it derives from equipped items (modular.assets below).
+        appearance: z.object({
+          body: z.string(),
+          head: z.string(),
+          hair: z.string().nullable().optional(),
+          beard: z.string().nullable().optional(),
+          eyebrows: z.string().nullable().optional(),
+          accessory: z.string().nullable().optional(),
+          horns: z.string().nullable().optional(),
+          skinColor: z.string(),
+          hairColor: z.string(),
+          hornColorA: z.string().optional(),
+          hornColorB: z.string().optional(),
+          hornPattern: z.enum(['gradient', 'repeated', 'solid']).optional(),
+          hornWeight: z.number().optional(),
+          equipmentTint: z.record(z.string()).optional(),
+          // Per-body-segment material swap (e.g. a ghostly arm). `material`
+          // names a factory registered via registerSegmentMaterials; sided
+          // segment keys (armR) hit one side, side-agnostic (arm) hit both.
+          segmentMaterials: z.array(z.object({
+            segments: z.array(z.string()),
+            material: z.string(),
+            params: z.record(z.any()).optional(),
+          })).optional(),
+        }).optional(),
         faction: z.string().optional(),
         team: z.enum(['player', 'ally', 'neutral', 'hostile']).optional(),
         controllable: z.boolean().optional(),
@@ -100,6 +129,41 @@ export default defineContentConfig({
           physical: z.number().optional(),
           magical: z.number().optional(),
         }).optional(),
+        // Modular-character equip rendering: which body segments this piece hides
+        // when worn. Keys are side-agnostic body-segment names (expanded to L/R at
+        // runtime). See components/CharacterPreview.vue body assembly.
+        modular: z.object({
+          slot: z.enum(['helmet', 'armor', 'cloak', 'trousers', 'gauntlets', 'boots']),
+          // Side-agnostic keys ('arm') hide both sides; sided keys ('armL') one.
+          hides: z.array(z.enum([
+            'head', 'torso', 'hips',
+            'arm', 'armL', 'armR',
+            'hand', 'handL', 'handR',
+            'leg', 'legL', 'legR',
+            'foot', 'footL', 'footR',
+          ])),
+          // Skeleton the fitted meshes are skinned to; absent = medium.
+          // Pieces only dress bodies on the same rig (see utils/gearDefaults).
+          rig: z.enum(['medium', 'small']).optional(),
+          // Fitted mesh per body sex; `any` = unisex asset. Resolution:
+          // assets[entity.sex] ?? assets.any (miss = piece renders nothing).
+          assets: z.object({
+            M: z.string().optional(),
+            F: z.string().optional(),
+            any: z.string().optional(),
+          }).optional(),
+        }).optional(),
+        // Palette-atlas tinting: `base` is the default atlas (also the GLB's embedded
+        // map); each `tints` entry is an alternate recolored atlas swapped onto the
+        // material's map. See components/CharacterPreview.vue armor tinting.
+        texture: z.object({
+          base: z.string(),
+          tints: z.array(z.object({
+            id: z.string(),
+            label: z.string(),
+            map: z.string(),
+          })).optional(),
+        }).optional(),
         weight: z.number().optional(),
         value: z.number().optional(),
         usable: z.boolean().optional(),
@@ -122,6 +186,8 @@ export default defineContentConfig({
           offHand: z.string().optional(),
           helmet: z.string().optional(),
           armor: z.string().optional(),
+          cloak: z.string().optional(),
+          trousers: z.string().optional(),
           gauntlets: z.string().optional(),
           boots: z.string().optional(),
           amulet: z.string().optional(),
@@ -133,6 +199,8 @@ export default defineContentConfig({
           'offHand',
           'helmet',
           'armor',
+          'cloak',
+          'trousers',
           'gauntlets',
           'boots',
           'amulet',

@@ -1,0 +1,17 @@
+templateId: cedric-cloak
+type: item
+subtype: cloak
+name: Cedric's Cloak
+icon: /img/armor/cedric_cloak.png
+modular:
+  slot: cloak
+  # Drapes over the back — covers nothing.
+  hides: []
+  assets:
+    any: /models/characters/cloaks/cedric_origin_cloak.glb
+texture:
+  base: /models/characters/textures/cedric_armor_texture.png
+armor:
+  physical: 1
+weight: 2
+value: 50

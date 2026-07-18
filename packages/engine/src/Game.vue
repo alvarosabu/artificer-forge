@@ -3,12 +3,9 @@
 // Owns the canvas + renderer + camera + in-scene systems (runtime) and mounts
 // the HUD overlay (ui). Renderer and post-processing are engine policy; render
 // config (bloom, outline presets) comes from useGameConfig().
-import type { TresRendererSetupContext } from '@tresjs/core'
-import { toValue } from 'vue'
 import { NoToneMapping } from 'three'
-import { WebGPURenderer } from 'three/webgpu'
 import { EffectComposer, useOutlinePassProvider } from '@artificer-forge/post-processing'
-import { CameraController, CombatSystem, SurfaceSystem, useContextMenuProvider, useGameConfig } from '@artificer-forge/engine/runtime'
+import { CameraController, CombatSystem, SurfaceSystem, createWebGPURenderer, useContextMenuProvider, useGameConfig } from '@artificer-forge/engine/runtime'
 import type { CameraProps } from '@artificer-forge/engine/runtime'
 import { Hud } from '@artificer-forge/engine/ui'
 
@@ -27,14 +24,6 @@ function handlePointerMissed() {
   close()
 }
 
-// WebGPU renderer is engine policy.
-const createWebGPURenderer = (ctx: TresRendererSetupContext) => {
-  return new WebGPURenderer({
-    canvas: toValue(ctx.canvas),
-    alpha: true,
-    antialias: true,
-  })
-}
 </script>
 
 <template>

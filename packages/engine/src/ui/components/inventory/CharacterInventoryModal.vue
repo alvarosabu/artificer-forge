@@ -85,6 +85,12 @@ function onItemClick(_item: EntityState) {}
               @context="onEquipmentContext"
             />
             <InventoryEquipmentSlot
+              v-if="hasSlot('trousers')"
+              slot-key="trousers"
+              :character-id="character.id"
+              @context="onEquipmentContext"
+            />
+            <InventoryEquipmentSlot
               v-if="hasSlot('gauntlets')"
               slot-key="gauntlets"
               :character-id="character.id"
@@ -100,6 +106,12 @@ function onItemClick(_item: EntityState) {}
 
           <!-- Right column: accessories — starts below helmet -->
           <div class="absolute right-2 top-28 flex flex-col gap-2 z-10">
+            <InventoryEquipmentSlot
+              v-if="hasSlot('cloak')"
+              slot-key="cloak"
+              :character-id="character.id"
+              @context="onEquipmentContext"
+            />
             <InventoryEquipmentSlot
               v-if="hasSlot('amulet')"
               slot-key="amulet"

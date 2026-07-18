@@ -57,6 +57,14 @@ export { default as Nameplate } from './components/Nameplate.vue'
 export { default as StatusEffectBadge } from './components/StatusEffectBadge.vue'
 export { default as StatusEffectBadges } from './components/StatusEffectBadges.vue'
 
+// Modular character system (parts, armor, materials) + rendering
+export * from './modular/partRegistry'
+export * from './modular/useModularRig'
+export * from './modular/useModularArmor'
+export * from './modular/segmentMaterials'
+export { loadGltf } from './modular/gltfCache'
+export * from './createWebGPURenderer'
+
 // Movement / animation controllers
 export * from './useCharacterAnimations'
 export * from './useCharacterController'

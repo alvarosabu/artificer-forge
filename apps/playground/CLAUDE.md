@@ -48,7 +48,7 @@ playground/
 templateId: ranger          # NOT 'id' (reserved by Nuxt Content)
 type: character
 name: Elara the Ranger
-model: /models/Ranger.glb
+model: /models/Ranger.glb   # single-GLB character
 animations:
   idle: Idle_Neutral_A
   attack: Melee_1H_Attack_Chop
@@ -56,6 +56,12 @@ stats:
   hp: 28
   maxHp: 28
 ```
+
+Characters can be **modular** instead of single-GLB: declare `sex` + `appearance`
+(part ids + colors) instead of `model` — see `tav.yaml`. Part ids come from the
+GENERATED manifest (`modules/part-manifest.ts` scans `public/models/characters`;
+exceptions in `utils/partOverrides.ts`). Armor visuals derive from equipped items
+(item YAML `modular.assets` per sex + `hides`), not from appearance.
 
 ### Runtime (Pinia Store)
 
@@ -116,6 +122,7 @@ interface EntityState {
 
 ## Gotchas
 
-- Restart dev server after adding/modifying YAML files
+- Restart dev server after adding/modifying YAML files or dropping part GLBs
+- Part GLB filenames must parse: `{GEN|HUM|ELF|TIF}[_{M|F}]_..._{Variant}` (folder = slot); misnamed files are skipped with a warning
 - `id` field in YAML is reserved → use `templateId`
 - Wrap async components (Character) in `<Suspense>`

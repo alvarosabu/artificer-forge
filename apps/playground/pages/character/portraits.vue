@@ -3,26 +3,68 @@ import { TresCanvas } from '@tresjs/core'
 import { OrbitControls } from '@tresjs/cientos'
 import { useControls } from '@tresjs/leches'
 import {
+  type ArmorPiece,
+  createWebGPURenderer,
+  type Equipment,
   frameFromHead,
   PORTRAIT_CAMERA,
+  PORTRAIT_LIGHTS,
+  PORTRAIT_RENDERING,
   PortraitBackground,
   PortraitLights,
   PortraitSubject,
   resolvePortraitBackground,
   type Vec3,
 } from '@artificer-forge/engine/runtime'
-import type { Equipment } from '@artificer-forge/engine/runtime'
+import type { CharacterAppearance } from '@artificer-forge/engine/core'
 import type { PerspectiveCamera } from 'three'
 
 useHead({ title: 'Character Portraits — Lab' })
 
+interface LabCharacter {
+  label: string
+  rig: string
+  background?: string
+  model?: string
+  appearance?: CharacterAppearance
+  armor?: ArmorPiece[]
+}
+
 // `background` mirrors each character's authored YAML `portraitBackground`; an
 // undefined one falls back to the shared default, same as the bake.
-const CHARACTERS = [
+const CHARACTERS: LabCharacter[] = [
   { label: 'Fenrath (Large)', model: '/models/characters/fenrath.glb', rig: 'Rig_Large', background: undefined },
   { label: 'Hero (Medium)', model: '/models/characters/hero.glb', rig: 'Rig_Medium', background: '/img/portraits/bgs/blue-storm.png' },
   { label: 'Zynrae (Medium)', model: '/models/characters/zynrae.glb', rig: 'Rig_Medium', background: undefined },
   { label: 'Orc Scout (Medium)', model: '/models/characters/orc.glb', rig: 'Rig_Medium', background: undefined },
+  {
+    // Modular subject: no model URL. The lab has no game store, so this mirrors
+    // cedric.yaml + his armor item YAMLs by hand — keep in sync when his recipe
+    // or gear changes.
+    label: 'Cedric (Modular)',
+    rig: 'Rig_Medium',
+    background: '/img/portraits/bgs/blue-storm.png',
+    appearance: {
+      body: 'HUM_M_MEDIUM_Body_A',
+      head: 'HUM_M_Head_Cedric',
+      hair: 'GEN_M_Hair_Long_A',
+      beard: null,
+      eyebrows: 'GEN_Eyebrows_Thin_A',
+      horns: null,
+      skinColor: '#eecbb0',
+      hairColor: '#2c222b',
+      segmentMaterials: [
+        { segments: ['armR', 'handR'], material: 'ghost', params: { color: '#88ccff', glowStrength: 12, fresnelPower: 1.2 } },
+      ],
+    },
+    armor: [
+      { id: 'ARM_M_Cedric_Padded', path: '/models/characters/armors/ARM_M_Cedric_Padded.glb', hides: ['torso'] },
+      { id: 'ARM_Cedric_Cloak', path: '/models/characters/armors/ARM_Cedric_Cloak.glb', hides: [] },
+      { id: 'ARM_Cedric_Trousers', path: '/models/characters/trousers/ARM_Cedric_Trousers.glb', hides: ['hips', 'leg'] },
+      { id: 'ARM_Cedric_Gauntlet', path: '/models/characters/gauntlets/ARM_Cedric_Gauntlet.glb', hides: ['armL'] },
+      { id: 'ARM_Cedric_Boots', path: '/models/characters/boots/ARM_Cedric_Boots.glb', hides: ['foot'] },
+    ],
+  },
 ]
 const selected = ref(CHARACTERS[0]!)
 const equipment: Equipment = {}
@@ -34,12 +76,21 @@ const bgSrc = computed(() => resolvePortraitBackground(selected.value.background
 // into PORTRAIT_CAMERA in utils/portraitRigPresets.ts.
 // NOTE: no folder name — a named folder renders COLLAPSED by default, which hides
 // every control and makes the panel look empty/broken. Top-level = always visible.
-const { headLift, viewHeight, fov, cameraHeightOffset, yaw } = useControls({
+const { headLift, viewHeight, fov, cameraHeightOffset, yaw, exposure, keyLight, keyColor, fillLight, fillColor, rimLight, rimColor, bounceLight, envBounce } = useControls({
   yaw: { value: PORTRAIT_CAMERA.yaw, min: -90, max: 90, step: 1, type: 'range' },
   headLift: { value: PORTRAIT_CAMERA.headLift, min: -0.5, max: 1, step: 0.01, type: 'range' },
   viewHeight: { value: PORTRAIT_CAMERA.viewHeight, min: 0.5, max: 3, step: 0.01, type: 'range' },
   fov: { value: PORTRAIT_CAMERA.fov, min: 10, max: 70, step: 1, type: 'range' },
   cameraHeightOffset: { value: PORTRAIT_CAMERA.cameraHeightOffset, min: -1, max: 1, step: 0.01, type: 'range' },
+  exposure: { value: PORTRAIT_RENDERING.toneMappingExposure, min: 0.4, max: 2.5, step: 0.05, type: 'range' },
+  keyLight: { value: PORTRAIT_LIGHTS.key, min: 0, max: 6, step: 0.05, type: 'range' },
+  keyColor: { value: PORTRAIT_LIGHTS.keyColor, type: 'color' },
+  fillLight: { value: PORTRAIT_LIGHTS.fill, min: 0, max: 2, step: 0.05, type: 'range' },
+  fillColor: { value: PORTRAIT_LIGHTS.fillColor, type: 'color' },
+  rimLight: { value: PORTRAIT_LIGHTS.rim, min: 0, max: 5, step: 0.05, type: 'range' },
+  rimColor: { value: PORTRAIT_LIGHTS.rimColor, type: 'color' },
+  bounceLight: { value: PORTRAIT_LIGHTS.bounce, min: 0, max: 2, step: 0.05, type: 'range' },
+  envBounce: { value: PORTRAIT_RENDERING.environmentIntensity, min: 0, max: 1.5, step: 0.05, type: 'range' },
 })
 
 // useControls refs are typed as possibly-undefined; fall back to the defaults.
@@ -49,6 +100,18 @@ const knobs = computed(() => ({
   fov: Number(fov?.value ?? PORTRAIT_CAMERA.fov),
   cameraHeightOffset: Number(cameraHeightOffset?.value ?? PORTRAIT_CAMERA.cameraHeightOffset),
   yaw: Number(yaw?.value ?? PORTRAIT_CAMERA.yaw),
+}))
+
+const look = computed(() => ({
+  exposure: Number(exposure?.value ?? PORTRAIT_RENDERING.toneMappingExposure),
+  key: Number(keyLight?.value ?? PORTRAIT_LIGHTS.key),
+  keyColor: String(keyColor?.value ?? PORTRAIT_LIGHTS.keyColor),
+  fill: Number(fillLight?.value ?? PORTRAIT_LIGHTS.fill),
+  fillColor: String(fillColor?.value ?? PORTRAIT_LIGHTS.fillColor),
+  rim: Number(rimLight?.value ?? PORTRAIT_LIGHTS.rim),
+  rimColor: String(rimColor?.value ?? PORTRAIT_LIGHTS.rimColor),
+  bounce: Number(bounceLight?.value ?? PORTRAIT_LIGHTS.bounce),
+  env: Number(envBounce?.value ?? PORTRAIT_RENDERING.environmentIntensity),
 }))
 
 const bounds = ref<{ min: Vec3, max: Vec3 } | null>(null)
@@ -98,7 +161,10 @@ const snippet = computed(() => `const PORTRAIT_CAMERA = {
   fov: ${knobs.value.fov},
   cameraHeightOffset: ${knobs.value.cameraHeightOffset},
   yaw: ${knobs.value.yaw},
-}`)
+}
+// PORTRAIT_RENDERING: toneMappingExposure: ${look.value.exposure}, environmentIntensity: ${look.value.env}
+// PORTRAIT_LIGHTS: key: ${look.value.key}, keyColor: '${look.value.keyColor}', fill: ${look.value.fill}, fillColor: '${look.value.fillColor}',
+//   rim: ${look.value.rim}, rimColor: '${look.value.rimColor}', bounce: ${look.value.bounce}`)
 
 const copied = ref(false)
 async function copySnippet() {
@@ -118,7 +184,7 @@ async function copySnippet() {
       <label>
         Character
         <select v-model="selected">
-          <option v-for="c in CHARACTERS" :key="c.model" :value="c">{{ c.label }}</option>
+          <option v-for="c in CHARACTERS" :key="c.label" :value="c">{{ c.label }}</option>
         </select>
       </label>
     </header>
@@ -127,15 +193,30 @@ async function copySnippet() {
       <!-- Scene camera: orbit to inspect the model -->
       <section class="view">
         <span class="tag">Scene (orbit)</span>
-        <TresCanvas clear-color="#10131c" :alpha="false">
+        <TresCanvas
+          clear-color="#10131c"
+          :alpha="false"
+          :renderer="createWebGPURenderer"
+          :tone-mapping="PORTRAIT_RENDERING.toneMapping"
+          :tone-mapping-exposure="look.exposure"
+          :shadows="PORTRAIT_RENDERING.shadows"
+        >
           <TresPerspectiveCamera :position="[4, 3.5, 7]" :look-at="sceneTarget" :fov="40" />
           <OrbitControls :target="sceneTarget" />
-          <PortraitLights />
+          <PortraitLights
+            :key-intensity="look.key"
+            :key-color="look.keyColor"
+            :fill-intensity="look.fill"
+            :fill-color="look.fillColor"
+            :rim-intensity="look.rim"
+            :rim-color="look.rimColor"
+            :bounce-intensity="look.bounce"
+          />
           <TresGridHelper :args="[10, 10]" />
           <Suspense>
             <PortraitSubject
-              :key="`scene-${selected.model}`"
-              :descriptor="{ model: selected.model, rig: selected.rig, equipment }"
+              :key="`scene-${selected.label}`"
+              :descriptor="{ model: selected.model, appearance: selected.appearance, armor: selected.armor, rig: selected.rig, equipment }"
               :auto-capture="false"
             />
           </Suspense>
@@ -145,19 +226,35 @@ async function copySnippet() {
       <!-- Portrait camera: exact WYSIWYG of the baked portrait -->
       <section class="view portrait">
         <span class="tag">Portrait (bake preview)</span>
-        <TresCanvas clear-color="#10131c" :alpha="false">
+        <TresCanvas
+          clear-color="#10131c"
+          :alpha="false"
+          :renderer="createWebGPURenderer"
+          :tone-mapping="PORTRAIT_RENDERING.toneMapping"
+          :tone-mapping-exposure="look.exposure"
+          :shadows="PORTRAIT_RENDERING.shadows"
+        >
           <TresPerspectiveCamera ref="portraitCamRef">
             <PortraitBackground
               v-if="bgSrc"
               :framing="portraitCam"
               :src="bgSrc"
+              :env-intensity="look.env"
             />
           </TresPerspectiveCamera>
-          <PortraitLights />
+          <PortraitLights
+            :key-intensity="look.key"
+            :key-color="look.keyColor"
+            :fill-intensity="look.fill"
+            :fill-color="look.fillColor"
+            :rim-intensity="look.rim"
+            :rim-color="look.rimColor"
+            :bounce-intensity="look.bounce"
+          />
           <Suspense>
             <PortraitSubject
-              :key="`portrait-${selected.model}`"
-              :descriptor="{ model: selected.model, rig: selected.rig, equipment }"
+              :key="`portrait-${selected.label}`"
+              :descriptor="{ model: selected.model, appearance: selected.appearance, armor: selected.armor, rig: selected.rig, equipment }"
               :auto-capture="false"
               @bounds="onBounds"
               @head="onHead"

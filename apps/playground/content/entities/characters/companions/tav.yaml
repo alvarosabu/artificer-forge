@@ -1,0 +1,66 @@
+templateId: tav
+type: character
+name: Tav
+class: fighter
+level: 1
+race: human
+sex: M
+
+stats:
+  hp: 38
+  maxHp: 38
+  ac: 14
+  strength: 12
+  dexterity: 16
+  constitution: 12
+  intelligence: 10
+  wisdom: 14
+  charisma: 10
+  maxActions: 1
+  maxBonusActions: 1
+
+team: player
+controllable: true
+
+ai:
+  behavior: companion
+  followDistance: 3
+
+# Static portrait: live baking renders entity.model, which modular characters
+# don't have. Reusing the hero art until a tav portrait exists.
+portrait: /img/portraits/hero_portrait.png
+portraitBackground: /img/portraits/bgs/blue-storm.png
+
+# Modular character: no `model` — assembled from parts on the shared rig.
+appearance:
+  body: HUM_M_MEDIUM_Body_A
+  head: HUM_M_Head_A
+  hair: GEN_M_Hair_Short_A
+  beard: null
+  eyebrows: GEN_Eyebrows_Thin_A
+  horns: null
+  skinColor: '#eecbb0'
+  hairColor: '#3b2417'
+
+abilities:
+  - arrow-shot
+  - magic-missile
+  - fireball
+
+equipmentSlots:
+  - mainHand
+  - offHand
+  - helmet
+  - armor
+  - trousers
+  - gauntlets
+  - boots
+  - amulet
+  - ring1
+  - ring2
+
+equipment:
+  mainHand: shortsword
+  armor: leather-jerkin
+  trousers: common-pants
+  boots: leather-sandals

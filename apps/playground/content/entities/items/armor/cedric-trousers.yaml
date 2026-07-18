@@ -1,0 +1,18 @@
+templateId: cedric-trousers
+type: item
+subtype: trousers
+name: Cedric's Trousers
+icon: /img/armor/cedric_trousers.png
+modular:
+  slot: trousers
+  # Short breeches — the padded coat covers the hips/thighs from outside,
+  # so hiding the whole leg leaves no visible gap.
+  hides: [hips, leg]
+  assets:
+    any: /models/characters/trousers/ARM_Cedric_Trousers.glb
+texture:
+  base: /models/characters/textures/cedric_armor_texture.png
+armor:
+  physical: 2
+weight: 3
+value: 40

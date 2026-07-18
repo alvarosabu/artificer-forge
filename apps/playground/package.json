@@ -12,7 +12,8 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "sync:blender": "./scripts/sync-blender.sh"
   },
   "dependencies": {
     "@artificer-forge/dialog-editor": "workspace:*",
@@ -40,8 +41,12 @@
     "zod-to-json-schema": "catalog:nuxt"
   },
   "devDependencies": {
+    "@gltf-transform/core": "catalog:",
+    "@gltf-transform/extensions": "catalog:",
+    "@gltf-transform/functions": "catalog:",
     "@tresjs/eslint-config": "catalog:three",
     "@types/three": "catalog:three",
+    "draco3dgltf": "catalog:",
     "typescript": "catalog:typescript",
     "vitest": "catalog:"
   }

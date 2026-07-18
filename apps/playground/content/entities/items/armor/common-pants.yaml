@@ -1,0 +1,17 @@
+templateId: common-pants
+type: item
+subtype: trousers
+name: Common Pants
+model: /models/characters/trousers/common_pants.glb
+modular:
+  slot: trousers
+  assets:
+    any: /models/characters/trousers/common_pants.glb
+  # Pants cover hips + legs. A shorts variant would use hides: [leg] only.
+  hides: [hips, leg]
+texture:
+  base: /models/characters/textures/common_folk_clothes_texture.png
+armor:
+  physical: 1
+weight: 2
+value: 5

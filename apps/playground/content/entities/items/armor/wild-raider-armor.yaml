@@ -1,0 +1,18 @@
+templateId: wild-raider-armor
+type: item
+subtype: armor
+name: Wild Raider Armor
+modular:
+  slot: armor
+  # Small-rig fitted (goblin starter set) — won't dress medium bodies.
+  rig: small
+  hides: [torso]
+  assets:
+    M: /models/characters/armors/ARM_M_Wild_Raider_Armor.glb
+    F: /models/characters/armors/ARM_F_Wild_Raider_Armor.glb
+texture:
+  base: /models/characters/textures/wild_raider_texture.png
+armor:
+  physical: 4
+weight: 5
+value: 25

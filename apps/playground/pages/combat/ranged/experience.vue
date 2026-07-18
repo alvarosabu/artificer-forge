@@ -6,7 +6,7 @@ const { setCharacterRef } = useSceneRefs()
 useCommands({ entities: true, animations: true, statusEffects: true, damageNumbers: true })
 
 onMounted(async () => {
-  const heroId = await gameStore.spawnFromTemplate('hero', { x: -10, y: 0, z: 10 })
+  const heroId = await gameStore.spawnFromTemplate('cedric', { x: -10, y: 0, z: 10 })
   gameStore.addToParty(heroId)
   gameStore.selectEntity(heroId)
   await gameStore.spawnItemEntity('bow', { containerId: heroId, slot: 'offHand' })

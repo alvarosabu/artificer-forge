@@ -1,3 +1,5 @@
+import { ACESFilmicToneMapping } from 'three'
+
 export interface PortraitFraming {
   cameraPosition: [number, number, number]
   lookAt: [number, number, number]
@@ -19,22 +21,46 @@ export type Vec3 = [number, number, number]
 // Changes apply on next bake — clear localStorage 'af:portraits' (or re-enable +
 // bump PORTRAIT_CACHE_VERSION in portraitSignature.ts) so cached portraits rebake.
 export const PORTRAIT_CAMERA = {
-  // Shift the look point above (+) or below (−) the head-box centre, as a
-  // fraction of head height. 0 = dead-centre on the head.
   headLift: 0,
-  // Vertical slice to fit in frame, as a multiple of head height. ~1 = head fills
-  // the frame; larger = more headroom + shoulders.
-  viewHeight: 1.3,
-  // Field of view (deg). Lower = flatter, more telephoto look.
-  fov: 30,
-  // Camera height offset relative to the look point, as a fraction of head height.
-  // Positive = look down on the subject slightly; negative = look up.
+  viewHeight: 1.4,
+  fov: 10,
   cameraHeightOffset: 0.05,
-  // Horizontal orbit angle (deg) around the head, keeping the framing distance.
-  // 0 = dead front; positive swings the camera to the model's left for a 3/4 view.
   yaw: 20,
 }
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Renderer state for portrait canvases (bake studio AND the lab previews — they
+// must stay identical or the lab stops being WYSIWYG). ACES filmic is the
+// punchiest transform three ships (three's AgX is the look-less base curve —
+// flat and desaturated, NOT Blender's contrasty AgX) and gets closest to the
+// authored Blender reference portraits.
+// NOTE: pass these EXPLICITLY to every portrait <TresCanvas> — an omitted
+// tone-mapping prop silently falls back to TresJS's default.
+export const PORTRAIT_RENDERING = {
+  toneMapping: ACESFilmicToneMapping,
+  toneMappingExposure: 1.1,
+  shadows: true,
+  /** Backdrop-driven scene.environment strength (Blender-GI-like bounce). */
+  environmentIntensity: 0.1,
+}
+
+// Portrait lighting (positions live in <PortraitLights>). Warm key dominates;
+// everything cool (fill, rim, backdrop bounce) stays subtle so portraits read
+// warm + dramatic, not blue. Tune live in the portrait lab panel.
+// Warmth gotcha: under ACES an overexposed warm light bleaches to WHITE — for a
+// warmer face, deepen keyColor toward orange and/or lower key/exposure; cranking
+// key intensity makes it colder.
+export const PORTRAIT_LIGHTS = {
+  key: 2.5,
+  keyColor: '#ffd9a3',
+  fill: 0.2,
+  fillColor: '#9fb8ff',
+  rim: 1.8,
+  rimColor: '#cfe0ff',
+  bounce: 0.35,
+  bounceSky: '#eed9bd',
+  bounceGround: '#5a4030',
+}
 
 export type FrameOptions = Partial<typeof PORTRAIT_CAMERA>
 
