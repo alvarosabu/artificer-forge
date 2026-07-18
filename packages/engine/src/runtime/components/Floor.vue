@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { DoubleSide, PlaneGeometry, Vector3 } from 'three'
-import { NodeMaterial, Node } from 'three/webgpu'
+import { MeshLambertNodeMaterial, NodeMaterial, Node } from 'three/webgpu'
 import {
   clamp,
   smoothstep,
@@ -12,15 +12,20 @@ import {
   mix,
   step,
   positionWorld,
+  vec3,
 } from 'three/tsl'
 import { TresPointerEvent } from '@tresjs/core'
+import type { GradingContext } from '../grading/grading'
+import { createDropShadowCatcher, stylizedOutput } from '../grading/stylizedOutput'
 
 interface GridLine {
-  color: ReturnType<typeof uniform>
-  scale: ReturnType<typeof uniform>
-  thickness: ReturnType<typeof uniform>
-  cross: ReturnType<typeof uniform>
+  color: Node<'color'>
+  scale: Node<'float'>
+  thickness: Node<'float'>
+  cross: Node<'float'>
 }
+
+const props = defineProps<{ grading?: GradingContext | null }>()
 
 const emit = defineEmits<{
   click: [event: TresPointerEvent]
@@ -53,11 +58,13 @@ const toAntialiasedGrid = Fn(([uvRef, scale, thickness, cross]: [any, any, any, 
   const lineAA = uvDeriv.mul(1.5)
 
   // Cross mask - creates the + pattern by masking out parts of the grid
-  const crossGrid = step(referenceUv.fract().sub(0.5).abs(), cross.oneMinus().mul(0.5))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const crossGrid: any = step(referenceUv.fract().sub(0.5).abs(), cross.oneMinus().mul(0.5))
   const crossMask = mix(crossGrid.x, 1, crossGrid.y).oneMinus()
 
   const gridUV = referenceUv.fract().mul(2).sub(1).abs().oneMinus()
-  let grid = smoothstep(drawWidth.add(lineAA), drawWidth.sub(lineAA), gridUV)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let grid: any = smoothstep(drawWidth.add(lineAA), drawWidth.sub(lineAA), gridUV)
   grid = grid.mul(clamp(lineWidth.div(drawWidth), 0, 1))
   grid = mix(grid, lineWidth, clamp(uvDeriv.mul(2).sub(1), 0, 1)).mul(crossMask)
 
@@ -68,20 +75,20 @@ function createGridMaterial(
   baseColor: string | number,
   lines: GridLine[],
   globalScale = 1,
+  grading: GradingContext | null = null,
   fadeStart = 40,
   fadeEnd = 80,
 ) {
-  const material = new NodeMaterial()
+  // graded floor is the main drop-shadow receiver — Lambert base so the catcher runs
+  const material = grading ? new MeshLambertNodeMaterial() : new NodeMaterial()
   material.side = DoubleSide
-  material.transparent = true
-  material.depthWrite = false // transparent ground: writing depth lets it occlude transparent objects above it (e.g. fire billboards) depending on draw order
 
   const scaleNode = uniform(globalScale)
   const fadeStartNode = uniform(fadeStart)
   const fadeEndNode = uniform(fadeEnd)
 
   // Build color by layering grids - use reduce to maintain proper typing
-  const gridColor = lines.reduce<Node>(
+  const gridColor = lines.reduce<Node<'vec3'>>(
     (acc, line) => {
       const grid = toAntialiasedGrid(
         uv(),
@@ -89,18 +96,30 @@ function createGridMaterial(
         line.thickness,
         line.cross,
       )
-      return mix(acc, line.color, grid)
+      return mix(acc, vec3(line.color), grid)
     },
-    uniform(color(baseColor)),
+    vec3(uniform(color(baseColor))),
   )
 
-  // Distance-based fade for horizon effect
-  // Calculate distance from world position to origin (XZ plane)
-  const dist = positionWorld.xz.length()
-  const fadeAlpha = smoothstep(fadeEndNode, fadeStartNode, dist)
-
   material.colorNode = gridColor
-  material.outputNode = vec4(gridColor, fadeAlpha)
+
+  if (grading) {
+    // fog does the horizon dissolve now — no hand-rolled distance fade, no
+    // hardcoded clear-color assumption on this path
+    material.transparent = false
+    material.depthWrite = true
+    const dropShadow = createDropShadowCatcher()
+    material.receivedShadowNode = dropShadow.receivedShadowNode
+    material.outputNode = stylizedOutput(gridColor, grading, { hasCoreShadows: false, dropShadowNode: dropShadow.shadowFactor })
+  }
+  else {
+    material.transparent = true
+    material.depthWrite = false // transparent ground: writing depth lets it occlude transparent objects above it (e.g. fire billboards) depending on draw order
+    // Distance-based fade for horizon effect, from world position to origin (XZ plane)
+    const dist = positionWorld.xz.length()
+    const fadeAlpha = smoothstep(fadeEndNode, fadeStartNode, dist)
+    material.outputNode = vec4(gridColor, fadeAlpha)
+  }
 
   return { material, scaleNode, fadeStartNode, fadeEndNode }
 }
@@ -113,7 +132,7 @@ const lines: GridLine[] = [
 ]
 
 // Base color matches TresCanvas clear-color for seamless horizon fade
-const { material } = createGridMaterial(0x020420, lines, 0.1)
+const { material } = createGridMaterial(0x020420, lines, 0.1, props.grading)
 
 const geometry = new PlaneGeometry(200, 200)
 </script>

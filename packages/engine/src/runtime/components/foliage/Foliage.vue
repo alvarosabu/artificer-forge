@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { watch } from 'vue'
 import { Color } from 'three'
-import { Fn, texture, uv, vec4 } from 'three/tsl'
+import { useLoop } from '@tresjs/core'
 import { createFoliage, FoliageOptions } from './foliage'
+import { advanceWindTime, DEFAULT_WIND_ANGLE, DEFAULT_WIND_STRENGTH } from '../wind/wind'
 
 const props = withDefaults(defineProps<FoliageOptions>(), {
     references: () => [],
@@ -11,30 +12,32 @@ const props = withDefaults(defineProps<FoliageOptions>(), {
     amount: 80,
     size: 0.8,
     seed: 'foliage',
+    windAngle: DEFAULT_WIND_ANGLE,
+    windStrength: DEFAULT_WIND_STRENGTH,
 })
 
-const { geometry, material, uniforms, count } = createFoliage(props)
+const { geometry, material, uniforms, count, setTexture } = createFoliage(props)
 
 watch(() => props.colorA, (val) => uniforms.colorA.value.set(new Color(val as Color)))
 watch(() => props.colorB, (val) => uniforms.colorB.value.set(new Color(val as Color)))
 watch(() => props.lightingDirection, (val) => { if (val) uniforms.lightingDir.value.copy(val) })
+watch(() => props.windAngle, (angle) => uniforms.wind.direction.value.set(Math.sin(angle), Math.cos(angle)))
+watch(() => props.windStrength, (val) => { uniforms.wind.strength.value = val })
 
 watch(() => props.foliageTexture, (tex) => {
     if (!tex) return
-    material.opacityNode = texture(tex, uv()).r
-    material.castShadowNode = Fn(() => {
-        const alphaColor = texture(tex, uv()).r  // default UVs, no rotation
-        alphaColor.lessThan(0.5).discard()
-        return vec4(0, 1, 1, 1)  // WebGPU shadow pass convention — not RGBA color
-    })()
-    material.needsUpdate = true
+    setTexture(tex)
 }, { immediate: true, deep: true })
+
+const { onBeforeRender } = useLoop()
+onBeforeRender(({ delta }) => advanceWindTime(uniforms.wind, delta))
 </script>
 
 <template>
     <TresInstancedMesh
         :args="[geometry, material, count]"
         cast-shadow
+        receive-shadow
         :frustum-culled="false"
     />
 </template>

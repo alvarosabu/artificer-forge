@@ -40,10 +40,16 @@ function disposeObject(obj: Group) {
   })
 }
 
+export interface UseEquipmentOptions {
+  /** runs on each freshly attached equipment model (e.g. grading material swap) */
+  onAttach?: (object: Object3D) => void
+}
+
 export function useEquipment(
   rig: Ref<TresObject3D | undefined>,
   equipment: Ref<Equipment | undefined>,
   activeSlot?: Ref<'mainHand' | 'offHand' | 'none' | undefined>,
+  options: UseEquipmentOptions = {},
 ) {
   const graph = useGraph(rig)
   const gameStore = useGameStore()
@@ -91,6 +97,7 @@ export function useEquipment(
         child.castShadow = true
       }
     })
+    options.onAttach?.(scene)
     bone.add(scene as unknown as TresObject3D)
     attached[slot] = scene
     applyVisibility()
