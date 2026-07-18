@@ -13,7 +13,9 @@ export default defineNuxtModule({
     const filesDir = resolve('../files')
     const charactersDir = join(filesDir, 'models', 'characters')
 
-    const nitro = (nuxt.options as any).nitro as { publicAssets?: { dir: string }[] }
+    // nitro options are typed by the @nuxt/nitro-server builder, which modules
+    // don't depend on, so the shape is declared manually
+    const { nitro } = nuxt.options as unknown as { nitro: { publicAssets?: { dir: string }[] } }
     nitro.publicAssets ||= []
     nitro.publicAssets.push({ dir: filesDir })
 

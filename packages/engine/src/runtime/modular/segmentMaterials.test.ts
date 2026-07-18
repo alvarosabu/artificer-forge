@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { segmentMatcher } from '@artificer-forge/engine/runtime'
+import { segmentMatcher } from './segmentMaterials'
 
 describe('segmentMatcher', () => {
   const bodyChildren = ['HUM_M_ArmL_A', 'HUM_M_ArmR_A', 'HUM_M_HandR_A', 'HUM_M_Torso_A', 'HUM_M_LegL_A']
