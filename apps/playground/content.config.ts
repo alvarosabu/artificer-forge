@@ -53,8 +53,8 @@ export default defineContentConfig({
         sex: z.enum(['M', 'F']).optional(),
         // Modular cosmetics — presence switches rendering from `model` (single
         // GLB) to modular assembly. Part ids come from the generated part
-        // manifest (modules/part-manifest.ts). Armor is NOT part of appearance:
-        // it derives from equipped items (modular.assets below).
+        // manifest (@artificer-forge/assets/nuxt build-time scan). Armor is NOT
+        // part of appearance: it derives from equipped items (modular.assets below).
         appearance: z.object({
           body: z.string(),
           head: z.string(),

@@ -5,8 +5,8 @@
 //
 //   node scripts/merge-body-segments.mjs <out.glb> <segment.glb...>
 //   node scripts/merge-body-segments.mjs \
-//     public/models/characters/bodies/GOB_M_SMALL_Body_A.glb \
-//     public/models/characters/misc/GOB_M_*.glb
+//     packages/assets/files/models/characters/bodies/GOB_M_SMALL_Body_A.glb \
+//     packages/assets/files/models/characters/misc/GOB_M_*.glb
 
 import { NodeIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'

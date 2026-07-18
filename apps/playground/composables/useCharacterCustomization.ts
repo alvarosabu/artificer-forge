@@ -1,6 +1,6 @@
 import { computed, reactive, watch } from 'vue'
 import { ACCESSORIES, BEARDS, BODIES, EYEBROWS, HAIR, HEADS, HORNS } from '../utils/characterParts'
-import { forRaceSex, RACE_RIG, type Race, type Sex } from '../utils/partManifest'
+import { forRaceSex, RACE_RIG, type Race, type Sex } from '@artificer-forge/assets'
 import { defaultEquipmentFor, type EquipSlot } from '../utils/gearDefaults'
 import type { HornPattern } from '@artificer-forge/vfx'
 

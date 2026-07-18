@@ -1,6 +1,6 @@
 import type { CharacterAppearance } from '@artificer-forge/engine/core'
 import type { CustomizationState } from '../composables/useCharacterCustomization'
-import type { Race, Sex } from './partManifest'
+import type { Race, Sex } from '@artificer-forge/assets'
 
 // Maps customizer lab state → the engine's entity fields. This is what a
 // future "Play" flow spawns from (spawnFromTemplate overrides). toon/nude/

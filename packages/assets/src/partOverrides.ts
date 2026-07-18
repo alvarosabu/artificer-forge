@@ -1,7 +1,7 @@
 import type { PartOverride } from './partManifest'
 
 // Manifest exceptions the filename convention can't express, keyed by part id
-// (filename stem) and merged over the scanned entry by modules/part-manifest.ts.
+// (filename stem) and merged over the scanned entry by src/scan.ts.
 // Exceptions ONLY — never inventory; a part must still exist on disk to appear.
 
 export const PART_OVERRIDES: Record<string, PartOverride> = {

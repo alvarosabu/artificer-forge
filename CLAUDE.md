@@ -10,6 +10,7 @@ pnpm monorepo for 3D RPG games using **Nuxt 4 + TresJS** (Vue-based Three.js).
 | `apps/game` | `@artificer-forge/game` | Tabletop RPG adventure game |
 | `apps/grimoire` | `@artificer-forge/grimoire` | Documentation (Docus) |
 | `packages/gamelab-components` | `@artificer-forge/components` | Shared 3D components |
+| `packages/assets` | `@artificer-forge/assets` | Shared 3D assets (models/textures) + part manifest, consumed via Nuxt module |
 
 ## Commands
 

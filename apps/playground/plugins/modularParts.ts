@@ -3,9 +3,9 @@ import manifest from '#build/character-parts.mjs'
 import { registerPartManifest, registerSegmentMaterials } from '@artificer-forge/engine/runtime'
 import { ghostMaterial, type GhostMaterialOptions } from '@artificer-forge/vfx'
 
-// Hand the generated part manifest (modules/part-manifest.ts) to the engine —
-// the engine never hardcodes asset paths. Armor is intentionally absent: those
-// assets resolve through item YAML (modular.assets).
+// Hand the generated part manifest (@artificer-forge/assets/nuxt build-time
+// scan) to the engine — the engine never hardcodes asset paths. Armor is
+// intentionally absent: those assets resolve through item YAML (modular.assets).
 export default defineNuxtPlugin(() => {
   registerPartManifest({
     rigs: manifest.rigs,

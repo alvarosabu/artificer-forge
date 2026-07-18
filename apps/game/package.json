@@ -13,6 +13,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@artificer-forge/assets": "workspace:*",
     "@nuxt/eslint": "catalog:nuxt",
     "@tresjs/cientos": "catalog:three",
     "@tresjs/nuxt": "catalog:three",
