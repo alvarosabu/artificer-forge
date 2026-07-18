@@ -1,0 +1,38 @@
+{
+  "name": "@artificer-forge/assets",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./nuxt": {
+      "types": "./src/module.ts",
+      "import": "./src/module.ts"
+    }
+  },
+  "files": [
+    "src",
+    "files"
+  ],
+  "scripts": {
+    "sync:blender": "./scripts/sync-blender.sh",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nuxt/kit": "^4.3.1"
+  },
+  "devDependencies": {
+    "@gltf-transform/core": "catalog:",
+    "@gltf-transform/extensions": "catalog:",
+    "@gltf-transform/functions": "catalog:",
+    "@types/node": "^25.0.0",
+    "draco3dgltf": "catalog:",
+    "typescript": "catalog:typescript",
+    "vitest": "catalog:"
+  }
+}

@@ -1,4 +1,4 @@
-import { RACE_RIG, type Race, type RigKey } from './partManifest'
+import { RACE_RIG, type Race, type RigKey } from '@artificer-forge/assets'
 
 // Gear domain: which items a fresh character wears, and whether a fitted mesh
 // can dress a given race's skeleton. Item YAML (modular.rig) declares the rig

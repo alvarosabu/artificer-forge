@@ -10,7 +10,7 @@ import { AnimationName, createWebGPURenderer } from '@artificer-forge/engine/run
 import { useCharacterCustomization } from '../../../composables/useCharacterCustomization'
 import { customizationToTemplateYaml } from '../../../utils/customizationToTemplateYaml'
 import { HEADS } from '../../../utils/characterParts'
-import { forRaceSex, type Race } from '../../../utils/partManifest'
+import { forRaceSex, type Race } from '@artificer-forge/assets'
 import { fitsRig, type EquipSlot } from '../../../utils/gearDefaults'
 
 useHead({ title: 'Create Character — Lab' })

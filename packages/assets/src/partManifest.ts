@@ -1,6 +1,6 @@
 // Pure part-manifest domain: types, filename parser, and filter helpers.
-// No #build imports — unit-testable and consumed by both the build-time scanner
-// (modules/part-manifest.ts) and the runtime re-export layer (characterParts.ts).
+// No fs/#build imports — unit-testable and consumed by both the build-time
+// scanner (src/scan.ts) and app code via the package root export.
 
 export type Sex = 'M' | 'F'
 export type Race = 'human' | 'elf' | 'tiefling' | 'goblin'

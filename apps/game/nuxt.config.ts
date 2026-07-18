@@ -2,7 +2,8 @@
 export default defineNuxtConfig({
   modules: [
     '@tresjs/nuxt',
-    '@nuxt/devtools'
+    '@nuxt/devtools',
+    '@artificer-forge/assets/nuxt',
   ],
   compatibilityDate: '2025-01-01',
 })

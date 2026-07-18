@@ -11,6 +11,7 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@pinia/nuxt',
     '@artificer-forge/dialog-editor',
+    '@artificer-forge/assets/nuxt',
   ],
   dialogEditor: {
     autocomplete: {
@@ -33,7 +34,7 @@ export default defineNuxtConfig({
     ],
   },
   build: {
-    transpile: ['@artificer-forge/engine'],
+    transpile: ['@artificer-forge/engine', '@artificer-forge/assets'],
   },
   icon: {
     customCollections: [{

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Sync Blender exports (character GLBs + textures) into playground public folder.
+# Sync Blender exports (character GLBs + textures) into the shared assets package.
 # Additive: only copies new/updated files, never deletes (color variants etc. are safe).
 # Usage: pnpm sync:blender [--dry-run]
 set -euo pipefail
 
 SRC="$HOME/Blender/Projects/Artificier Forge/models"
-DEST="$(cd "$(dirname "$0")/.." && pwd)/public/models/characters"
+DEST="$(cd "$(dirname "$0")/.." && pwd)/files/models/characters"
 
 RSYNC_FLAGS=(-av --update)
 if [[ "${1:-}" == "--dry-run" || "${1:-}" == "-n" ]]; then
