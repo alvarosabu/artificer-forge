@@ -3,7 +3,10 @@ import { computed } from 'vue'
 import { until } from '@vueuse/core'
 import { EquirectangularReflectionMapping, Object3D, SRGBColorSpace, Vector3 } from 'three'
 import type { AnimationAction } from 'three'
-import { AnimationName, Character, createTrampleMap, Floor, Foliage, Grass, useEnvironmentStore, useGameStore, useSceneRefs, WindLines } from '@artificer-forge/engine/runtime'
+import { AnimationName, Character, createTrampleMap, Floor, Flowers, Foliage, Grass, GrassTufts, useEnvironmentStore, useGameStore, useSceneRefs, WindLines } from '@artificer-forge/engine/runtime'
+
+
+
 const references = [
   { position: [2, 0, -3] as [number, number, number], scale: 1.0 },
   { position: [-4, 0, 1] as [number, number, number], scale: 0.8 },
@@ -31,6 +34,11 @@ const { state: foliageTexture } = useTexture('/textures/foliage/foliage.png')
 
 const { uuid } = useSharedLechesControls()
 
+const { subdivisions, fieldSize } = useControls('field', {
+  subdivisions: { value: 400, min: 100, max: 1000, step: 100, type: 'range' },
+  size: { value: 100, min: 10, max: 400, step: 10, type: 'range' },
+}, { uuid })
+
 const { foliageColorA, foliageColorB } = useControls('foliage', {
   colorA: { value: '#b4b536', type: 'color' },
   colorB: { value: '#d8cf3b', type: 'color' },
@@ -39,6 +47,33 @@ const { foliageColorA, foliageColorB } = useControls('foliage', {
 const { grassColorA, grassColorB } = useControls('grass', {
   colorA: { value: '#b4b536', type: 'color' },
   colorB: { value: '#d8cf3b', type: 'color' },
+}, { uuid })
+
+const { tuftsDensity, tuftsHeight, tuftsSpread, tuftsColorA, tuftsColorB } = useControls('tufts', {
+  density: { value: 0.35, min: 0, max: 1, step: 0.01, type: 'range' },
+  height: { value: 2.2, min: 0.4, max: 4, step: 0.05, type: 'range' },
+  spread: { value: 0.45, min: 0.1, max: 1.2, step: 0.01, type: 'range' },
+  colorA: { value: '#2f5d2a', type: 'color' },
+  colorB: { value: '#7fae3c', type: 'color' },
+}, { uuid })
+
+// one folder per flower species — leches folder names must stay single-word
+const { puffsDensity, puffsHeight, puffsColor } = useControls('puffs', {
+  density: { value: 0.5, min: 0, max: 1, step: 0.01, type: 'range' },
+  height: { value: 0.85, min: 0.1, max: 1.5, step: 0.01, type: 'range' },
+  color: { value: '#ffffff', type: 'color' },
+}, { uuid })
+
+const { poppiesDensity, poppiesHeight, poppiesColor } = useControls('poppies', {
+  density: { value: 0.34, min: 0, max: 1, step: 0.01, type: 'range' },
+  height: { value: 0.44, min: 0.1, max: 1.5, step: 0.01, type: 'range' },
+  color: { value: '#c4202a', type: 'color' },
+}, { uuid })
+
+const { daisiesDensity, daisiesHeight, daisiesColor } = useControls('daisies', {
+  density: { value: 0.38, min: 0, max: 1, step: 0.01, type: 'range' },
+  height: { value: 0.32, min: 0.1, max: 1.5, step: 0.01, type: 'range' },
+  color: { value: '#e8c22a', type: 'color' },
 }, { uuid })
 
 const { state: grassDiffuseMap } = useTexture('/textures/grass/splat.jpg')
@@ -182,11 +217,56 @@ onMounted(async () => {
   <!-- diffuseMap presence is decided at material creation, so wait for the texture -->
   <Grass
     v-if="grassDiffuseMap"
-    :subdivisions="200"
-    :size="30"
+    :subdivisions="400"
+    :size="fieldSize"
     :color-a="grassColorA"
     :color-b="grassColorB"
     :diffuse-map="grassDiffuseMap"
+    :wind-angle="environment.windAngle"
+    :wind-strength="environment.windStrength"
+    :trample="trampleMap"
+  />
+  <GrassTufts
+    :subdivisions="20"
+    :size="fieldSize"
+    :density="tuftsDensity"
+    :height="tuftsHeight"
+    :spread="tuftsSpread"
+    :color-a="tuftsColorA"
+    :color-b="tuftsColorB"
+    :wind-angle="environment.windAngle"
+    :wind-strength="environment.windStrength"
+    :trample="trampleMap"
+  />
+  <Flowers
+    shape="puff"
+    :subdivisions="70"
+    :size="fieldSize"
+    :density="puffsDensity"
+    :height="puffsHeight"
+    :petal-color="puffsColor"
+    :wind-angle="environment.windAngle"
+    :wind-strength="environment.windStrength"
+    :trample="trampleMap"
+  />
+  <Flowers
+    shape="poppy"
+    :subdivisions="60"
+    :size="fieldSize"
+    :density="poppiesDensity"
+    :height="poppiesHeight"
+    :petal-color="poppiesColor"
+    :wind-angle="environment.windAngle"
+    :wind-strength="environment.windStrength"
+    :trample="trampleMap"
+  />
+  <Flowers
+    shape="daisy"
+    :subdivisions="60"
+    :size="fieldSize"
+    :density="daisiesDensity"
+    :height="daisiesHeight"
+    :petal-color="daisiesColor"
     :wind-angle="environment.windAngle"
     :wind-strength="environment.windStrength"
     :trample="trampleMap"
