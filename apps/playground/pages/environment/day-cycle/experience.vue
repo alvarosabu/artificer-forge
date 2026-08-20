@@ -3,7 +3,7 @@ import { computed, shallowRef } from 'vue'
 import { until } from '@vueuse/core'
 import { Object3D, SRGBColorSpace } from 'three'
 import type { AmbientLight, AnimationAction, DirectionalLight } from 'three'
-import { AnimationName, Character, createGradingContext, createTrampleMap, Floor, Foliage, Grass, useEnvironmentStore, useGameStore, useSceneRefs, WindLines } from '@artificer-forge/engine/runtime'
+import { AnimationName, Character, createGradingContext, createTrampleMap, Floor, Flowers, Foliage, Grass, GrassTufts, useEnvironmentStore, useGameStore, useSceneRefs, WindLines } from '@artificer-forge/engine/runtime'
 import type { DayCycleName } from '~/utils/dayCyclePresets'
 
 
@@ -327,6 +327,45 @@ onMounted(async () => {
     :color-a="grassColorA"
     :color-b="grassColorB"
     :diffuse-map="grassDiffuseMap"
+    :wind-angle="environment.windAngle"
+    :wind-strength="environment.windStrength"
+    :trample="trampleMap"
+    :grading="grading"
+  />
+  <GrassTufts
+    :subdivisions="20"
+    :size="30"
+    :density="0.35"
+    :wind-angle="environment.windAngle"
+    :wind-strength="environment.windStrength"
+    :trample="trampleMap"
+    :grading="grading"
+  />
+  <Flowers
+    shape="puff"
+    :subdivisions="70"
+    :size="30"
+    :density="0.5"
+    :wind-angle="environment.windAngle"
+    :wind-strength="environment.windStrength"
+    :trample="trampleMap"
+    :grading="grading"
+  />
+  <Flowers
+    shape="poppy"
+    :subdivisions="60"
+    :size="30"
+    :density="0.34"
+    :wind-angle="environment.windAngle"
+    :wind-strength="environment.windStrength"
+    :trample="trampleMap"
+    :grading="grading"
+  />
+  <Flowers
+    shape="daisy"
+    :subdivisions="60"
+    :size="30"
+    :density="0.38"
     :wind-angle="environment.windAngle"
     :wind-strength="environment.windStrength"
     :trample="trampleMap"
