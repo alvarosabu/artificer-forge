@@ -32,18 +32,23 @@ onSlotActivated((slot) => {
   }
 })
 
+// Ground markers sit a hair above whatever they mark, not above y = 0: on terrain
+// a fixed height buries them in the hillside or floats them over a dip. The y they
+// track comes from the thing itself — the entity's feet, the clicked ground point.
+const GROUND_OFFSET = 0.01
+
 const reticlePosition = computed<[number, number, number]>(() => {
   const id = combatStore.hoveredTargetId
-  if (!id) return [0, 0.01, 0]
+  if (!id) return [0, GROUND_OFFSET, 0]
   const entity = gameStore.getEntity(id)
-  if (!entity) return [0, 0.01, 0]
-  return [entity.position.x, 0.01, entity.position.z]
+  if (!entity) return [0, GROUND_OFFSET, 0]
+  return [entity.position.x, entity.position.y + GROUND_OFFSET, entity.position.z]
 })
 
 const targetIndicatorPosition = computed<[number, number, number] | null>(() => {
   const target = gameStore.selectedEntity?.moveTarget
   if (!target) return null
-  return [target.x, 0.01, target.z]
+  return [target.x, target.y + GROUND_OFFSET, target.z]
 })
 
 // Trajectory preview for ranged-projectile abilities

@@ -20,6 +20,9 @@ export function usePointerController(
   const target = shallowRef<Vector3 | null>(null)
   const isMoving = computed(() => target.value !== null)
 
+  /** How close to the target counts as arrived, in metres, measured on XZ. */
+  const ARRIVE_RADIUS = 0.1
+
   const arriveHook = createEventHook<Vector3>()
 
   function moveTo(point: Vector3) {
@@ -30,10 +33,17 @@ export function usePointerController(
   function update(delta: number) {
     if (!character.value || !target.value) return
 
-    const direction = target.value.clone().sub(character.value.position)
-    const distance = direction.length()
+    // Walking is a ground-plane problem, so both the distance and the step stay
+    // on XZ. The scene owns y (terrain grounding, physics), and a target height
+    // that something else keeps overwriting is a gap this loop can never close:
+    // measured in 3D it would leave `distance` stuck above ARRIVE_RADIUS and the
+    // character walking forever. The target keeps its y as data for markers.
+    const position = character.value.position
+    const dx = target.value.x - position.x
+    const dz = target.value.z - position.z
+    const distance = Math.hypot(dx, dz)
 
-    if (distance < 0.1) {
+    if (distance < ARRIVE_RADIUS) {
       const arrivedAt = target.value.clone()
       target.value = null
       animationControls.play(AnimationName.IDLE_A)
@@ -42,10 +52,13 @@ export function usePointerController(
     }
 
     // Rotate to face movement direction
-    character.value.rotation.y = Math.atan2(direction.x, direction.z)
+    character.value.rotation.y = Math.atan2(dx, dz)
 
-    direction.normalize()
-    character.value.position.add(direction.multiplyScalar(speed * delta))
+    // Clamped so a long frame lands on the target instead of stepping past it and
+    // orbiting — the other way arrival never fires
+    const step = Math.min(speed * delta, distance)
+    position.x += (dx / distance) * step
+    position.z += (dz / distance) * step
   }
 
   function cancelMovement() {

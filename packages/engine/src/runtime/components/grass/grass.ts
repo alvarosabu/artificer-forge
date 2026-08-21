@@ -1,6 +1,6 @@
 import { TresColor } from '@tresjs/core'
 import { BufferAttribute, Color, DoubleSide, InstancedBufferAttribute, InstancedBufferGeometry, Sphere, Texture, Vector3 } from 'three'
-import { attribute, Fn, mix, positionGeometry, rotateUV, texture, uniform, varying, vec2, vec3 } from 'three/tsl'
+import { attribute, float, Fn, mix, positionGeometry, rotateUV, texture, uniform, varying, vec2, vec3 } from 'three/tsl'
 import { MeshBasicNodeMaterial, MeshLambertNodeMaterial } from 'three/webgpu'
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js'
 import type { ColorRepresentation, TextureNode, UniformNode } from 'three/webgpu'
@@ -8,6 +8,9 @@ import { createWindUniforms, windOffset, type WindSettings, type WindUniforms } 
 import { trampleUv, type TrampleMap } from '../../trample/trample'
 import type { GradingContext } from '../../grading/grading'
 import { createDropShadowCatcher, stylizedOutput } from '../../grading/stylizedOutput'
+import { HeightField } from '../../terrain/heightField'
+import { sampleHeight } from '../../terrain/heightField'
+import { ControlMap, controlUv } from '../../terrain/controlMap'
 
 const bladeWidth = uniform(0.1)
 const bladeHeight = uniform(0.6)
@@ -34,6 +37,10 @@ export interface GrassOptions extends WindSettings {
     diffuseMap?: Texture | null
     trample?: TrampleMap | null
     grading?: GradingContext | null
+    heightField?: HeightField | null
+    control?: ControlMap | null
+    maskLow?: number
+    maskHigh?: number
 }
 
 export function createGrassGeometry(options: GrassOptions) {
@@ -84,9 +91,13 @@ export function buildGrassMaterial(options: {
   windUniforms: WindUniforms, 
   diffuseMapNode?: TextureNode | null, 
   trample?: TrampleMap | null,
-  grading?: GradingContext | null
+  grading?: GradingContext | null,
+  heightField?: HeightField | null,
+  control?: ControlMap | null,
+  maskLow?: UniformNode<'float', number> | null,
+  maskHigh?: UniformNode<'float', number> | null
 }): MeshBasicNodeMaterial | MeshLambertNodeMaterial {
-    const { colorAUniform, colorBUniform, windUniforms, diffuseMapNode, trample, grading } = options
+    const { colorAUniform, colorBUniform, windUniforms, diffuseMapNode, trample, grading, heightField, control, maskLow, maskHigh } = options
     // graded blades catch drop shadows — Lambert base only so the catcher runs
     const material = grading ? new MeshLambertNodeMaterial() : new MeshBasicNodeMaterial()
     material.side = DoubleSide
@@ -102,6 +113,13 @@ export function buildGrassMaterial(options: {
         const random = attribute<'float'>('random', 'float')
         const yaw = attribute<'float'>('yaw', 'float')
 
+        const worldXZ = anchor.toVar()
+
+        const visible = control ? 
+          texture(control.texture, controlUv(control.uniforms, worldXZ))
+              .g.smoothstep(maskLow, maskHigh).toVar()
+        : float(1).toVar()
+
         const trampleAmt = trample ? texture(trample.texture, trampleUv(trample.uniforms, anchor)).r.toVar() : null
 
         // height: per-blade random × perlin patchiness, crushed where trampled
@@ -109,17 +127,19 @@ export function buildGrassMaterial(options: {
         let height = bladeHeight
           .mul(mix(1, random, bladeHeightRandomness))
           .mul(heightVariation)
+          .mul(heightVariation)
         if (trampleAmt) height = height.mul(trampleAmt.mul(0.75).oneMinus())
 
         // unit blade → world scale, spun around its own base by the per-blade yaw
         const local = vec3(
-          positionGeometry.x.mul(bladeWidth),
+          positionGeometry.x.mul(bladeWidth).mul(visible),
           positionGeometry.y.mul(height),
           0,
         ).toVar()
         local.xz.assign(rotateUV(local.xz, yaw, vec2(0)))
 
-        const pos = vec3(local.x.add(anchor.x), local.y, local.z.add(anchor.y)).toVar()
+        const pos = vec3(local.x.add(worldXZ.x), local.y, local.z.add(worldXZ.y)).toVar()
+        if (heightField) pos.y.addAssign(sampleHeight(heightField, worldXZ))
 
         // wind: taller blades sway more, weight curves the blade along its length.
         // Trampled blades are pinned down, so damp their sway too
@@ -140,6 +160,7 @@ export function buildGrassMaterial(options: {
           pos.addAssign(vec3(toBlade.x.div(dist), 0, toBlade.y.div(dist)).mul(push.mul(push)).mul(windWeight).mul(0.5))
           pos.y.subAssign(push.mul(push).mul(height).mul(0.3).mul(windWeight))
         }
+        pos.y.addAssign(visible.lessThan(0.01).select(float(1000), float(0)))
 
         return pos
     })()
@@ -167,6 +188,8 @@ export function createGrass(options: GrassOptions) {
     const geometry = createGrassGeometry(options)
     const colorAUniform = uniform(new Color(options.colorA as ColorRepresentation))
     const colorBUniform = uniform(new Color(options.colorB as ColorRepresentation))
+    const maskLow = uniform(options.maskLow ?? 0.25)
+    const maskHigh = uniform(options.maskHigh ?? 0.6)
     const windUniforms = createWindUniforms(options)
 
     // anchor ∈ [-size/2, size/2] → normalized field UV [0, 1]
@@ -174,7 +197,18 @@ export function createGrass(options: GrassOptions) {
       ? texture(options.diffuseMap, attribute<'vec2'>('anchor', 'vec2').div(options.size).add(0.5))
       : null
 
-    const material = buildGrassMaterial({ colorAUniform, colorBUniform, windUniforms, diffuseMapNode, trample: options.trample, grading: options.grading })
+    const material = buildGrassMaterial({
+      colorAUniform,
+      colorBUniform,
+      windUniforms,
+      diffuseMapNode,
+      trample: options.trample,
+      grading: options.grading,
+      heightField: options.heightField,
+      control: options.control,
+      maskLow,
+      maskHigh,
+    })
     const uniforms = {
         bladeWidth,
         bladeHeight,

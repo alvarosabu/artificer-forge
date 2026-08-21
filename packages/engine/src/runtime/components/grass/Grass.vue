@@ -12,6 +12,10 @@ const props = withDefaults(defineProps<GrassOptions>(), {
   colorB: '#d8cf3b',
   windAngle: DEFAULT_WIND_ANGLE,
   windStrength: DEFAULT_WIND_STRENGTH,
+  control: null,
+  maskLow: 0.25,
+  maskHigh: 0.6,
+  heightField: null,
 })
 
 const { geometry, material, uniforms, dispose } = createGrass(props)

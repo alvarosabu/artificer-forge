@@ -1,7 +1,7 @@
 import { TresColor } from "@tresjs/core"
-import { BufferAttribute, BufferGeometry, Color, DoubleSide, InstancedBufferAttribute, Object3D, PlaneGeometry, Quaternion, Spherical, StaticDrawUsage, Texture, Vector3 } from "three"
+import { BufferAttribute, BufferGeometry, Color, InstancedBufferAttribute, Object3D, PlaneGeometry, Spherical, StaticDrawUsage, Texture, Vector3 } from "three"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js"
-import { attribute, float, Fn, instance, mix, normalWorld, positionLocal, positionWorld, rotateUV, texture, uniform, uv, varying, vec2, vec3, vec4 } from "three/tsl"
+import { attribute, cameraWorldMatrix, float, Fn, instance, instancedBufferAttribute, mix, normalWorld, positionLocal, positionWorld, rotateUV, texture, uniform, uv, varying, vec2, vec3, vec4 } from "three/tsl"
 import { MeshLambertNodeMaterial, MeshStandardNodeMaterial } from "three/webgpu"
 import type { UniformNode } from "three/webgpu"
 import { createWindUniforms, windOffset, type WindSettings, type WindUniforms } from "../wind/wind"
@@ -19,7 +19,6 @@ export interface FoliageOptions extends WindSettings {
     foliageTexture?: Texture | null
     /** legacy ramp/shadow direction — ignored when grading is set (direction lives in grading) */
     lightingDirection?: Vector3
-    cameraForward?: Vector3
     trample?: TrampleMap | null
     grading?: GradingContext | null
 }
@@ -44,43 +43,45 @@ function mulberry32(seed: number): () => number {
     }
 }
 
+// The cluster transform carries NO billboard rotation — the quads face the camera in
+// the vertex shader instead (see billboardOffset), so this is only place + size + a
+// random yaw. The yaw exists to vary the baked fake-spherical normals between bushes:
+// without it every cluster would catch the light on exactly the same side.
 function buildInstanceMatrices(
     references: Object3D[],
     rng: () => number,
-    cameraForward: Vector3,
-): InstancedBufferAttribute {
+): { matrices: InstancedBufferAttribute, scales: InstancedBufferAttribute } {
     const count = references.length
     const data = new Float32Array(count * 16)
+    const scaleData = new Float32Array(count)
     const dummy = new Object3D()
 
     for (let i = 0; i < count; i++) {
         const ref = references[i]
+        const scale = ref.matrixWorld.getMaxScaleOnAxis()
 
         dummy.position.setFromMatrixPosition(ref.matrixWorld)
-        dummy.scale.setScalar(ref.matrixWorld.getMaxScaleOnAxis())
-
-        const angle = rng() * Math.PI * 2
-        dummy.up.set(Math.sin(angle), Math.cos(angle), 0)
-        dummy.lookAt(
-            dummy.position.x + cameraForward.x,
-            dummy.position.y + cameraForward.y,
-            dummy.position.z + cameraForward.z,
-        )
+        dummy.scale.setScalar(scale)
+        dummy.rotation.set(0, rng() * Math.PI * 2, 0)
 
         dummy.updateMatrix()
         dummy.matrix.toArray(data, i * 16)
+        // quad corners are expanded after the instance transform, so they miss its
+        // scale — hand it to the shader separately or every bush gets 1.0-sized leaves
+        scaleData[i] = scale
     }
 
-    const attr = new InstancedBufferAttribute(data, 16)
-    attr.setUsage(StaticDrawUsage)
-    return attr
+    const matrices = new InstancedBufferAttribute(data, 16)
+    matrices.setUsage(StaticDrawUsage)
+    const scales = new InstancedBufferAttribute(scaleData, 1)
+    scales.setUsage(StaticDrawUsage)
+    return { matrices, scales }
 }
 
 function buildClusterGeometry(rng: () => number, amount: number, size: number): BufferGeometry {
     const planes: BufferGeometry[] = []
     const spherical = new Spherical()
     const normal = new Vector3()
-    const surfaceNormal = new Vector3()
 
     for (let i = 0; i < amount; i++) {
         const plane = new PlaneGeometry(size, size)
@@ -92,15 +93,25 @@ function buildClusterGeometry(rng: () => number, amount: number, size: number): 
         )
         const position = new Vector3().setFromSpherical(spherical)
 
-        const rotZ = rng() * Math.PI * 2
-        plane.rotateZ(rotZ)
-        const outward = position.clone().normalize()
-        const q = new Quaternion().setFromUnitVectors(new Vector3(0, 0, 1), outward)
-        plane.applyQuaternion(q)
+        // Planes are only spun in-plane, never tilted toward the sphere surface: every
+        // quad is turned to face the camera in the vertex shader, so it always shows its
+        // full leaf silhouette. Tilting them outward turns the ones near the silhouette
+        // edge-on and the blob reads as a pile of shards.
+        plane.rotateZ(rng() * Math.PI * 2)
+
+        // rotateZ keeps the quad in the XY plane, so its xy IS the spun corner offset.
+        // Grab it before translating — the shader re-applies it along the camera axes.
+        const posArr = plane.attributes.position.array as Float32Array
+        const cornerArr = new Float32Array(8)
+        for (let v = 0; v < 4; v++) {
+            cornerArr[v * 2] = posArr[v * 3]
+            cornerArr[v * 2 + 1] = posArr[v * 3 + 1]
+        }
+
         plane.translate(position.x, position.y, position.z)
+        const outward = position.clone().normalize()
 
         // Lerp normals 85% toward sphere surface normal — do NOT normalize
-        const posArr = plane.attributes.position.array as Float32Array
         const normArr = plane.attributes.normal.array as Float32Array
         // baked vertex AO: depth into the cluster (0 = core, 1 = surface)
         const aoArr = new Float32Array(4)
@@ -110,10 +121,10 @@ function buildClusterGeometry(rng: () => number, amount: number, size: number): 
             const vy = posArr[v * 3 + 1]
             const vz = posArr[v * 3 + 2]
 
-            surfaceNormal.set(vx, vy, vz).normalize()
-            normal.set(normArr[v * 3], normArr[v * 3 + 1], normArr[v * 3 + 2])
-            normal.lerp(surfaceNormal, 0.85)
-            // Intentionally NOT normalized — produces softer lighting
+            // Fake spherical normals: start from the vertex position (keeps a little
+            // per-corner variation) and pull 85% toward the plane's outward direction.
+            // Intentionally NOT normalized — produces softer lighting.
+            normal.set(vx, vy, vz).lerp(outward, 0.85)
 
             normArr[v * 3]     = normal.x
             normArr[v * 3 + 1] = normal.y
@@ -125,6 +136,17 @@ function buildClusterGeometry(rng: () => number, amount: number, size: number): 
             aoArr[v] = 1 - Math.min(1, depth * 3)
         }
         plane.setAttribute('ao', new BufferAttribute(aoArr, 1))
+        plane.setAttribute('corner', new BufferAttribute(cornerArr, 2))
+
+        // Collapse the quad onto its centre: `position` now carries the leaf ANCHOR,
+        // repeated across all four verts, and the shader rebuilds the quad from
+        // `corner`. Normals and ao above were still measured at the real vertex
+        // positions, so the fake spherical shading is unchanged.
+        for (let v = 0; v < 4; v++) {
+            posArr[v * 3]     = position.x
+            posArr[v * 3 + 1] = position.y
+            posArr[v * 3 + 2] = position.z
+        }
 
         planes.push(plane)
     }
@@ -132,16 +154,32 @@ function buildClusterGeometry(rng: () => number, amount: number, size: number): 
     return mergeGeometries(planes)
 }
 
-// Wind flutters the leaves by rotating the alpha-texture UVs (no positional
-// movement, keeps the cluster silhouette stable). Shadow pass keeps plain UVs.
-function foliageAlphaUv(wind: WindUniforms) {
-    const foliageWindOffset = windOffset(wind)
-    return rotateUV(uv(), foliageWindOffset(positionLocal.xz).length().mul(2.2), vec2(0.5))
+// True per-frame billboard: rebuild the quad around its anchor along the camera's own
+// right/up axes, so every leaf faces the viewer at any orbit angle. Baking the facing
+// into the instance matrix (Bruno's approach) is cheaper but only holds up from the one
+// angle his camera is locked to. cameraWorldMatrix follows whichever camera is rendering,
+// so the shadow pass turns the quads toward the light — which is what we want there.
+// w=0 drops the translation column, leaving just the rotation basis.
+//
+// The wind flutter spins the QUAD, not the texture UV. Rotating the UV (Bruno's
+// approach) swings the sampled square outside [0,1] — the angle here reaches ~2 rad,
+// which overshoots the texture by ~20% at the corners. Outside, clamp-to-edge repeats
+// the SDF's black border, so the alpha test slices straight-edged chunks off any leaf
+// near the quad corner. Spinning the corner offsets instead is the same visual flutter
+// with the UV left untouched, so nothing can be cut. The shadow pass runs this same
+// positionNode, so cast silhouettes stay in sync for free.
+function billboardOffset(clusterScale: ReturnType<typeof instancedBufferAttribute>, wind: WindUniforms) {
+    const flutter = windOffset(wind)(positionLocal.xz).length().mul(2.2)
+    // center vec2(0): corner offsets are already relative to the quad centre
+    const corner = rotateUV(attribute<'vec2'>('corner', 'vec2'), flutter, vec2(0)).mul(clusterScale)
+    const right = cameraWorldMatrix.mul(vec4(1, 0, 0, 0)).xyz
+    const up = cameraWorldMatrix.mul(vec4(0, 1, 0, 0)).xyz
+    return right.mul(corner.x).add(up.mul(corner.y))
 }
 
 export function applyFoliageTexture(material: FoliageMaterial, tex: Texture, wind: WindUniforms, grading?: GradingContext | null) {
     // graded path skips opacityNode — alpha routes through the stylized finish instead
-    if (!grading) material.opacityNode = texture(tex, foliageAlphaUv(wind)).r
+    if (!grading) material.opacityNode = texture(tex, uv()).r
     material.castShadowNode = Fn(() => {
         const alphaColor = texture(tex, uv()).r
         alphaColor.lessThan(0.5).discard()
@@ -163,7 +201,7 @@ function gradedFoliageOutput(
 ) {
     const ramp = normalWorld.dot(grading.uniforms.lightDirection).smoothstep(0, 1)
     const baseColor = mix(colorAUniform, colorBUniform, ramp)
-    const alpha = tex ? texture(tex, foliageAlphaUv(wind)).r : float(1)
+    const alpha = tex ? texture(tex, uv()).r : float(1)
     return stylizedOutput(baseColor, grading, {
         hasCoreShadows: true,
         // baked cluster-depth AO: inner leaves sink into the shadow band
@@ -180,16 +218,20 @@ function buildFoliageMaterial(options: {
     lightingDirUniform: UniformNode<'vec3', Vector3>,
     foliageTexture?: Texture | null,
     instanceMatrix: InstancedBufferAttribute,
+    instanceScale: InstancedBufferAttribute,
     windUniforms: WindUniforms,
     trample?: TrampleMap | null,
     grading?: GradingContext | null,
     dropShadow?: ReturnType<typeof createDropShadowCatcher> | null,
 }) {
-    const { colorAUniform, colorBUniform, lightingDirUniform, foliageTexture, instanceMatrix, windUniforms, trample, grading, dropShadow } = options
+    const { colorAUniform, colorBUniform, lightingDirUniform, foliageTexture, instanceMatrix, instanceScale, windUniforms, trample, grading, dropShadow } = options
     // grading IS the lighting — Lambert base only exists so the drop-shadow catcher runs
     const material: FoliageMaterial = grading ? new MeshLambertNodeMaterial() : new MeshStandardNodeMaterial()
 
-    material.side = DoubleSide
+    // FrontSide, like Bruno's MeshDefaultMaterial default. The quads are billboarded to
+    // face the camera, so a back face only ever appears on a quad turned away from the
+    // viewer — rendering those double-sided just piles unlit, wrong-normal leaves into
+    // the blob and flattens the shading.
     material.depthWrite = true
     material.transparent = false
     if (!grading) material.alphaTest = 0.3 // graded path discards inside the finish instead
@@ -197,14 +239,19 @@ function buildFoliageMaterial(options: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     material.positionNode = Fn(({ object }: { object: any }) => {
         instance(object.count, instanceMatrix).toStack()
-        if (!trample) return positionLocal
         // instance() assigns the transform to positionLocal at build time, AFTER any
         // statements authored here — so no toVar()/assign on it (a var would snapshot the
         // pre-instance value). A pure expression evaluates at the output, post-instance,
         // where xz is world space (instance matrices carry the world translation).
-        const trampleAmt = texture(trample.texture, trampleUv(trample.uniforms, positionLocal.xz)).r
-        // squash the cluster toward the ground (y=0: references sit at ground level) where trampled
-        return vec3(positionLocal.x, positionLocal.y.mul(trampleAmt.mul(0.6).oneMinus()), positionLocal.z)
+        const clusterScale = instancedBufferAttribute(instanceScale, 'float')
+        // positionLocal is the leaf anchor; move the anchor first, then face the quad.
+        let anchor = positionLocal
+        if (trample) {
+            const trampleAmt = texture(trample.texture, trampleUv(trample.uniforms, positionLocal.xz)).r
+            // squash the cluster toward the ground (y=0: references sit at ground level) where trampled
+            anchor = vec3(positionLocal.x, positionLocal.y.mul(trampleAmt.mul(0.6).oneMinus()), positionLocal.z)
+        }
+        return anchor.add(billboardOffset(clusterScale, windUniforms))
     })()
 
     if (grading) {
@@ -213,7 +260,7 @@ function buildFoliageMaterial(options: {
             // billboard planes self-shadow at grazing sun angles — sample the shadow
             // map 1 unit toward the light (world space: positionLocal would lose the
             // instance transform). lightDirection points INTO the scene, so subtract
-            material.receivedShadowPositionNode = positionWorld.sub(grading.uniforms.lightDirection)
+            // material.receivedShadowPositionNode = positionWorld.sub(grading.uniforms.lightDirection)
         }
         material.outputNode = gradedFoliageOutput(grading, colorAUniform, colorBUniform, foliageTexture, windUniforms, dropShadow?.shadowFactor)
     }
@@ -245,13 +292,12 @@ export function createFoliage(options: FoliageOptions) {
         foliageTexture,
         lightingDirection,
         seed,
-        cameraForward = new Vector3(0, 0, -1),
         trample,
         grading,
     } = options
     const rng = mulberry32(hashSeed(seed || ''))
     const geometry = buildClusterGeometry(rng, amount, size)
-    const instanceMatrix = buildInstanceMatrices(references, rng, cameraForward)
+    const { matrices: instanceMatrix, scales: instanceScale } = buildInstanceMatrices(references, rng)
 
     // Pass raw Three.js objects to uniform() — NOT TSL nodes like color()/vec3()
     // Passing a TSL node as the uniform value causes zero-size GPU buffers
@@ -269,6 +315,7 @@ export function createFoliage(options: FoliageOptions) {
         lightingDirUniform,
         foliageTexture,
         instanceMatrix,
+        instanceScale,
         windUniforms,
         trample,
         grading,

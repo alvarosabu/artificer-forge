@@ -86,3 +86,10 @@ export { default as PortraitStudio } from './components/portrait/Studio.vue'
 export { default as PortraitSubject } from './components/portrait/Subject.vue'
 export { default as PortraitBackground } from './components/portrait/Background.vue'
 export { default as PortraitLights } from './components/portrait/Lights.vue'
+
+// Terrain
+export * from './terrain/controlMap'
+export * from './terrain/terrainMaterial'
+export * from './terrain/heightField'
+export { default as TerrainGround } from './components/terrain/TerrainGround.vue'
+export { default as WaterSurface } from './components/terrain/WaterSurface.vue'

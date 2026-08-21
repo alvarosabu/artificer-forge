@@ -27,7 +27,7 @@ const characterEntities = computed(() => {
   return [...gameStore.entities.values()].filter(e => e.type === 'character')
 })
 
-const { state: foliageTexture } = useTexture('/textures/foliage/foliage.png')
+const { state: foliageTexture } = useTexture('/textures/foliage/foliageSDF.png')
 
 const { uuid } = useSharedLechesControls()
 

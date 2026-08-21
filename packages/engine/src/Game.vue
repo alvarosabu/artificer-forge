@@ -40,11 +40,16 @@ function handlePointerMissed() {
     </slot>
     <slot />
     <!-- Gameplay systems — override to compose your own set (engine + custom),
-         or pass an empty #systems slot for non-gameplay scenes (menus, char select). -->
-    <slot name="systems">
+         or pass an empty #systems slot for non-gameplay scenes (menus, char select).
+         Keyed off slot PRESENCE, not slot output: <slot> falls back whenever the
+         provided slot renders nothing, so an empty #systems would otherwise get
+         the defaults anyway — and CombatSystem's flat ground-click plane would
+         quietly outrank a scene's own terrain. -->
+    <slot v-if="$slots.systems" name="systems" />
+    <template v-else>
       <CombatSystem />
       <SurfaceSystem />
-    </slot>
+    </template>
     <EffectComposer
       :outline-presets="config.outlinePresets"
       :bloom="{

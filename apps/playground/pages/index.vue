@@ -70,6 +70,7 @@ const categories: DemoCategory[] = [
       { label: 'Surface', to: '/environment/surface' },
       { label: 'Surface Interactions', to: '/environment/surface-interactions' },
       { label: 'Day Cycle', to: '/environment/day-cycle' },
+      { label: 'Terrain', to: '/environment/terrain' },
     ],
   },
 ]
