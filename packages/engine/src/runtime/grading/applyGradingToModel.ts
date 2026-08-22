@@ -1,9 +1,20 @@
 import type { Material, Mesh, MeshStandardMaterial, Object3D } from 'three'
 import { Color } from 'three'
-import { normalWorld, positionWorld, texture, uniform, uv } from 'three/tsl'
+import { float, normalWorld, positionWorld, texture, uniform, uv } from 'three/tsl'
 import { MeshLambertNodeMaterial } from 'three/webgpu'
+import type { Node } from 'three/webgpu'
 import type { GradingContext } from './grading'
 import { createDropShadowCatcher, stylizedOutput } from './stylizedOutput'
+
+export interface ApplyGradingOptions {
+    /**
+     * World height the model rests on, as a node, for the contact-occlusion term.
+     * Defaults to 0, which is right for a character on flat ground. A prop sitting
+     * in a valley needs the terrain height under it, or the whole model reads as
+     * 'touching the ground' and darkens: pass sampleHeight(field, positionWorld.xz).
+     */
+    groundHeight?: Node<'float'>
+}
 
 /**
  * Swaps a loaded model's materials (GLB PBR) for graded equivalents:
@@ -12,7 +23,7 @@ import { createDropShadowCatcher, stylizedOutput } from './stylizedOutput'
  * Lambert base ONLY so the drop-shadow catcher runs; its lighting is unused.
  * Shared source materials stay shared: one graded material per source.
  */
-export function applyGradingToModel(root: Object3D, grading: GradingContext) {
+export function applyGradingToModel(root: Object3D, grading: GradingContext, { groundHeight }: ApplyGradingOptions = {}) {
     const graded = new Map<Material, MeshLambertNodeMaterial>()
 
     root.traverse((child) => {
@@ -35,7 +46,8 @@ export function applyGradingToModel(root: Object3D, grading: GradingContext) {
             // tell us: down-facing surfaces lose sky light (under chin/arms/skirt),
             // and anything near the ground picks up contact occlusion (feet, sitting)
             const skyAo = normalWorld.y.negate().max(0).mul(0.5).oneMinus()
-            const contactAo = positionWorld.y.smoothstep(0, 0.35).oneMinus().mul(0.6).oneMinus()
+            const heightAboveGround = positionWorld.y.sub(groundHeight ?? float(0))
+            const contactAo = heightAboveGround.smoothstep(0, 0.35).oneMinus().mul(0.6).oneMinus()
             let aoNode = skyAo.mul(contactAo)
             // baked aoMap multiplies in if a model ever ships one
             if (std.aoMap) aoNode = aoNode.mul(texture(std.aoMap, uv(std.aoMap.channel)).r)

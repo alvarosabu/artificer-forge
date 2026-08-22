@@ -1,12 +1,20 @@
 <script setup lang="ts">
-import { Mesh, Raycaster, SRGBColorSpace, Vector3 } from 'three'
-import type { BufferGeometry, Color, DirectionalLight } from 'three'
+import { Group, Mesh, Raycaster, SRGBColorSpace, Vector3 } from 'three'
+import type { BufferGeometry, Color, DirectionalLight, Object3D, Texture } from 'three'
 import type { TresPointerEvent } from '@tresjs/core'
 import { TargetIndicator } from '@artificer-forge/vfx'
-import { Character, createControlMap, createGradingContext, createHeightField, createTerrainUniforms, Flowers, Grass, GrassTufts, sampleHeight, TerrainGround, useEnvironmentStore, useGameStore, useSceneRefs, WaterSurface, type ControlMap, type HeightField } from '@artificer-forge/engine/runtime'
+import { applyGradingToModel, Character, createControlMap, createGradingContext, createHeightField, createTerrainUniforms, createWaterUniforms, extractCanopyReferences, Flowers, Grass, GrassTufts, sampleHeight, TerrainGround, Trees, useEnvironmentStore, useGameStore, useSceneRefs, Water, type ControlMap, type HeightField, WindLines } from '@artificer-forge/engine/runtime'
 import type { DayCycleName } from '~/utils/dayCyclePresets'
 import { MeshBasicNodeMaterial, type WebGPURenderer } from 'three/webgpu'
 import { positionWorld, vec4 } from 'three/tsl'
+
+// useTexture's ref holds an empty Texture (image === null) until the file lands.
+// Truthiness is not enough: handing a pixel-less texture to a WebGPU material
+// throws inside the bind-group init every frame, which kills the render loop and
+// leaves a blank page. Gate on the image, and only then let a material see it.
+function whenLoaded<T extends Texture>(source: { value: T | null | undefined }) {
+  return computed(() => (source.value?.image ? source.value : null))
+}
 
 const control = shallowRef<ControlMap | null>(null)
 const { renderer } = useTresContext()
@@ -14,7 +22,7 @@ const heightField = shallowRef<HeightField | null>(null)
 
 const { state: controlTexture } = useTexture('/levels/testbed.control.png')
 
-watch(controlTexture, (texture) => {
+watch(whenLoaded(controlTexture), (texture) => {
   if (texture) {
     control.value = createControlMap({
       texture,
@@ -23,13 +31,24 @@ watch(controlTexture, (texture) => {
   }
 })
 
-const { state: grassMap } = useTexture('/textures/grass.png')
-const { state: groundMap } = useTexture('/textures/dirt.webp')
-const { state: roadMap } = useTexture('/textures/road.jpg')
-const { state: rockMap } = useTexture('/textures/rock.webp')
+const grassMap = whenLoaded(useTexture('/textures/grass.png').state)
+const groundMap = whenLoaded(useTexture('/textures/dirt.webp').state)
+const roadMap = whenLoaded(useTexture('/textures/road.jpg').state)
+const rockMap = whenLoaded(useTexture('/textures/rock.webp').state)
+const waterNormalMap = whenLoaded(useTexture('/textures/water-normal.jpg').state)
+// The level GLB is authored in Blender and holds everything static: the terrain
+// plus every non-interactable prop. The split here is by node name, because that
+// is the only contract Blender can carry. Entities (anything with runtime state)
+// never live in here — they come from YAML templates via the store.
+const LEVEL_GROUND_NODE = 'Terrain'
 
 const { state: gltf } = useGLTF('/levels/testbed.glb')
 const groundGeometry = shallowRef<BufferGeometry | null>(null)
+const propsRoot = shallowRef<Object3D | null>(null)
+const canopyReferences = shallowRef<Object3D[]>([])
+// Bruno's foliage SDF: one greyscale leaf silhouette the alpha test cuts out of every
+// billboarded quad, so the leaf shape costs no geometry.
+const { state: foliageTexture } = useTexture('/textures/foliage/foliageSDF.png')
 
 const { state: grassDiffuseMap } = useTexture('/textures/grass/splat.jpg')
 watch(grassDiffuseMap, (tex) => {
@@ -39,20 +58,38 @@ watch(grassDiffuseMap, (tex) => {
 watch(gltf, (loaded) => {
   if (!loaded) return
 
-  // collect into an array rather than assigning to an outer variable: TypeScript
-  // cannot narrow a value written inside a callback
-  const meshes: Mesh[] = []
-  loaded.scene.traverse((child) => {
-    if (child instanceof Mesh) meshes.push(child)
-  })
-  const ground = meshes[0]
-  if (!ground) return
+  const ground = loaded.scene.getObjectByName(LEVEL_GROUND_NODE)
+  // fail loudly: a rename in Blender used to silently promote whichever mesh
+  // happened to come first, which bakes a height field out of a rock
+  if (!(ground instanceof Mesh)) {
+    console.error(`[terrain] no mesh named "${LEVEL_GROUND_NODE}" in testbed.glb`)
+    return
+  }
 
   // bake the node transform into the vertices, so local space == world space
   ground.updateWorldMatrix(true, false)
   const geometry = ground.geometry.clone()
   geometry.applyMatrix4(ground.matrixWorld)
   groundGeometry.value = geometry
+
+  // Everything else is scenery. Clone rather than reparent: useGLTF caches the
+  // scene by url, and moving nodes out of it would empty the cached copy on the
+  // next HMR pass. Object3D.clone shares geometry and material, so this is cheap.
+  const scenery = new Group()
+  scenery.position.copy(loaded.scene.position)
+  scenery.quaternion.copy(loaded.scene.quaternion)
+  scenery.scale.copy(loaded.scene.scale)
+  for (const child of loaded.scene.children) {
+    if (child !== ground) scenery.add(child.clone())
+  }
+
+  // Canopies come out of the clone BEFORE propsRoot is published: the markers are
+  // children of their trunk node, so the clone above brings them along, and the
+  // grading watcher below would otherwise build node materials for three balls that
+  // are about to be thrown away.
+  canopyReferences.value = extractCanopyReferences(scenery)
+
+  propsRoot.value = scenery
 }, { immediate: true })
 
 // --- Character, for scale and for walking the level ---
@@ -141,6 +178,19 @@ watch(scene, (s) => {
   s.backgroundNode = grading.fogColor    // sky IS the fog gradient
 }, { immediate: true })
 
+// Props are graded like every other model, but the contact-occlusion term needs
+// the terrain height under each fragment: these rocks sit 4 to 6 metres below
+// y = 0, and the default (ground at 0) would read that as buried and darken them.
+watch([propsRoot, heightField], ([root, field]) => {
+  if (!root || !field) return
+  applyGradingToModel(root, grading, { groundHeight: sampleHeight(field, positionWorld.xz) })
+  root.traverse((child) => {
+    if (!(child instanceof Mesh)) return
+    child.castShadow = true
+    child.receiveShadow = true
+  })
+})
+
 const { dayCyclePreset, dayCycleAuto } = useControls('dayCycle', {
   preset: {
     value: 'day',
@@ -171,6 +221,7 @@ watch(fogSceneFar!, (v) => { grading.range.sceneFar = v })
 // (its node graph bakes in which maps exist), so every knob here has to be a
 // uniform — anything else would need a rebuild.
 const terrain = createTerrainUniforms()
+const water = createWaterUniforms()
 
 // leches gives us plain refs; these just forward them into the uniforms
 function bindColor(source: Ref<string>, target: { value: Color }) {
@@ -250,7 +301,7 @@ bindNumber(rockWarp!, terrain.rockWarp)
 // painted control map, rock reads normal.y, shore reads the water channel.
 const {
   blendGrassLow, blendGrassHigh, blendRoadLow, blendRoadHigh,
-  blendRockLow, blendRockHigh, blendShoreLow, blendShoreHigh, blendEdge,
+  blendRockLow, blendRockHigh, blendEdge,
 } = useControls('blend', {
   grassLow: { value: terrain.grassBlendLow.value, min: 0, max: 1, step: 0.01, type: 'range' },
   grassHigh: { value: terrain.grassBlendHigh.value, min: 0, max: 1, step: 0.01, type: 'range' },
@@ -258,8 +309,6 @@ const {
   roadHigh: { value: terrain.roadBlendHigh.value, min: 0, max: 1, step: 0.01, type: 'range' },
   rockLow: { value: terrain.slopeStart.value, min: 0, max: 1, step: 0.01, type: 'range' },
   rockHigh: { value: terrain.slopeEnd.value, min: 0, max: 1, step: 0.01, type: 'range' },
-  shoreLow: { value: terrain.shoreLow.value, min: 0, max: 1, step: 0.01, type: 'range' },
-  shoreHigh: { value: terrain.shoreHigh.value, min: 0, max: 1, step: 0.01, type: 'range' },
   edge: { value: terrain.edgeStrength.value, min: 0, max: 2, step: 0.05, type: 'range' },
 }, { uuid })
 
@@ -269,15 +318,102 @@ bindNumber(blendRoadLow!, terrain.roadBlendLow)
 bindNumber(blendRoadHigh!, terrain.roadBlendHigh)
 bindNumber(blendRockLow!, terrain.slopeStart)
 bindNumber(blendRockHigh!, terrain.slopeEnd)
-bindNumber(blendShoreLow!, terrain.shoreLow)
-bindNumber(blendShoreHigh!, terrain.shoreHigh)
 bindNumber(blendEdge!, terrain.edgeStrength)
 
-const { shoreColor } = useControls('shore', {
+// Damp sand on the TERRAIN, not the water plane: the ring of darker ground that
+// makes the waterline read as wet rather than as a decal edge. low/high is the
+// painted blue band it ramps across; above/below are metres from the water line,
+// so they decide how far up the beach the damp reaches and how far down it goes
+// before the water's own absorption takes over the darkening.
+const { shoreColor, shoreLow, shoreHigh, shoreAbove, shoreBelow } = useControls('shore', {
   color: { value: hex(terrain.wetGround), type: 'color' },
+  low: { value: terrain.shoreLow.value, min: 0, max: 1, step: 0.01, type: 'range' },
+  high: { value: terrain.shoreHigh.value, min: 0, max: 1, step: 0.01, type: 'range' },
+  above: { value: terrain.dampAbove.value, min: 0, max: 2, step: 0.01, type: 'range' },
+  below: { value: terrain.dampBelow.value, min: -4, max: 0, step: 0.01, type: 'range' },
 }, { uuid })
 
 bindColor(shoreColor!, terrain.wetGround)
+bindNumber(shoreLow!, terrain.shoreLow)
+bindNumber(shoreHigh!, terrain.shoreHigh)
+bindNumber(shoreAbove!, terrain.dampAbove)
+bindNumber(shoreBelow!, terrain.dampBelow)
+
+// The water plane itself. `absorption` is the colour the water EATS, so the
+// surface looks like its complement: reddish-orange absorption is what reads as
+// blue-green water. strength is how hard that bites per metre, depth caps the
+// ramp so sky pixels behind the plane don't go black, and edgeLow/edgeHigh is
+// the painted blue band the surface fades in over.
+//
+// `level` drives BOTH the plane's Y and the terrain's idea of where the water
+// line sits — they have to agree, or the damp ring detaches from the surface.
+const { waterLevel,
+  waterAbsorption,
+  waterStrength,
+  waterDepth,
+  waterEdgeLow,
+  waterEdgeHigh,
+  waterRipplesScale,
+  waterRipplesStrength,
+  waterRipplesSpeed,
+  waterRefraction,
+} = useControls('water', {
+  level: { value: -1, min: -6, max: 2, step: 0.01, type: 'range' },
+  absorption: { value: hex(water.absorption), type: 'color' },
+  strength: { value: water.absorbStrength.value, min: 0, max: 3, step: 0.01, type: 'range' },
+  depth: { value: water.maxDepth.value, min: 0.5, max: 30, step: 0.1, type: 'range' },
+  edgeLow: { value: water.maskLow.value, min: 0, max: 1, step: 0.01, type: 'range' },
+  edgeHigh: { value: water.maskHigh.value, min: 0, max: 1, step: 0.01, type: 'range' },
+  ripplesScale: { value: water.rippleScale.value, min: 0.1, max: 2, step: 0.01, type: 'range' },
+  ripplesStrength: { value: water.rippleStrength.value, min: 0, max: 1, step: 0.01, type: 'range' },
+  ripplesSpeed: { value: water.rippleSpeed.value, min: 0, max: 0.1, step: 0.01, type: 'range' },
+  refraction: { value: water.refraction.value, min: 0, max: 6, step: 0.05, type: 'range' },
+}, { uuid })
+
+bindColor(waterAbsorption!, water.absorption)
+bindNumber(waterStrength!, water.absorbStrength)
+bindNumber(waterDepth!, water.maxDepth)
+bindNumber(waterEdgeLow!, water.maskLow)
+bindNumber(waterEdgeHigh!, water.maskHigh)
+bindNumber(waterLevel!, terrain.waterLevel)
+bindNumber(waterRipplesScale!, water.rippleScale)
+bindNumber(waterRipplesStrength!, water.rippleStrength)
+bindNumber(waterRipplesSpeed!, water.rippleSpeed)
+bindNumber(waterRefraction!, water.refraction)
+// the panel opens before the first watch fires, so seed the terrain's copy now
+terrain.waterLevel.value = toValue(waterLevel!)
+
+// Foam at the waterline. `depth` is the whole band in metres of water, so it
+// widens on a gentle beach and tightens on a cliff without any painting; `edge`
+// is the solid rim inside it; lines/width/drift are the stripes travelling
+// toward the shore; `wobble` is how far the ripple normals push the band up and
+// down the beach. `color` doubles as the strength: the mix goes all the way to
+// it, so pulling it toward grey is exactly what a strength slider would do.
+const {
+  foamColor,
+  foamDepth,
+  foamEdge,
+  foamLines,
+  foamWidth,
+  foamDrift,
+  foamWobble,
+} = useControls('foam', {
+  color: { value: hex(water.foamColor), type: 'color' },
+  depth: { value: water.foamDepth.value, min: 0.05, max: 4, step: 0.01, type: 'range' },
+  edge: { value: water.foamEdge.value, min: 0.01, max: 1, step: 0.01, type: 'range' },
+  lines: { value: water.foamLines.value, min: 1, max: 12, step: 1, type: 'range' },
+  width: { value: water.foamWidth.value, min: 0.02, max: 1, step: 0.01, type: 'range' },
+  drift: { value: water.foamDrift.value, min: 0, max: 2, step: 0.01, type: 'range' },
+  wobble: { value: water.foamWobble.value, min: 0, max: 1, step: 0.01, type: 'range' },
+}, { uuid })
+
+bindColor(foamColor!, water.foamColor)
+bindNumber(foamDepth!, water.foamDepth)
+bindNumber(foamEdge!, water.foamEdge)
+bindNumber(foamLines!, water.foamLines)
+bindNumber(foamWidth!, water.foamWidth)
+bindNumber(foamDrift!, water.foamDrift)
+bindNumber(foamWobble!, water.foamWobble)
 
 // frequencies are cycles per metre: 1 / value is the feature size in metres
 const { noiseGrain, noisePatch, noiseRock, noiseWarp } = useControls('noise', {
@@ -321,6 +457,17 @@ const { daisiesDensity, daisiesHeight, daisiesColor } = useControls('daisies', {
   density: { value: 0.38, min: 0, max: 1, step: 0.01, type: 'range' },
   height: { value: 0.32, min: 0.1, max: 1.5, step: 0.01, type: 'range' },
   color: { value: '#e8c22a', type: 'color' },
+}, { uuid })
+
+// Canopies. Placement is authored in Blender (one icosphere per blob), so there is no
+// density here — only the look. leafSize and amount are baked into the cluster geometry,
+// so moving them rebuilds the instanced mesh; colours are uniforms and stay live.
+const { treesColorA, treesColorB, treesAmount, treesLeafSize, treesCanopyScale } = useControls('trees', {
+  colorA: { value: '#3c6b2f', type: 'color' },
+  colorB: { value: '#86b544', type: 'color' },
+  amount: { value: 150, min: 20, max: 400, step: 10, type: 'range' },
+  leafSize: { value: 0.5, min: 0.1, max: 1.5, step: 0.01, type: 'range' },
+  canopyScale: { value: 1, min: 0.4, max: 2, step: 0.01, type: 'range' },
 }, { uuid })
 
 const directionalLightRef = shallowRef<DirectionalLight>()
@@ -416,6 +563,26 @@ onUnmounted(() => heightField.value?.dispose())
     :uniforms="terrain"
     @click="handleGroundClick"
   />
+  <!-- Static scenery straight from the level GLB: rocks now, bridges and fences
+       later. No pointer handler, so clicks fall through to the ground behind. -->
+  <primitive
+    v-if="propsRoot"
+    :object="propsRoot"
+  />
+  <!-- The trunks render as ordinary scenery above; this only fills the canopy markers
+       that extractCanopyReferences pulled out of that same GLB. -->
+  <Trees
+    :references="canopyReferences"
+    :foliage-texture="foliageTexture"
+    :grading="grading"
+    :color-a="treesColorA"
+    :color-b="treesColorB"
+    :amount="treesAmount"
+    :leaf-size="treesLeafSize"
+    :canopy-scale="treesCanopyScale"
+    :wind-angle="environment.windAngle"
+    :wind-strength="environment.windStrength"
+  />
   <TargetIndicator
     v-if="moveTargetPosition"
     :position="moveTargetPosition"
@@ -500,12 +667,20 @@ onUnmounted(() => heightField.value?.dispose())
     :wind-angle="environment.windAngle"
     :wind-strength="environment.windStrength"
   />
-  <WaterSurface
-    v-if="control"
+  <Water
+    v-if="control && waterNormalMap"
     :control="control"
-    :level="-1.2"
+    :level="waterLevel"
     :grading="grading"
+    :uniforms="water"
+    :normal-map="waterNormalMap"
   />
+  <WindLines
+    :wind-angle="environment.windAngle"
+    :intensity="environment.windStrength"
+    :radius="15"
+    :height="2"
+  /> 
   <!-- <TresMesh v-if="heightField" :position="[0, 20, 0]" :rotation="[-Math.PI / 2, 0, 0]">
     <TresPlaneGeometry :args="[60, 60]" />
     <primitive :object="createHeightFieldPreview(heightField)" attach="material" />

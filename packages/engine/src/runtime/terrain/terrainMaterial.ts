@@ -54,9 +54,14 @@ export function createTerrainUniforms() {
     slopeEnd: uniform(0.82),
     wetGround: uniform(new Color('#4a3a28')),
     /** blue-channel band the shore darkening ramps across */
-    shoreLow: uniform(0.05),
-    shoreHigh: uniform(0.6),
-    /** how hard the fine noise bites into a painted edge; 0 = clean brush line */
+    shoreLow: uniform(0.02),
+    shoreHigh: uniform(0.15),
+    /** world Y of the water plane. Must match the Water component's level */
+    waterLevel: uniform(-1.2),
+    /** metres above the water line that damp sand reaches */
+    dampAbove: uniform(0.3),
+    /** metres below it before absorption takes over the darkening */
+    dampBelow: uniform(-0.8),
     edgeStrength: uniform(0.5),
     grainFreq: uniform(0.35), // ~3m — surface break-up and painted-edge wobble
     patchFreq: uniform(0.06), // ~17m — broad tonal drift, the thing that reads as terrain
@@ -162,7 +167,10 @@ export function buildTerrainMaterial(options: {
     surface.assign(mix(surface, rock, steep))
 
     // shore darkening applies to whatever material ended up there
-    const wet = smoothstep(u.shoreLow, u.shoreHigh, data.b)
+    const h = positionWorld.y.sub(u.waterLevel).toVar()
+    const below = smoothstep(0, u.dampAbove, h).oneMinus()
+    const shallow = smoothstep(u.dampBelow, 0, h)
+    const wet = below.mul(shallow).mul(smoothstep(u.shoreLow, u.shoreHigh, data.b))
     surface.assign(mix(surface, u.wetGround, wet))
     return surface
   })()
