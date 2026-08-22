@@ -2,7 +2,7 @@
 import { computed, onErrorCaptured, ref, shallowRef, watchEffect } from 'vue'
 import { TresCanvas } from '@tresjs/core'
 import type { PerspectiveCamera } from 'three'
-import { createWebGPURenderer } from '../../createWebGPURenderer'
+import { createTransparentWebGPURenderer } from '../../createWebGPURenderer'
 import { frameFromHead, PORTRAIT_RENDERING, type PortraitFraming, type Vec3 } from '../../portrait/portraitRigPresets'
 import { usePortraitStudio } from '../../portrait/usePortraitStudio'
 import PortraitBackground from './Background.vue'
@@ -84,9 +84,8 @@ const studioStyle = {
     <!-- No preserve-drawing-buffer: that's a WebGL context option; WebGPU canvases
          stay readable via toDataURL after present. -->
     <TresCanvas
-      :alpha="true"
       :antialias="true"
-      :renderer="createWebGPURenderer"
+      :renderer="createTransparentWebGPURenderer"
       :tone-mapping="PORTRAIT_RENDERING.toneMapping"
       :tone-mapping-exposure="PORTRAIT_RENDERING.toneMappingExposure"
       :shadows="PORTRAIT_RENDERING.shadows"

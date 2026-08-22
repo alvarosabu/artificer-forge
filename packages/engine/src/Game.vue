@@ -50,7 +50,7 @@ function handlePointerMissed() {
       <CombatSystem />
       <SurfaceSystem />
     </template>
-    <EffectComposer
+    <!-- <EffectComposer
       :outline-presets="config.outlinePresets"
       :bloom="{
         strength: config.bloom.strength,
@@ -58,7 +58,7 @@ function handlePointerMissed() {
         threshold: config.bloom.threshold,
         smoothWidth: config.bloom.smoothWidth,
       }"
-    />
+    /> -->
   </TresCanvas>
   <slot name="hud">
     <Hud />

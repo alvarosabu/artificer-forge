@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { TresCanvas } from '@tresjs/core'
-import { createWebGPURenderer, useGameStore } from '@artificer-forge/engine/runtime'
+import { createTransparentWebGPURenderer, useGameStore } from '@artificer-forge/engine/runtime'
 import InventoryCharacterPreviewModel from './CharacterPreviewModel.vue'
 import InventoryModularCharacterPreviewModel from './ModularCharacterPreviewModel.vue'
 
@@ -23,10 +23,9 @@ const rigKey = computed(() => entity.value?.rig ?? 'Rig_Medium')
   <div class="w-full h-full bg-marine-950/60 rounded">
     <TresCanvas
       v-if="modelUrl || isModular"
-      :alpha="true"
       clear-color="#0a0a14"
       :antialias="true"
-      :renderer="createWebGPURenderer"
+      :renderer="createTransparentWebGPURenderer"
     >
       <TresPerspectiveCamera
         :position="[2, 1.3,8 ]"

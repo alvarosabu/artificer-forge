@@ -97,7 +97,14 @@ export function stylizedOutput(baseColor: any, grading: GradingContext, options:
 
         if (hasFog) out = grading.fogStrength.mix(out, grading.fogColor)
 
-        if (options.alphaTest !== undefined) alphaNode.lessThan(options.alphaTest).discard()
+        // An alphaTest cutout is binary coverage: the pixels that survive are fully
+        // opaque. Passing the smooth alpha through instead leaks it to the canvas
+        // alpha channel, and a premultiplied canvas (alpha: true) then composites the
+        // PAGE background through every cutout edge — white halos around every leaf.
+        if (options.alphaTest !== undefined) {
+            alphaNode.lessThan(options.alphaTest).discard()
+            return vec4(out.rgb, 1)
+        }
 
         return vec4(out.rgb, alphaNode)
     })()
