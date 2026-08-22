@@ -3,7 +3,7 @@ import { Mesh, Raycaster, SRGBColorSpace, Vector3 } from 'three'
 import type { BufferGeometry, Color, DirectionalLight } from 'three'
 import type { TresPointerEvent } from '@tresjs/core'
 import { TargetIndicator } from '@artificer-forge/vfx'
-import { Character, createControlMap, createGradingContext, createHeightField, createTerrainUniforms, Grass, sampleHeight, TerrainGround, useEnvironmentStore, useGameStore, useSceneRefs, WaterSurface, type ControlMap, type HeightField } from '@artificer-forge/engine/runtime'
+import { Character, createControlMap, createGradingContext, createHeightField, createTerrainUniforms, Flowers, Grass, GrassTufts, sampleHeight, TerrainGround, useEnvironmentStore, useGameStore, useSceneRefs, WaterSurface, type ControlMap, type HeightField } from '@artificer-forge/engine/runtime'
 import type { DayCycleName } from '~/utils/dayCyclePresets'
 import { MeshBasicNodeMaterial, type WebGPURenderer } from 'three/webgpu'
 import { positionWorld, vec4 } from 'three/tsl'
@@ -292,6 +292,37 @@ bindNumber(noisePatch!, terrain.patchFreq)
 bindNumber(noiseRock!, terrain.rockFreq)
 bindNumber(noiseWarp!, terrain.warpFreq)
 
+// Scattered vegetation. Placement is the SAME control.g band the ground blends
+// grass with, so nothing grows on the road or in the water: mask low/high here
+// only decides how far into the painted grass a species reaches, density is the
+// cutoff against the per-species patch noise. One leches folder per species, and
+// folder names have to stay single-word or the keys stop destructuring.
+const { tuftsDensity, tuftsHeight, tuftsSpread, tuftsColorA, tuftsColorB } = useControls('tufts', {
+  density: { value: 0.35, min: 0, max: 1, step: 0.01, type: 'range' },
+  height: { value: 2.2, min: 0.4, max: 4, step: 0.05, type: 'range' },
+  spread: { value: 0.45, min: 0.1, max: 1.2, step: 0.01, type: 'range' },
+  colorA: { value: '#2f5d2a', type: 'color' },
+  colorB: { value: '#7fae3c', type: 'color' },
+}, { uuid })
+
+const { puffsDensity, puffsHeight, puffsColor } = useControls('puffs', {
+  density: { value: 0.5, min: 0, max: 1, step: 0.01, type: 'range' },
+  height: { value: 0.85, min: 0.1, max: 1.5, step: 0.01, type: 'range' },
+  color: { value: '#ffffff', type: 'color' },
+}, { uuid })
+
+const { poppiesDensity, poppiesHeight, poppiesColor } = useControls('poppies', {
+  density: { value: 0.34, min: 0, max: 1, step: 0.01, type: 'range' },
+  height: { value: 0.44, min: 0.1, max: 1.5, step: 0.01, type: 'range' },
+  color: { value: '#c4202a', type: 'color' },
+}, { uuid })
+
+const { daisiesDensity, daisiesHeight, daisiesColor } = useControls('daisies', {
+  density: { value: 0.38, min: 0, max: 1, step: 0.01, type: 'range' },
+  height: { value: 0.32, min: 0.1, max: 1.5, step: 0.01, type: 'range' },
+  color: { value: '#e8c22a', type: 'color' },
+}, { uuid })
+
 const directionalLightRef = shallowRef<DirectionalLight>()
 
 // the sun must aim exactly along grading.lightDirection or the drop shadows and
@@ -409,6 +440,65 @@ onUnmounted(() => heightField.value?.dispose())
     :control="control"
     :mask-low="0.25"
     :mask-high="0.6"
+  />
+  <!-- Scatter grids are per-species on purpose: a tuft template is ~160 verts
+       against a flower's ~60, so tufts stay coarse and lean on density instead -->
+  <GrassTufts
+    v-if="control && heightField"
+    :subdivisions="40"
+    :size="60"
+    :grading="grading"
+    :height-field="heightField"
+    :control="control"
+    :density="tuftsDensity"
+    :height="tuftsHeight"
+    :spread="tuftsSpread"
+    :color-a="tuftsColorA"
+    :color-b="tuftsColorB"
+    :wind-angle="environment.windAngle"
+    :wind-strength="environment.windStrength"
+  />
+  <Flowers
+    v-if="control && heightField"
+    shape="puff"
+    :subdivisions="140"
+    :size="60"
+    :grading="grading"
+    :height-field="heightField"
+    :control="control"
+    :density="puffsDensity"
+    :height="puffsHeight"
+    :petal-color="puffsColor"
+    :wind-angle="environment.windAngle"
+    :wind-strength="environment.windStrength"
+  />
+  <Flowers
+    v-if="control && heightField"
+    shape="poppy"
+    :subdivisions="120"
+    :size="60"
+    :grading="grading"
+    :height-field="heightField"
+    :control="control"
+    :density="poppiesDensity"
+    :height="poppiesHeight"
+    :petal-color="poppiesColor"
+    :wind-angle="environment.windAngle"
+    :wind-strength="environment.windStrength"
+  />
+  <Flowers
+    v-if="control && heightField"
+    shape="daisy"
+    :subdivisions="120"
+    :size="60"
+    :grading="grading"
+    :height-field="heightField"
+    :control="control"
+    :density="daisiesDensity"
+    :height="daisiesHeight"
+    :petal-color="daisiesColor"
+    :wind-angle="environment.windAngle"
+    :wind-strength="environment.windStrength"
   />
   <WaterSurface
     v-if="control"
