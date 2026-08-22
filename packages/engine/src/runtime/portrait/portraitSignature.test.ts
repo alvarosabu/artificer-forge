@@ -27,7 +27,9 @@ describe('portraitSignature', () => {
   })
 
   it('treats missing fields as empty without throwing', () => {
-    expect(portraitSignature({ equipment: {} })).toBe('v8|||||||')
+    // Not pinned to a version literal: bumping PORTRAIT_CACHE_VERSION to invalidate
+    // stale bakes is routine, and should not read as a broken test.
+    expect(portraitSignature({ equipment: {} })).toMatch(/^v\d+\|{7}$/)
   })
 
   it('changes when a modular appearance part changes', () => {

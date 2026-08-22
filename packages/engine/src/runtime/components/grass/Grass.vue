@@ -18,13 +18,18 @@ const props = withDefaults(defineProps<GrassOptions>(), {
   heightField: null,
 })
 
-const { geometry, material, uniforms, dispose } = createGrass(props)
+const { geometry, material, uniforms, setMaskBand, dispose } = createGrass(props)
 
 watch(() => props.colorA, (val) => uniforms.colorA.value.set(new Color(val as ColorRepresentation)))
 watch(() => props.colorB, (val) => uniforms.colorB.value.set(new Color(val as ColorRepresentation)))
 // texture reference is swappable; presence/absence is decided at creation (remount to switch modes)
 watch(() => props.diffuseMap, (val) => {
   if (val && uniforms.diffuseMap) uniforms.diffuseMap.value = val
+})
+// the band feeds the mask bake, so this re-sorts and re-uploads the instance buffer.
+// Cheap enough for a slider drag, not for a per-frame animation.
+watch([() => props.maskLow, () => props.maskHigh], ([low, high]) => {
+  setMaskBand(low ?? 0.25, high ?? 0.6)
 })
 watch(() => props.windAngle, (angle) => uniforms.wind.direction.value.set(Math.sin(angle), Math.cos(angle)))
 watch(() => props.windStrength, (val) => { uniforms.wind.strength.value = val })

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onErrorCaptured, ref, shallowRef, watchEffect } from 'vue'
+import { computed, onErrorCaptured, onScopeDispose, ref, shallowRef, watch, watchEffect } from 'vue'
 import { TresCanvas } from '@tresjs/core'
 import type { PerspectiveCamera } from 'three'
 import { createTransparentWebGPURenderer } from '../../createWebGPURenderer'
@@ -12,7 +12,7 @@ import PortraitSubject from './Subject.vue'
 // `active` is a shallowRef. usePortraitStudio() returns a PLAIN object, so nested
 // refs are NOT auto-unwrapped when accessed as `studio.active` in a template.
 // Destructure it so the template can reference `active` directly (auto-unwrapped).
-const { active, captured, failed } = usePortraitStudio()
+const { active, pending, captured, failed } = usePortraitStudio()
 
 // The subject emits an auto-framed camera (computed from its bounding box) just
 // before capture. Until then, a neutral placeholder keeps the camera valid; it's
@@ -58,6 +58,29 @@ function onFailed(err: unknown) {
   failed(err)
 }
 
+// The canvas owns a whole WebGPU device, and this component is mounted app-wide,
+// so an always-on canvas means every page carries a second device that re-uploads
+// any texture the world scene already holds. Mount it only while there is work.
+//
+// The teardown is delayed rather than immediate: `pending` covers a burst of
+// queued bakes, but two bursts a few hundred ms apart (a portrait request landing
+// just after the party's) would otherwise pay for a fresh device. Holding the
+// canvas briefly is far cheaper than rebuilding it.
+const IDLE_TEARDOWN_MS = 2_000
+const canvasAlive = ref(false)
+let teardownTimer: ReturnType<typeof setTimeout> | undefined
+
+watch(pending, (count) => {
+  clearTimeout(teardownTimer)
+  if (count > 0) {
+    canvasAlive.value = true
+    return
+  }
+  teardownTimer = setTimeout(() => { canvasAlive.value = false }, IDLE_TEARDOWN_MS)
+})
+
+onScopeDispose(() => clearTimeout(teardownTimer))
+
 // A <Suspense> load failure (e.g. bad model URL, Draco error) would otherwise
 // propagate as an unhandled error: the bake promise never settles and the
 // serialized queue deadlocks for every subsequent bake. Route it to failed().
@@ -84,6 +107,7 @@ const studioStyle = {
     <!-- No preserve-drawing-buffer: that's a WebGL context option; WebGPU canvases
          stay readable via toDataURL after present. -->
     <TresCanvas
+      v-if="canvasAlive"
       :antialias="true"
       :renderer="createTransparentWebGPURenderer"
       :tone-mapping="PORTRAIT_RENDERING.toneMapping"

@@ -5,7 +5,7 @@ import { MeshBasicNodeMaterial, MeshLambertNodeMaterial } from 'three/webgpu'
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js'
 import type { ColorRepresentation, TextureNode, UniformNode } from 'three/webgpu'
 import { createWindUniforms, windOffset, type WindSettings, type WindUniforms } from '../wind/wind'
-import { coverageNode, createDensityMapNode, type DensityChannel } from '../scatter/density'
+import { coverageNode, createDensityMapNode, createScatterBake, type DensityChannel } from '../scatter/density'
 import { trampleUv, type TrampleMap } from '../../trample/trample'
 import type { GradingContext } from '../../grading/grading'
 import { createDropShadowCatcher, stylizedOutput } from '../../grading/stylizedOutput'
@@ -20,13 +20,15 @@ import type { ControlMap } from '../../terrain/controlMap'
  * a spherical cap (dandelion), `petals` splays quads radially into a cup (poppy,
  * daisy). No textures: colors are uniforms, so a species is retintable live.
  *
- * Where flowers grow is a density test in the vertex stage: the terrain control
- * map's grass channel times baked Perlin patchiness (see scatter/density). They
- * sit on the terrain by sampling the baked height field at the anchor, so a whole
- * flower rides one height instead of shearing across a slope. Instances that fail
- * the test collapse to zero area and get punted out of view, so repainting the
- * mask needs no rebuild. That wastes a vertex invocation per rejected instance —
- * fine at thousands, swap to CPU-baked instance lists if this ever needs 100k.
+ * Where flowers grow is a density test: the terrain control map's grass channel
+ * times baked Perlin patchiness (see scatter/density). They sit on the terrain by
+ * sampling the baked height field at the anchor, so a whole flower rides one
+ * height instead of shearing across a slope.
+ *
+ * That test is baked and sorted on the CPU, so the instance buffer runs from most
+ * to least covered and `density` only moves `instanceCount`. A rejected flower
+ * costs nothing. Without a readable control map the test falls back into the
+ * vertex stage, where rejects collapse to zero area and get punted out of view.
  */
 
 export type FlowerShape = 'puff' | 'poppy' | 'daisy'
@@ -257,6 +259,8 @@ export function createFlowersGeometry(options: FlowersOptions & { preset: Flower
     const instanceData = new Float32Array(count * 4)
     // patch noise decides where the species grows, baked once at the anchor
     const densityNoises = new Float32Array(count)
+    // the bake needs the white noise unpacked; the shader still reads instanceData.x
+    const randoms = new Float32Array(count)
     const noise = new ImprovedNoise()
     // offset the noise field per species so they don't all clump in the same spots
     const noiseOffset = hashSeed(seed) % 97
@@ -269,7 +273,7 @@ export function createFlowersGeometry(options: FlowersOptions & { preset: Flower
 
             anchors[i * 2] = x
             anchors[i * 2 + 1] = z
-            instanceData[i * 4] = rng()
+            instanceData[i * 4] = randoms[i] = rng()
             instanceData[i * 4 + 1] = rng() * Math.PI * 2
             instanceData[i * 4 + 2] = noise.noise(x * 0.0321, z * 0.0321, 0) * 0.5 + 1
             instanceData[i * 4 + 3] = noise.noise(x * 0.02, z * 0.02, 0) * 0.5 + 0.5
@@ -279,16 +283,40 @@ export function createFlowersGeometry(options: FlowersOptions & { preset: Flower
         }
     }
 
+    // sorts anchors and instanceData by coverage in place when it can
+    const bake = createScatterBake({
+        count,
+        anchors,
+        attributes: [{ array: instanceData, stride: 4 }],
+        noise: { densityNoises, randoms },
+        control: options.control,
+        maskLow: options.maskLow ?? 0.25,
+        maskHigh: options.maskHigh ?? 0.6,
+        densityMap: options.densityMap,
+    })
+
     const geometry = new InstancedBufferGeometry()
     geometry.instanceCount = count
     geometry.setIndex(builder.indices)
     geometry.setAttribute('position', new BufferAttribute(new Float32Array(builder.positions), 3))
     geometry.setAttribute('vertexData', new BufferAttribute(new Float32Array(builder.vertexData), 3))
-    geometry.setAttribute('anchor', new InstancedBufferAttribute(anchors, 2))
-    geometry.setAttribute('instanceData', new InstancedBufferAttribute(instanceData, 4))
-    geometry.setAttribute('densityNoise', new InstancedBufferAttribute(densityNoises, 1))
+    const anchorAttribute = new InstancedBufferAttribute(anchors, 2)
+    const instanceAttribute = new InstancedBufferAttribute(instanceData, 4)
+    geometry.setAttribute('anchor', anchorAttribute)
+    geometry.setAttribute('instanceData', instanceAttribute)
+    // only the shader path reads this, and leaving it off keeps a vertex buffer
+    // free against the WebGPU limit of 8
+    if (!bake.coverage) geometry.setAttribute('densityNoise', new InstancedBufferAttribute(densityNoises, 1))
     geometry.boundingSphere = new Sphere(new Vector3(), (size / 2) * Math.SQRT2 + 2)
-    return geometry
+
+    const rebake = (maskLow: number, maskHigh: number) => {
+        if (!bake.rebake(maskLow, maskHigh)) return false
+        anchorAttribute.needsUpdate = true
+        instanceAttribute.needsUpdate = true
+        return true
+    }
+
+    return { geometry, bake, rebake }
 }
 
 interface FlowersMaterialOptions {
@@ -310,10 +338,12 @@ interface FlowersMaterialOptions {
     heightField?: HeightField | null
     trample?: TrampleMap | null
     grading?: GradingContext | null
+    /** coverage already baked on the CPU: drop the whole test from the shader */
+    baked?: boolean
 }
 
 export function buildFlowersMaterial(options: FlowersMaterialOptions) {
-    const { petalA, petalB, stem, center, height, headSize, stemWidth, threshold, shadowIntensity, windUniforms, densityMapNode, densityChannel, control, maskLow, maskHigh, heightField, trample, grading } = options
+    const { petalA, petalB, stem, center, height, headSize, stemWidth, threshold, shadowIntensity, windUniforms, densityMapNode, densityChannel, control, maskLow, maskHigh, heightField, trample, grading, baked = false } = options
     // graded flowers catch drop shadows — Lambert base only so the catcher runs
     const material = grading ? new MeshLambertNodeMaterial() : new MeshBasicNodeMaterial()
     material.side = DoubleSide
@@ -330,7 +360,6 @@ export function buildFlowersMaterial(options: FlowersMaterialOptions) {
     material.positionNode = Fn(() => {
         const random = instanceData.x
         const yaw = instanceData.y
-        const densityNoise = attribute<'float'>('densityNoise', 'float')
 
         const trampleAmt = trample ? texture(trample.texture, trampleUv(trample.uniforms, anchor)).r.toVar() : null
 
@@ -350,11 +379,16 @@ export function buildFlowersMaterial(options: FlowersMaterialOptions) {
         ).toVar()
         local.xz.assign(rotateUV(local.xz, yaw, vec2(0)))
 
+        // baked: the buffer is sorted by coverage and instanceCount already cuts
+        // the rejects, so there is nothing to test here
+        const visible = baked
+            ? null
+            : step(threshold, coverageNode({
+                anchor, control, maskLow, maskHigh, densityMapNode, channel: densityChannel, random,
+                densityNoise: attribute<'float'>('densityNoise', 'float'),
+            })).toVar()
         // failing instances collapse to zero area at the anchor
-        const visible = step(threshold, coverageNode({
-            anchor, control, maskLow, maskHigh, densityMapNode, channel: densityChannel, densityNoise, random,
-        })).toVar()
-        local.mulAssign(visible)
+        if (visible) local.mulAssign(visible)
 
         const pos = vec3(local.x.add(anchor.x), local.y, local.z.add(anchor.y)).toVar()
         // sampled at the anchor, not per vertex: the whole flower stands on one
@@ -381,7 +415,7 @@ export function buildFlowersMaterial(options: FlowersMaterialOptions) {
 
         // zero area alone is not enough now that the ground is not at y = 0: a
         // collapsed instance would still leave slivers on the terrain surface
-        pos.y.addAssign(visible.lessThan(0.5).select(float(1000), float(0)))
+        if (visible) pos.y.addAssign(visible.lessThan(0.5).select(float(1000), float(0)))
 
         return pos
     })()
@@ -411,7 +445,7 @@ export function buildFlowersMaterial(options: FlowersMaterialOptions) {
 
 export function createFlowers(options: FlowersOptions) {
     const preset = FLOWER_PRESETS[options.shape] ?? FLOWER_PRESETS.puff
-    const geometry = createFlowersGeometry({ ...options, preset })
+    const { geometry, bake, rebake } = createFlowersGeometry({ ...options, preset })
 
     const toColor = (value: TresColor | undefined, fallback: string) =>
         uniform(new Color((value ?? fallback) as ColorRepresentation))
@@ -442,7 +476,24 @@ export function createFlowers(options: FlowersOptions) {
         heightField: options.heightField,
         trample: options.trample,
         grading: options.grading,
+        baked: bake.coverage !== null,
     })
+
+    // baked: density picks how much of the coverage-sorted prefix to draw.
+    // shader path: it stays the threshold the vertex test compares against.
+    const setDensity = (density: number) => {
+        const next = 1 - density
+        threshold.value = next
+        if (bake.coverage) geometry.instanceCount = bake.countFor(next)
+    }
+    setDensity(options.density ?? 0.55)
+
+    // the band feeds the baked coverage, so moving it has to re-sort and re-upload
+    const setMaskBand = (low: number, high: number) => {
+        maskLow.value = low
+        maskHigh.value = high
+        if (rebake(low, high)) setDensity(1 - threshold.value)
+    }
 
     const uniforms = {
         petalColor: petalA,
@@ -461,7 +512,7 @@ export function createFlowers(options: FlowersOptions) {
         grading: options.grading,
     }
 
-    return { geometry, material, uniforms, dispose: () => {
+    return { geometry, material, uniforms, setDensity, setMaskBand, dispose: () => {
         geometry.dispose()
         material.dispose()
     } }

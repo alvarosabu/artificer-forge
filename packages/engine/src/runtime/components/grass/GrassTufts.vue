@@ -6,8 +6,8 @@ import { createGrassTufts, type GrassTuftsOptions } from './grassTufts'
 import { advanceWindTime, DEFAULT_WIND_ANGLE, DEFAULT_WIND_STRENGTH } from '../wind/wind'
 
 const props = withDefaults(defineProps<GrassTuftsOptions>(), {
-  // coarse on purpose: a tuft template is ~160 verts, so rejected instances
-  // cost more here than they do for flowers
+  // coarse on purpose: a tuft template is ~160 verts, so each DRAWN instance
+  // costs more here than a flower does
   subdivisions: 20,
   size: 30,
   blades: 18,
@@ -26,21 +26,24 @@ const props = withDefaults(defineProps<GrassTuftsOptions>(), {
   heightField: null,
 })
 
-const { geometry, material, uniforms, dispose } = createGrassTufts(props)
+const { geometry, material, uniforms, setDensity, setMaskBand, dispose } = createGrassTufts(props)
 
 watch(() => props.colorA, (val) => { if (val !== undefined) uniforms.colorA.value.set(new Color(val as ColorRepresentation)) })
 watch(() => props.colorB, (val) => { if (val !== undefined) uniforms.colorB.value.set(new Color(val as ColorRepresentation)) })
 watch(() => props.height, (val) => { if (val !== undefined) uniforms.height.value = val })
 watch(() => props.spread, (val) => { if (val !== undefined) uniforms.spread.value = val })
-// coverage is a shader threshold, so density retunes live with no rebuild
-watch(() => props.density, (val) => { uniforms.threshold.value = 1 - (val ?? 0.35) })
+// coverage is baked and sorted, so density only moves the draw count. No rebuild
+// either way: on the shader fallback it is still just a threshold.
+watch(() => props.density, (val) => { setDensity(val ?? 0.35) })
 // texture reference is swappable; presence/absence is decided at creation (remount to switch modes)
 watch(() => props.densityMap, (val) => {
   if (val && uniforms.densityMap) uniforms.densityMap.value = val
 })
-// the control band is a shader threshold too, so it retunes live
-watch(() => props.maskLow, (val) => { if (val !== undefined) uniforms.maskLow.value = val })
-watch(() => props.maskHigh, (val) => { if (val !== undefined) uniforms.maskHigh.value = val })
+// the band feeds the bake, so this re-sorts and re-uploads the instance buffer.
+// Cheap enough for a slider drag, not for a per-frame animation.
+watch([() => props.maskLow, () => props.maskHigh], ([low, high]) => {
+  setMaskBand(low ?? 0.25, high ?? 0.6)
+})
 watch(() => props.windAngle, (angle) => uniforms.wind.direction.value.set(Math.sin(angle), Math.cos(angle)))
 watch(() => props.windStrength, (val) => { uniforms.wind.strength.value = val })
 

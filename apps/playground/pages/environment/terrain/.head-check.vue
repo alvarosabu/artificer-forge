@@ -3,7 +3,7 @@ import { Group, Mesh, Raycaster, SRGBColorSpace, Vector3 } from 'three'
 import type { BufferGeometry, Color, DirectionalLight, Object3D, Texture } from 'three'
 import type { TresPointerEvent } from '@tresjs/core'
 import { TargetIndicator } from '@artificer-forge/vfx'
-import { applyGradingToModel, Character, createControlMap, createGradingContext, createHeightField, createTerrainUniforms, createTrampleMap, createWaterUniforms, extractCanopyReferences, Flowers, Grass, GrassTufts, sampleHeight, TerrainGround, Trees, useEnvironmentStore, useGameStore, useSceneRefs, Water, type ControlMap, type HeightField, WindLines } from '@artificer-forge/engine/runtime'
+import { applyGradingToModel, Character, createControlMap, createGradingContext, createHeightField, createTerrainUniforms, createWaterUniforms, extractCanopyReferences, Flowers, Grass, GrassTufts, sampleHeight, TerrainGround, Trees, useEnvironmentStore, useGameStore, useSceneRefs, Water, type ControlMap, type HeightField, WindLines } from '@artificer-forge/engine/runtime'
 import type { DayCycleName } from '~/utils/dayCyclePresets'
 import { MeshBasicNodeMaterial, type WebGPURenderer } from 'three/webgpu'
 import { positionWorld, vec4 } from 'three/tsl'
@@ -42,9 +42,7 @@ const waterNormalMap = whenLoaded(useTexture('/textures/water-normal.webp').stat
 // never live in here — they come from YAML templates via the store.
 const LEVEL_GROUND_NODE = 'Terrain'
 
-const { state: gltf } = useGLTF('/levels/testbed.glb', {
-  draco: true,
-})
+const { state: gltf } = useGLTF('/levels/testbed.glb')
 const groundGeometry = shallowRef<BufferGeometry | null>(null)
 const propsRoot = shallowRef<Object3D | null>(null)
 const canopyReferences = shallowRef<Object3D[]>([])
@@ -98,8 +96,8 @@ watch(gltf, (loaded) => {
 
 // A raycast target, deliberately NOT added to the scene. The geometry already has
 // its world transform baked in above, so an identity mesh sits exactly where
-// TerrainGround draws it. This is the correct ground query; the baked height field
-// replaces it once there is a CPU-side reader for it.
+// TerrainGround draws it. This is the slow-but-correct ground query: one ray
+// against every triangle. The baked height field replaces it later.
 const groundPicker = shallowRef<Mesh | null>(null)
 watch(groundGeometry, (geometry) => {
   if (!geometry) return
@@ -107,15 +105,6 @@ watch(groundGeometry, (geometry) => {
   mesh.updateMatrixWorld()
   groundPicker.value = mesh
 })
-
-// The ground ray runs once per frame against all 32,768 terrain triangles, which
-// brute-force intersectObject tests one by one. A BVH makes it a tree descent.
-// firstHitOnly, because the ray points straight down and groundHeight takes [0]:
-// the default traversal collects and sorts every hit along the ray instead.
-// CENTER over the default SAH, because the terrain is an even grid where the cheap
-// split builds just as good a tree, without a build hitch at load.
-// Off-scene is fine: useBVH only needs a Mesh with geometry and a material.
-useBVH(groundPicker, { firstHitOnly: true, splitStrategy: 'CENTER' })
 
 watch([groundGeometry, () => renderer.instance], async ([geometry, gpu]) => {
   if (!geometry || !gpu || heightField.value) return
@@ -470,44 +459,11 @@ const { daisiesDensity, daisiesHeight, daisiesColor } = useControls('daisies', {
   color: { value: '#e8c22a', type: 'color' },
 }, { uuid })
 
-// World-aligned trample map: characters stamp it, grass and foliage read it and
-// bend where it is marked. Size and origin match the control map and the height
-// field, so one world XZ means the same texel in all three. 512 keeps the same
-// ~8.5 texels per metre the 30m pages get at 256 — the cost is a 512² canvas
-// re-uploaded on every fade frame, so drop the resolution first if this bites.
-const trampleMap = createTrampleMap({ size: 60, resolution: 512 })
-
-// debug view: the texture's backing canvas rendered live in the bottom-right corner
-const { trampleDebug } = useControls('trample', {
-  debug: { value: false, type: 'boolean' },
-}, { uuid })
-
-const trampleCanvas = trampleMap.texture.image as HTMLCanvasElement
-watch(trampleDebug!, (show) => {
-  if (show) {
-    Object.assign(trampleCanvas.style, {
-      position: 'fixed',
-      bottom: '16px',
-      right: '16px',
-      width: '200px',
-      height: '200px',
-      border: '1px solid rgba(255, 255, 255, 0.4)',
-      borderRadius: '4px',
-      zIndex: '100',
-      pointerEvents: 'none',
-    })
-    document.body.appendChild(trampleCanvas)
-  }
-  else {
-    trampleCanvas.remove()
-  }
-})
-
 // Canopies. Placement is authored in Blender (one icosphere per blob), so there is no
 // density here — only the look. leafSize and amount are baked into the cluster geometry,
 // so moving them rebuilds the instanced mesh; colours are uniforms and stay live.
 const { treesColorA, treesColorB, treesAmount, treesLeafSize, treesCanopyScale } = useControls('trees', {
-  colorA: { value: '#6bd54d', type: 'color' },
+  colorA: { value: '#3c6b2f', type: 'color' },
   colorB: { value: '#86b544', type: 'color' },
   amount: { value: 150, min: 20, max: 400, step: 10, type: 'range' },
   leafSize: { value: 0.5, min: 0.1, max: 1.5, step: 0.01, type: 'range' },
@@ -582,26 +538,7 @@ onBeforeRender(() => {
   if (y !== null) position.y = y
 }, 10)
 
-// Also priority 10, for the same reason: stamping at the default priority would
-// mark where the character stood last frame, leaving the trail a step behind.
-// Trails first, then the live interactor — a stamp is the lasting mark that fades
-// back, the interactor is where blades part around the character right now, so
-// only the one being driven gets it.
-onBeforeRender(({ delta }) => {
-  trampleMap.update(delta)
-  for (const entity of characterEntities.value) {
-    const pos = getCharacterRef(entity.id)?.getPosition()
-    if (pos) trampleMap.stamp(pos.x, pos.z)
-  }
-  const leaderPos = playerId.value ? getCharacterRef(playerId.value)?.getPosition() : null
-  if (leaderPos) trampleMap.setInteractor(leaderPos.x, leaderPos.z)
-}, 10)
-
-onUnmounted(() => {
-  heightField.value?.dispose()
-  trampleCanvas.remove()
-  trampleMap.dispose()
-})
+onUnmounted(() => heightField.value?.dispose())
 </script>
 
 <template>
@@ -662,13 +599,12 @@ onUnmounted(() => {
   />
   <Grass
     v-if="control && heightField && grassDiffuseMap"
-    :subdivisions="300"
+    :subdivisions="400"
     :diffuse-map="grassDiffuseMap"
     :size="60"
     :grading="grading"
     :height-field="heightField"
     :control="control"
-    :trample="trampleMap"
     :mask-low="0.25"
     :mask-high="0.6"
   />
@@ -681,7 +617,6 @@ onUnmounted(() => {
     :grading="grading"
     :height-field="heightField"
     :control="control"
-    :trample="trampleMap"
     :density="tuftsDensity"
     :height="tuftsHeight"
     :spread="tuftsSpread"
@@ -693,12 +628,11 @@ onUnmounted(() => {
   <Flowers
     v-if="control && heightField"
     shape="puff"
-    :subdivisions="90"
+    :subdivisions="140"
     :size="60"
     :grading="grading"
     :height-field="heightField"
     :control="control"
-    :trample="trampleMap"
     :density="puffsDensity"
     :height="puffsHeight"
     :petal-color="puffsColor"
@@ -708,12 +642,11 @@ onUnmounted(() => {
   <Flowers
     v-if="control && heightField"
     shape="poppy"
-    :subdivisions="60"
+    :subdivisions="120"
     :size="60"
     :grading="grading"
     :height-field="heightField"
     :control="control"
-    :trample="trampleMap"
     :density="poppiesDensity"
     :height="poppiesHeight"
     :petal-color="poppiesColor"
@@ -723,12 +656,11 @@ onUnmounted(() => {
   <Flowers
     v-if="control && heightField"
     shape="daisy"
-    :subdivisions="40"
+    :subdivisions="120"
     :size="60"
     :grading="grading"
     :height-field="heightField"
     :control="control"
-    :trample="trampleMap"
     :density="daisiesDensity"
     :height="daisiesHeight"
     :petal-color="daisiesColor"

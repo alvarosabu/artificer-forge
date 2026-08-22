@@ -6,10 +6,11 @@ import { usePortraitStudio } from './usePortraitStudio'
 import { resolvePortraitBackground } from './portraitBackgrounds'
 import { portraitSignature } from './portraitSignature'
 
-// TEMP: persistent cache disabled while portrait framing is being calibrated, so
-// every load re-bakes from the current settings instead of serving a stale image.
-// Flip back to `true` once framing is locked in (and bump PORTRAIT_CACHE_VERSION).
-const PORTRAIT_CACHE_ENABLED = false
+// Persisted bakes are served straight from localStorage. A stale image can only
+// survive a pipeline change if PORTRAIT_CACHE_VERSION (portraitSignature.ts) is not
+// bumped alongside it — the version is part of the signature, so bumping it misses
+// every cached entry. Set to false only while actively calibrating framing.
+const PORTRAIT_CACHE_ENABLED = true
 
 export function usePortraitRenderer(entityId: MaybeRefOrGetter<string>) {
   const gameStore = useGameStore()
@@ -35,7 +36,6 @@ export function usePortraitRenderer(entityId: MaybeRefOrGetter<string>) {
     const background = resolvePortraitBackground(e.portraitBackground)
     const armor = e.appearance ? armorPieces.value : undefined
     return {
-      id: e.id,
       model: e.model,
       modular: e.appearance,
       armor,
@@ -60,21 +60,21 @@ export function usePortraitRenderer(entityId: MaybeRefOrGetter<string>) {
         return
       }
 
-      const cached = PORTRAIT_CACHE_ENABLED ? portraitStore.get(a.id) : undefined
-      if (cached && cached.signature === a.signature) {
-        url.value = cached.url
+      // The signature IS the cache key, so a hit is already known to match.
+      const cached = PORTRAIT_CACHE_ENABLED ? portraitStore.get(a.signature) : undefined
+      if (cached) {
+        url.value = cached
         return
       }
 
-      // Auto-generated portrait is preferred. The authored `portrait` (or a stale
-      // cached bake) is only a placeholder shown while the fresh one renders, or a
-      // fallback if the bake fails.
-      url.value = a.fallback ?? cached?.url
+      // Auto-generated portrait is preferred. The authored `portrait` is only a
+      // placeholder shown while the fresh one renders, or a fallback if the bake fails.
+      url.value = a.fallback
 
       studio
-        .bake(`${a.id}:${a.signature}`, { model: a.model, appearance: a.modular, armor: a.armor, rig: a.rig, equipment: a.equipment, background: a.background })
+        .bake(a.signature, { model: a.model, appearance: a.modular, armor: a.armor, rig: a.rig, equipment: a.equipment, background: a.background })
         .then((dataUrl) => {
-          if (PORTRAIT_CACHE_ENABLED) portraitStore.set(a.id, dataUrl, a.signature)
+          if (PORTRAIT_CACHE_ENABLED) portraitStore.set(a.signature, dataUrl)
           url.value = dataUrl
         })
         .catch(() => {

@@ -19,7 +19,7 @@ const props = withDefaults(defineProps<FlowersOptions>(), {
   heightField: null,
 })
 
-const { geometry, material, uniforms, dispose } = createFlowers(props)
+const { geometry, material, uniforms, setDensity, setMaskBand, dispose } = createFlowers(props)
 
 const setColor = (target: { value: Color }, value?: unknown) => {
   if (value !== undefined) target.value.set(new Color(value as ColorRepresentation))
@@ -31,15 +31,18 @@ watch(() => props.stemColor, val => setColor(uniforms.stemColor, val))
 watch(() => props.centerColor, val => setColor(uniforms.centerColor, val))
 watch(() => props.height, (val) => { if (val !== undefined) uniforms.height.value = val })
 watch(() => props.headSize, (val) => { if (val !== undefined) uniforms.headSize.value = val })
-// coverage is a shader threshold, so density retunes live with no rebuild
-watch(() => props.density, (val) => { uniforms.threshold.value = 1 - (val ?? 0.55) })
+// coverage is baked and sorted, so density only moves the draw count. No rebuild
+// either way: on the shader fallback it is still just a threshold.
+watch(() => props.density, (val) => { setDensity(val ?? 0.55) })
 // texture reference is swappable; presence/absence is decided at creation (remount to switch modes)
 watch(() => props.densityMap, (val) => {
   if (val && uniforms.densityMap) uniforms.densityMap.value = val
 })
-// the control band is a shader threshold too, so it retunes live
-watch(() => props.maskLow, (val) => { if (val !== undefined) uniforms.maskLow.value = val })
-watch(() => props.maskHigh, (val) => { if (val !== undefined) uniforms.maskHigh.value = val })
+// the band feeds the bake, so this re-sorts and re-uploads the instance buffer.
+// Cheap enough for a slider drag, not for a per-frame animation.
+watch([() => props.maskLow, () => props.maskHigh], ([low, high]) => {
+  setMaskBand(low ?? 0.25, high ?? 0.6)
+})
 watch(() => props.windAngle, (angle) => uniforms.wind.direction.value.set(Math.sin(angle), Math.cos(angle)))
 watch(() => props.windStrength, (val) => { uniforms.wind.strength.value = val })
 

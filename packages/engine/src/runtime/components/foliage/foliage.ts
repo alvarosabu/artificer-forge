@@ -1,5 +1,5 @@
 import { TresColor } from "@tresjs/core"
-import { BufferAttribute, BufferGeometry, Color, InstancedBufferAttribute, Object3D, PlaneGeometry, Spherical, StaticDrawUsage, Texture, Vector3 } from "three"
+import { BufferAttribute, BufferGeometry, Color, FrontSide, InstancedBufferAttribute, Object3D, PlaneGeometry, Spherical, StaticDrawUsage, Texture, Vector3 } from "three"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js"
 import { attribute, cameraWorldMatrix, float, Fn, instance, instancedBufferAttribute, mix, normalWorld, positionLocal, positionWorld, rotateUV, texture, uniform, uv, varying, vec2, vec3, vec4 } from "three/tsl"
 import { MeshLambertNodeMaterial, MeshStandardNodeMaterial } from "three/webgpu"
@@ -235,6 +235,17 @@ function buildFoliageMaterial(options: {
     material.depthWrite = true
     material.transparent = false
     if (!grading) material.alphaTest = 0.3 // graded path discards inside the finish instead
+
+    // Shadow pass MUST keep the front face. three flips a FrontSide material to
+    // BackSide when filling the shadow map (_shadowSide in Renderer.js), which is
+    // the right call for a closed solid — the depth lands on the far shell, away
+    // from the surface being lit, so acne needs less bias. A billboard has no far
+    // shell: positionNode below rebuilds the quad around whichever camera renders,
+    // so in the shadow pass the leaf turns to face the LIGHT and its single front
+    // face is the only one there is. Left on BackSide every quad is culled and the
+    // canopy writes nothing at all — silently, because a shadow map still at its
+    // cleared depth just reads as "everything is lit".
+    material.shadowSide = FrontSide
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     material.positionNode = Fn(({ object }: { object: any }) => {

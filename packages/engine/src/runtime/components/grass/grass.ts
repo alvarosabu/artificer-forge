@@ -11,6 +11,7 @@ import { createDropShadowCatcher, stylizedOutput } from '../../grading/stylizedO
 import { HeightField } from '../../terrain/heightField'
 import { sampleHeight } from '../../terrain/heightField'
 import { ControlMap, controlUv } from '../../terrain/controlMap'
+import { createScatterBake, MASK_EPSILON } from '../scatter/density'
 
 const bladeWidth = uniform(0.1)
 const bladeHeight = uniform(0.6)
@@ -70,19 +71,52 @@ export function createGrassGeometry(options: GrassOptions) {
     }
   }
 
+  // Coverage here is the bare control mask: no patch noise, no jitter. Blades where
+  // it collapses to nothing already get punted out of view in the vertex stage, so
+  // sorting by mask and drawing only the live prefix removes them from the dispatch
+  // without changing a pixel. Over half this field is road, water and off-band.
+  const bake = createScatterBake({
+    count,
+    anchors,
+    attributes: [
+      { array: randoms, stride: 1 },
+      { array: yaws, stride: 1 },
+      { array: heightNoises, stride: 1 },
+      { array: colorNoises, stride: 1 },
+    ],
+    control: options.control,
+    maskLow: options.maskLow ?? 0.25,
+    maskHigh: options.maskHigh ?? 0.6,
+  })
+
   const geometry = new InstancedBufferGeometry()
   geometry.instanceCount = count
   geometry.setIndex(BLADE_INDICES)
   geometry.setAttribute('position', new BufferAttribute(BLADE_POSITIONS, 3))
   geometry.setAttribute('windWeight', new BufferAttribute(BLADE_WIND_WEIGHT, 1))
-  geometry.setAttribute('anchor', new InstancedBufferAttribute(anchors, 2))
-  geometry.setAttribute('random', new InstancedBufferAttribute(randoms, 1))
-  geometry.setAttribute('yaw', new InstancedBufferAttribute(yaws, 1))
-  geometry.setAttribute('heightNoise', new InstancedBufferAttribute(heightNoises, 1))
-  geometry.setAttribute('colorNoise', new InstancedBufferAttribute(colorNoises, 1))
+  // held so a mask-band change can re-upload them after a re-sort
+  const instanced = [
+    new InstancedBufferAttribute(anchors, 2),
+    new InstancedBufferAttribute(randoms, 1),
+    new InstancedBufferAttribute(yaws, 1),
+    new InstancedBufferAttribute(heightNoises, 1),
+    new InstancedBufferAttribute(colorNoises, 1),
+  ]
+  geometry.setAttribute('anchor', instanced[0])
+  geometry.setAttribute('random', instanced[1])
+  geometry.setAttribute('yaw', instanced[2])
+  geometry.setAttribute('heightNoise', instanced[3])
+  geometry.setAttribute('colorNoise', instanced[4])
   // real bounds (field half-diagonal + sway/height margin) so frustum culling can skip the draw
   geometry.boundingSphere = new Sphere(new Vector3(), (size / 2) * Math.SQRT2 + 2)
-  return geometry
+
+  const rebake = (low: number, high: number) => {
+    if (!bake.rebake(low, high)) return false
+    for (const a of instanced) a.needsUpdate = true
+    return true
+  }
+
+  return { geometry, bake, rebake }
 }
 
 export function buildGrassMaterial(options: { 
@@ -160,7 +194,10 @@ export function buildGrassMaterial(options: {
           pos.addAssign(vec3(toBlade.x.div(dist), 0, toBlade.y.div(dist)).mul(push.mul(push)).mul(windWeight).mul(0.5))
           pos.y.subAssign(push.mul(push).mul(height).mul(0.3).mul(windWeight))
         }
-        pos.y.addAssign(visible.lessThan(0.01).select(float(1000), float(0)))
+        // Kept even though the bake already dropped the dead blades: the CPU reader
+        // and the GPU sampler can disagree by a hair right at the cutoff, and this
+        // catches the few that land on the wrong side of it.
+        pos.y.addAssign(visible.lessThan(MASK_EPSILON).select(float(1000), float(0)))
 
         return pos
     })()
@@ -185,7 +222,7 @@ export function buildGrassMaterial(options: {
 }
 
 export function createGrass(options: GrassOptions) {
-    const geometry = createGrassGeometry(options)
+    const { geometry, bake, rebake } = createGrassGeometry(options)
     const colorAUniform = uniform(new Color(options.colorA as ColorRepresentation))
     const colorBUniform = uniform(new Color(options.colorB as ColorRepresentation))
     const maskLow = uniform(options.maskLow ?? 0.25)
@@ -209,6 +246,19 @@ export function createGrass(options: GrassOptions) {
       maskLow,
       maskHigh,
     })
+    // the mask alone decides the draw count, and MASK_EPSILON is the same cutoff the
+    // vertex stage punts at — so every blade dropped here was already invisible
+    const applyMaskBand = () => {
+      if (bake.coverage) geometry.instanceCount = bake.countFor(MASK_EPSILON)
+    }
+    applyMaskBand()
+
+    const setMaskBand = (low: number, high: number) => {
+      maskLow.value = low
+      maskHigh.value = high
+      if (rebake(low, high)) applyMaskBand()
+    }
+
     const uniforms = {
         bladeWidth,
         bladeHeight,
@@ -220,7 +270,7 @@ export function createGrass(options: GrassOptions) {
         wind: windUniforms,
         grading: options.grading,
     }
-    return { geometry, material, uniforms, dispose: () => {
+    return { geometry, material, uniforms, setMaskBand, dispose: () => {
         geometry.dispose()
         material.dispose()
     } }
