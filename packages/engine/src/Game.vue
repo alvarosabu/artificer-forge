@@ -27,9 +27,14 @@ function handlePointerMissed() {
 </script>
 
 <template>
+  <!-- dpr is a [min, max] clamp on the system value, not a fixed ratio. Uncapped, a
+       Retina display renders 4x the pixels, and every post-processing pass pays that
+       multiplier again. 1.5 is where this art style stops showing the difference:
+       flat colour fields and cutout foliage have no fine detail to lose. -->
   <TresCanvas
     clear-color="#020420"
     window-size
+    :dpr="[1, 1.5]"
     :renderer="createWebGPURenderer"
     :tone-mapping="NoToneMapping"
     shadows

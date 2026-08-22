@@ -31,11 +31,11 @@ watch(whenLoaded(controlTexture), (texture) => {
   }
 })
 
-const grassMap = whenLoaded(useTexture('/textures/grass.png').state)
+const grassMap = whenLoaded(useTexture('/textures/grass.webp').state)
 const groundMap = whenLoaded(useTexture('/textures/dirt.webp').state)
-const roadMap = whenLoaded(useTexture('/textures/road.jpg').state)
+const roadMap = whenLoaded(useTexture('/textures/road.webp').state)
 const rockMap = whenLoaded(useTexture('/textures/rock.webp').state)
-const waterNormalMap = whenLoaded(useTexture('/textures/water-normal.jpg').state)
+const waterNormalMap = whenLoaded(useTexture('/textures/water-normal.webp').state)
 // The level GLB is authored in Blender and holds everything static: the terrain
 // plus every non-interactable prop. The split here is by node name, because that
 // is the only contract Blender can carry. Entities (anything with runtime state)
