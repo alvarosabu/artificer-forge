@@ -1,12 +1,46 @@
 <script setup lang="ts">
-import { Group, Mesh, Raycaster, SRGBColorSpace, Vector3 } from 'three'
-import type { BufferGeometry, Color, DirectionalLight, Object3D, Texture } from 'three'
+import { Group, Mesh, SRGBColorSpace } from 'three'
+import type { Color, DirectionalLight, Object3D, Texture } from 'three'
 import type { TresPointerEvent } from '@tresjs/core'
 import { TargetIndicator } from '@artificer-forge/vfx'
-import { applyGradingToModel, Character, createControlMap, createGradingContext, createHeightField, createTerrainUniforms, createTrampleMap, createWaterUniforms, extractCanopyReferences, Flowers, Grass, GrassTufts, sampleHeight, TerrainGround, Trees, useEnvironmentStore, useGameStore, useSceneRefs, Water, type ControlMap, type HeightField, WindLines } from '@artificer-forge/engine/runtime'
+import { applyGradingToModel, Character, createControlMap, createGradingContext, createHeightMap, createTerrainUniforms, createTrampleMap, createWaterUniforms, extractCanopyReferences, Flowers, Grass, GrassTufts, readHeightPixels, sampleHeight, sampleHeightAt, TerrainQuadtree, Trees, useEnvironmentStore, useGameStore, useSceneRefs, Water, type ControlMap, type HeightField, type HeightMapMeta, WindLines } from '@artificer-forge/engine/runtime'
 import type { DayCycleName } from '~/utils/dayCyclePresets'
-import { MeshBasicNodeMaterial, type WebGPURenderer } from 'three/webgpu'
+import { MeshBasicNodeMaterial } from 'three/webgpu'
 import { positionWorld, vec4 } from 'three/tsl'
+
+// The terrain is GENERATED from this map, not loaded from the GLB. Everything
+// below is a transcription of public/levels/level-512.height-2048.json, written by
+// `pnpm bake:heightmap apps/playground/public/levels/level-512.glb` — the image
+// alone has no scale, so these numbers are the only thing tying its 0..1 back to
+// metres. Re-bake and they have to be copied across again.
+//
+// The FULL extent. level-512.glb is 512 x 1024 m (the terrain was duplicated along
+// Z, and the halves meet at z = -244), and heightUv() divides by ONE size, so the
+// window is the 1024 m bounding square. That spends half its texels padding X,
+// where there is no mesh; the baker clamps those from the mesh edge, which is what
+// ClampToEdgeWrapping does at the border anyway.
+//
+// rgb, not grey, and not by preference: 138 m of relief over 8 bits is a 54 cm
+// ladder, which terraces every hillside. The packed map costs four texture reads
+// and a manual bilinear (see sampleHeight), and 2.9 MB instead of 272 KB.
+const HEIGHT_META: HeightMapMeta = {
+  resolution: 2048,
+  size: 1024,
+  origin: [-7.4813, -244.1614],
+  minHeight: -4.7006,
+  maxHeight: 133.4328,
+  texelSize: 0.5,
+  flipY: false,
+  encoding: 'rgb',
+}
+const HEIGHT_MAP_URL = '/levels/level-512.height-2048.rgb.png'
+
+// The control map is its OWN window, and a smaller one: control-512.png has paint
+// for the 512 m region around the start, not for the full bounding square. Two
+// different extents is fine — each carries its own origin/size uniforms — but
+// outside this square the paint clamps, so the far terrain reads as bare ground.
+const LEVEL_SIZE = 512
+const LEVEL_ORIGIN: [number, number] = [-7.4813, 11.8386]
 
 // useTexture's ref holds an empty Texture (image === null) until the file lands.
 // Truthiness is not enough: handing a pixel-less texture to a WebGPU material
@@ -17,16 +51,16 @@ function whenLoaded<T extends Texture>(source: { value: T | null | undefined }) 
 }
 
 const control = shallowRef<ControlMap | null>(null)
-const { renderer } = useTresContext()
 const heightField = shallowRef<HeightField | null>(null)
 
-const { state: controlTexture } = useTexture('/levels/testbed.control.png')
+const { state: controlTexture } = useTexture('/levels/control-512.png')
 
 watch(whenLoaded(controlTexture), (texture) => {
   if (texture) {
     control.value = createControlMap({
       texture,
-      size: 60,
+      size: LEVEL_SIZE,
+      origin: LEVEL_ORIGIN,
     })
   }
 })
@@ -42,10 +76,9 @@ const waterNormalMap = whenLoaded(useTexture('/textures/water-normal.webp').stat
 // never live in here — they come from YAML templates via the store.
 const LEVEL_GROUND_NODE = 'Terrain'
 
-const { state: gltf } = useGLTF('/levels/testbed.glb', {
+const { state: gltf } = useGLTF('/levels/level-512.glb', {
   draco: true,
 })
-const groundGeometry = shallowRef<BufferGeometry | null>(null)
 const propsRoot = shallowRef<Object3D | null>(null)
 const canopyReferences = shallowRef<Object3D[]>([])
 // Bruno's foliage SDF: one greyscale leaf silhouette the alpha test cuts out of every
@@ -61,19 +94,16 @@ watch(gltf, (loaded) => {
   if (!loaded) return
 
   const ground = loaded.scene.getObjectByName(LEVEL_GROUND_NODE)
-  // fail loudly: a rename in Blender used to silently promote whichever mesh
-  // happened to come first, which bakes a height field out of a rock
+  // fail loudly: a rename in Blender used to silently leave the authored terrain
+  // in the scene, drawn on top of the generated one and z-fighting with it
   if (!(ground instanceof Mesh)) {
-    console.error(`[terrain] no mesh named "${LEVEL_GROUND_NODE}" in testbed.glb`)
+    console.error(`[terrain] no mesh named "${LEVEL_GROUND_NODE}" in the level GLB`)
     return
   }
 
-  // bake the node transform into the vertices, so local space == world space
-  ground.updateWorldMatrix(true, false)
-  const geometry = ground.geometry.clone()
-  geometry.applyMatrix4(ground.matrixWorld)
-  groundGeometry.value = geometry
-
+  // The ground mesh itself is DROPPED: the height map is now the source of truth
+  // and TerrainQuadtree generates the surface from it. This node is looked up
+  // only so the loop below can leave it out.
   // Everything else is scenery. Clone rather than reparent: useGLTF caches the
   // scene by url, and moving nodes out of it would empty the cached copy on the
   // next HMR pass. Object3D.clone shares geometry and material, so this is cheap.
@@ -94,50 +124,28 @@ watch(gltf, (loaded) => {
   propsRoot.value = scenery
 }, { immediate: true })
 
-// --- Character, for scale and for walking the level ---
+// The height map, straight off disk. Nothing is baked: the PNG IS the field, and
+// the terrain mesh, the grass, the flowers and the props all read this one texture,
+// so none of them can drift from the surface being drawn.
+const { state: heightTexture } = useTexture(HEIGHT_MAP_URL)
 
-// A raycast target, deliberately NOT added to the scene. The geometry already has
-// its world transform baked in above, so an identity mesh sits exactly where
-// TerrainGround draws it. This is the correct ground query; the baked height field
-// replaces it once there is a CPU-side reader for it.
-const groundPicker = shallowRef<Mesh | null>(null)
-watch(groundGeometry, (geometry) => {
-  if (!geometry) return
-  const mesh = new Mesh(geometry)
-  mesh.updateMatrixWorld()
-  groundPicker.value = mesh
+watch(whenLoaded(heightTexture), (texture) => {
+  if (!texture || heightField.value) return
+  heightField.value = createHeightMap({ texture, meta: HEIGHT_META })
 })
 
-// The ground ray runs once per frame against all 32,768 terrain triangles, which
-// brute-force intersectObject tests one by one. A BVH makes it a tree descent.
-// firstHitOnly, because the ray points straight down and groundHeight takes [0]:
-// the default traversal collects and sorts every hit along the ray instead.
-// CENTER over the default SAH, because the terrain is an even grid where the cheap
-// split builds just as good a tree, without a build hitch at load.
-// Off-scene is fine: useBVH only needs a Mesh with geometry and a material.
-useBVH(groundPicker, { firstHitOnly: true, splitStrategy: 'CENTER' })
+// --- Character, for scale and for walking the level ---
 
-watch([groundGeometry, () => renderer.instance], async ([geometry, gpu]) => {
-  if (!geometry || !gpu || heightField.value) return
-  // the same 60 metres and the same origin as the control map, on purpose
-  const field = createHeightField({ geometry, size: 60, resolution: 512 })
-  await field.bake(gpu as WebGPURenderer)
-  heightField.value = field
-}, { immediate: true })
-
-
-
-const raycaster = new Raycaster()
-const _origin = new Vector3()
-const _down = new Vector3(0, -1, 0)
-
-// Terrain height under a world XZ, or null when the ray misses the mesh.
-// Starts well above the level so it always begins outside the geometry.
+// Terrain height under a world XZ, or null before the map has loaded. Two array
+// lookups and a bilinear blend, where this used to be a BVH raycast against 32k
+// triangles: sampleHeightAt mirrors the shader's sampling exactly, so the ground
+// the character stands on and the ground the GPU draws are the same surface.
 function groundHeight(x: number, z: number): number | null {
-  const mesh = groundPicker.value
-  if (!mesh) return null
-  raycaster.set(_origin.set(x, 200, z), _down)
-  return raycaster.intersectObject(mesh, false)[0]?.point.y ?? null
+  const field = heightField.value
+  if (!field) return null
+  const pixels = readHeightPixels(field)
+  if (!pixels) return null
+  return sampleHeightAt(field, pixels, x, z)
 }
 
 const gameStore = useGameStore()
@@ -148,6 +156,9 @@ const characterEntities = computed(() =>
   [...gameStore.entities.values()].filter(e => e.type === 'character'))
 
 onMounted(async () => {
+  // Debug spawn: out in the duplicated half. The two halves meet at z = -244, so
+  // this stands 268 m into the new one. y is ignored — the grounding pass below
+  // raycasts the terrain every frame and overwrites it.
   const id = await gameStore.spawnFromTemplate('hero', { x: 0, y: 0, z: 0 })
   gameStore.addToParty(id)
   gameStore.selectEntity(id)
@@ -181,7 +192,7 @@ const dayCycle = useDayCycle()
 // backwards from where fog should land: the overview camera sits ~50m out, so
 // day's 0.315/1.25 over span 55 starts the haze at ~67m and saturates past the
 // far edge — only the last stretch of ground dissolves, not the whole level
-const grading = createGradingContext({ sceneNear: 50, sceneFar: 105 })
+const grading = createGradingContext({ sceneNear: 50, sceneFar: 4000 })
 
 watch(scene, (s) => {
   if (!s) return
@@ -222,11 +233,28 @@ watch(dayCycleAuto!, (v) => { dayCycle.auto.running = v })
 
 const { fogSceneNear, fogSceneFar } = useControls('fog', {
   sceneNear: { value: 50, min: 0, max: 200, step: 0.5, type: 'range' },
-  sceneFar: { value: 105, min: 1, max: 300, step: 0.5, type: 'range' },
+  sceneFar: { value: 1000, min: 1, max: 3000, step: 0.5, type: 'range' },
 }, { uuid })
 
 watch(fogSceneNear!, (v) => { grading.range.sceneNear = v })
 watch(fogSceneFar!, (v) => { grading.range.sceneFar = v })
+
+// Terrain LOD. depth and split retune live; segments rebuilds the shared grid, so
+// it remounts the component (the :key below) rather than pretending to be live.
+//
+// One vertex per texel on the FINEST node is the useful maximum; past it every
+// extra vertex reads a texel twice. Here that is depth 6: 1024 / (32 * 2^6) = 0.5 m,
+// the map's texel size. split is the radius a node splits inside, as a multiple of
+// its own edge — 1.5 holds full detail out to ~24 m at this scale.
+const { quadtreeSegments, quadtreeDepth, quadtreeSplit, quadtreeSkirt, quadtreeWireframe } = useControls('quadtree', {
+  segments: { value: 32, min: 4, max: 64, step: 4, type: 'range' },
+  depth: { value: 6, min: 0, max: 8, step: 1, type: 'range' },
+  split: { value: 1.5, min: 0.5, max: 6, step: 0.1, type: 'range' },
+  skirt: { value: 4, min: 0, max: 40, step: 0.25, type: 'range' },
+  // every node draws the same number of quads, so cell size IS the LOD level:
+  // small cells near the camera, big cells out at the edge
+  wireframe: { value: false, type: 'boolean' },
+}, { uuid })
 
 // terrain look: one uniform bag, written into live. The material is built once
 // (its node graph bakes in which maps exist), so every knob here has to be a
@@ -612,18 +640,25 @@ onUnmounted(() => {
     :intensity="1.2"
     cast-shadow
   />
-  <!-- every map has to be loaded before mount: the material bakes in which maps
-       exist, so one arriving late would silently fall back to flat colour -->
-  <TerrainGround
-    v-if="control && groundGeometry && grassMap && groundMap && roadMap && rockMap"
+  <!-- The terrain, generated from the height map every frame. Every map has to be
+       loaded before mount: the material bakes in which maps exist, so one arriving
+       late would silently fall back to flat colour. -->
+  <TerrainQuadtree
+    v-if="control && heightField && grassMap && groundMap && roadMap && rockMap"
+    :key="quadtreeSegments"
+    :field="heightField"
     :control="control"
-    :geometry="groundGeometry"
     :grading="grading"
     :grass-map="grassMap"
     :ground-map="groundMap"
     :road-map="roadMap"
     :rock-map="rockMap"
     :uniforms="terrain"
+    :segments="quadtreeSegments"
+    :max-depth="quadtreeDepth"
+    :split-factor="quadtreeSplit"
+    :skirt-depth="quadtreeSkirt"
+    :wireframe="quadtreeWireframe"
     @click="handleGroundClick"
   />
   <!-- Static scenery straight from the level GLB: rocks now, bridges and fences
@@ -660,11 +695,11 @@ onUnmounted(() => {
     :entity-id="entity.id"
     :grading="grading"
   />
-  <Grass
+ <Grass
     v-if="control && heightField && grassDiffuseMap"
     :subdivisions="300"
     :diffuse-map="grassDiffuseMap"
-    :size="60"
+    :size="LEVEL_SIZE"
     :grading="grading"
     :height-field="heightField"
     :control="control"

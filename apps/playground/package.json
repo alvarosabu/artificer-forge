@@ -35,6 +35,7 @@
     "nuxt": "catalog:nuxt",
     "pinia": "catalog:vue",
     "three": "catalog:three",
+    "three-mesh-bvh": "^0.9.9",
     "vue": "catalog:vue",
     "vue-router": "catalog:vue",
     "zod": "catalog:nuxt",

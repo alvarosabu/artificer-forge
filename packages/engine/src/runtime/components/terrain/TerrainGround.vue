@@ -40,11 +40,15 @@ const { material } = buildTerrainMaterial({
 </script>
 
 <template>
+  <!-- receive only, never cast. Casting draws the whole ground a second time into
+       the shadow map, which at 512 m is another half a million triangles per frame,
+       and the finish takes its form from stylizedOutput's mid tone rather than from
+       terrain self-shadowing. The cost of that: a hill no longer shades the valley
+       behind it at a low sun. -->
   <TresMesh
     name="terrain"
     :geometry="props.geometry"
     :material="material"
-    cast-shadow
     receive-shadow
     @click="handleClick"
   />

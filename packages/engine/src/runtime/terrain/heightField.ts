@@ -5,7 +5,7 @@ import {
     Scene, Vector2,
 } from 'three/webgpu'
 import type { BufferGeometry, Node, Texture, UniformNode, WebGPURenderer } from 'three/webgpu'
-import { positionWorld, texture, uniform, vec2, vec4 } from 'three/tsl'
+import { floor, mix, positionWorld, texture, uniform, vec2, vec4 } from 'three/tsl'
 
 export interface HeightFieldSettings {
     /** the ground mesh geometry, with its node transform already baked in */
@@ -23,11 +23,36 @@ export interface HeightFieldUniforms {
     size: UniformNode<'float', number>
     /** world metres covered by one texel; stage 7 uses it as a sampling step */
     texelSize: UniformNode<'float', number>
+    /** world Y that an encoded 0 stands for */
+    minHeight: UniformNode<'float', number>
+    /** world Y span that the encoded 0..1 covers */
+    heightRange: UniformNode<'float', number>
 }
+
+/**
+ * How the image stores its 0..1.
+ *
+ * `grey` is the red channel, so 8 bits: fine while (maxHeight - minHeight) / 255
+ * is smaller than the terracing you can see. `rgb` packs 24 bits across r/g/b,
+ * which costs four texture reads and a manual bilinear (see sampleHeight) because
+ * a hardware-filtered tap would blend the BYTES and decode to nonsense.
+ */
+export type HeightEncoding = 'grey' | 'rgb'
 
 export interface HeightField {
     texture: Texture
+    encoding: HeightEncoding
     uniforms: HeightFieldUniforms
+    /**
+     * The same numbers as the uniforms, in plain JS. A CPU reader cannot get at a
+     * UniformNode's value without reaching through `.value`, and the quadtree needs
+     * these every frame — so they are mirrored here rather than dug out each time.
+     */
+    size: number
+    origin: Vector2
+    minHeight: number
+    heightRange: number
+    resolution: number
     bake: (renderer: WebGPURenderer) => Promise<void>
     dispose: () => void
 }
@@ -41,8 +66,52 @@ export function heightUv(uniforms: HeightFieldUniforms, worldXZ: Node<'vec2'>) {
     return vec2(local.x, local.y)
 }
 
+// 24 bits big-endian across r/g/b, matching the sidecar json's documented unpack.
+// texture() hands back byte/255, so the 255 puts the bytes back.
+const unpackRgb = (colour: Node<'vec4'>) =>
+    colour.r.mul(65536).add(colour.g.mul(256)).add(colour.b).mul(255 / 16777215)
+
+/**
+ * Bilinear blend of four NEAREST taps.
+ *
+ * A packed height map MUST be sampled unfiltered — hardware filtering would
+ * average the r, g and b bytes independently, and averaging the high byte of one
+ * texel with the low byte of its neighbour decodes to a height from nowhere. So
+ * the four corners are fetched at their exact centres and blended after decoding,
+ * which is the same result the sampler would give if the value were a single float.
+ */
+function bilinearRgb(field: HeightField, uv: Node<'vec2'>) {
+    const resolution = field.resolution
+    const texel = 1 / resolution
+    // texel centres sit at half-texel offsets; land off by half and every slope shifts
+    const p = uv.mul(resolution).sub(0.5).toVar()
+    const corner = floor(p).toVar()
+    const f = p.sub(corner).toVar()
+    const base = corner.add(0.5).mul(texel).toVar()
+
+    const at = (du: number, dv: number) =>
+        unpackRgb(texture(field.texture, base.add(vec2(du * texel, dv * texel))))
+
+    const top = mix(at(0, 0), at(1, 0), f.x)
+    const bottom = mix(at(0, 1), at(1, 1), f.x)
+    return mix(top, bottom, f.y)
+}
+
+/**
+ * World Y of the field under a world XZ.
+ *
+ * The image holds a normalised 0..1, so it has to be decoded back into metres.
+ * A GPU-baked field stores metres directly and sets minHeight 0 / heightRange 1,
+ * which makes this a no-op for it; a loaded PNG carries the real range from its
+ * sidecar json. Both paths then read the same, so every consumer (grass, flowers,
+ * props, the quadtree mesh) is indifferent to where the field came from.
+ */
 export function sampleHeight(field: HeightField, worldXZ: Node<'vec2'>) {
-    return texture(field.texture, heightUv(field.uniforms, worldXZ)).r
+    const uv = heightUv(field.uniforms, worldXZ)
+    const normalised = field.encoding === 'rgb'
+        ? bilinearRgb(field, uv)
+        : texture(field.texture, uv).r
+    return normalised.mul(field.uniforms.heightRange).add(field.uniforms.minHeight)
 }
 
 export function createHeightField({
@@ -95,10 +164,21 @@ export function createHeightField({
 
     return {
         texture: target.texture,
+        // a half-float target already holds the metres; nothing is packed
+        encoding: 'grey' as const,
+        size,
+        origin: new Vector2(origin[0], origin[1]),
+        // the bake writes positionWorld.y straight into a half-float target, so the
+        // stored value IS the metre count and needs no decoding
+        minHeight: 0,
+        heightRange: 1,
+        resolution,
         uniforms: {
             origin: uniform(new Vector2(origin[0], origin[1])),
             size: uniform(size),
             texelSize: uniform(size / resolution),
+            minHeight: uniform(0),
+            heightRange: uniform(1),
         },
         bake,
         dispose: () => {

@@ -20,7 +20,6 @@ interface ModelNodes {
   Tree_Cannopy_1_C_Color6003: Mesh
   Rock_3_D_Color1001: Mesh
   Rock_3_D_Color1002: Mesh
-  Tree_Bare_1_C_Color6001: Mesh
   Tree_Bare_1_C_Color6002: Mesh
   Tree_Cannopy_1_C_Color6004: Mesh
   Tree_Cannopy_1_C_Color6005: Mesh
@@ -29,18 +28,17 @@ interface ModelNodes {
   Tree_Cannopy_1_C_Color6007: Mesh
   Tree_Cannopy_1_C_Color6008: Mesh
   Tree_Cannopy_1_C_Color6009: Mesh
-  Tree_Cannopy_1_C_Color6010: Mesh
-  Tree_Cannopy_1_C_Color6011: Mesh
-  Tree_Cannopy_1_C_Color6012: Mesh
   Rock_3_D_Color1003: Mesh
   Rock_3_D_Color1004: Mesh
   Rock_3_D_Color1005: Mesh
+  Pier: Mesh
 }
 
 interface ModelMaterials {
   'LandscapeMaterial': MeshStandardMaterial
   'forest': MeshStandardMaterial
   'forest.004': MeshStandardMaterial
+  'texture': MeshStandardMaterial
 }
 
 const emit = defineEmits<{
@@ -58,7 +56,6 @@ defineSlots<{
   Tree_Bare_1_C_Color6?: (props: { node: Mesh, material: MeshStandardMaterial }) => any
   Rock_3_D_Color1001?: (props: { node: Mesh, material: MeshStandardMaterial }) => any
   Rock_3_D_Color1002?: (props: { node: Mesh, material: MeshStandardMaterial }) => any
-  Tree_Bare_1_C_Color6001?: (props: { node: Mesh, material: MeshStandardMaterial }) => any
   Tree_Cannopy_1_C_Color6004?: (props: { node: Mesh }) => any
   Tree_Cannopy_1_C_Color6005?: (props: { node: Mesh }) => any
   Tree_Cannopy_1_C_Color6006?: (props: { node: Mesh }) => any
@@ -67,12 +64,10 @@ defineSlots<{
   Tree_Cannopy_1_C_Color6008?: (props: { node: Mesh }) => any
   Tree_Cannopy_1_C_Color6009?: (props: { node: Mesh }) => any
   Tree_Bare_1_C_Color6003?: (props: { node: Mesh, material: MeshStandardMaterial }) => any
-  Tree_Cannopy_1_C_Color6010?: (props: { node: Mesh }) => any
-  Tree_Cannopy_1_C_Color6011?: (props: { node: Mesh }) => any
-  Tree_Cannopy_1_C_Color6012?: (props: { node: Mesh }) => any
   Rock_3_D_Color1003?: (props: { node: Mesh, material: MeshStandardMaterial }) => any
   Rock_3_D_Color1004?: (props: { node: Mesh, material: MeshStandardMaterial }) => any
   Rock_3_D_Color1005?: (props: { node: Mesh, material: MeshStandardMaterial }) => any
+  Pier?: (props: { node: Mesh, material: MeshStandardMaterial }) => any
 }>()
 
 const { state, nodes, materials, isLoading } = useGLTF<ModelNodes, ModelMaterials>('/levels/testbed.glb', { draco: true })
@@ -130,9 +125,6 @@ defineExpose({ nodes, materials, isReady })
       <slot name="Rock_3_D_Color1002" :node="nodes.Rock_3_D_Color1002" :material="materials.forest">
         <TresMesh :geometry="nodes.Rock_3_D_Color1002.geometry" :material="materials.forest" :position="[-19.33, -2.06, 12.28]" :rotation="[1.9, 0.05, -0.51]" :scale="[5.98, 5.98, 5.98]" />
       </slot>
-      <slot name="Tree_Bare_1_C_Color6001" :node="nodes.Tree_Bare_1_C_Color6001" :material="materials['forest.004']">
-        <TresMesh :geometry="nodes.Tree_Bare_1_C_Color6001.geometry" :material="materials['forest.004']" :position="[-18.89, 2.34, -1.52]" :rotation="[-0.01, -0.06, -0.08]" />
-      </slot>
       <slot name="Tree_Bare_1_C_Color6002" :node="nodes.Tree_Bare_1_C_Color6002" :material="materials['forest.004']">
         <TresMesh :geometry="nodes.Tree_Bare_1_C_Color6002.geometry" :material="materials['forest.004']" :position="[-1.45, 0.37, -24.44]" :rotation="[-3.13, -0.68, 3.08]">
           <slot name="Tree_Cannopy_1_C_Color6004" :node="nodes.Tree_Cannopy_1_C_Color6004">
@@ -159,15 +151,6 @@ defineExpose({ nodes, materials, isReady })
           </slot>
         </TresMesh>
       </slot>
-      <slot name="Tree_Cannopy_1_C_Color6010" :node="nodes.Tree_Cannopy_1_C_Color6010">
-        <TresMesh :geometry="nodes.Tree_Cannopy_1_C_Color6010.geometry" :position="[-18.86, 2.38, -0.68]" :rotation="[0.2, 0, -0.09]" />
-      </slot>
-      <slot name="Tree_Cannopy_1_C_Color6011" :node="nodes.Tree_Cannopy_1_C_Color6011">
-        <TresMesh :geometry="nodes.Tree_Cannopy_1_C_Color6011.geometry" :position="[-18.86, 2.38, -0.68]" :rotation="[0.2, 0, -0.09]" />
-      </slot>
-      <slot name="Tree_Cannopy_1_C_Color6012" :node="nodes.Tree_Cannopy_1_C_Color6012">
-        <TresMesh :geometry="nodes.Tree_Cannopy_1_C_Color6012.geometry" :position="[-18.86, 2.38, -0.68]" :rotation="[0.2, 0, -0.09]" />
-      </slot>
       <slot name="Rock_3_D_Color1003" :node="nodes.Rock_3_D_Color1003" :material="materials.forest">
         <TresMesh :geometry="nodes.Rock_3_D_Color1003.geometry" :material="materials.forest" :position="[-0.7, -1.34, 17.01]" :rotation="[-2.28, 0.56, -2.84]" :scale="[1.97, 1.97, 1.97]" />
       </slot>
@@ -176,6 +159,9 @@ defineExpose({ nodes, materials, isReady })
       </slot>
       <slot name="Rock_3_D_Color1005" :node="nodes.Rock_3_D_Color1005" :material="materials.forest">
         <TresMesh :geometry="nodes.Rock_3_D_Color1005.geometry" :material="materials.forest" :position="[-18.14, -3.8, 15.48]" :rotation="[-2.87, -0.55, -1.69]" :scale="[3.65, 3.65, 3.65]" />
+      </slot>
+      <slot name="Pier" :node="nodes.Pier" :material="materials.texture">
+        <TresMesh :geometry="nodes.Pier.geometry" :material="materials.texture" :position="[-2.81, -1.79, 10.46]" :rotation="[0, 0.44, 0]" :scale="1.75" />
       </slot>
     </template>
   </TresGroup>

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { OrbitControls } from '@tresjs/cientos'
 import { useGameStore } from '../stores/game'
-import type { CameraControllerProps } from '../camera'
+import { CAMERA_DEFAULTS, type CameraControllerProps } from '../camera'
 import { useSceneRefs } from '../useSceneRefs';
-import { computed, shallowRef, toValue } from 'vue';
+import { computed, shallowRef, toValue, watch } from 'vue';
 import { Camera, MathUtils, Vector3 } from 'three';
 import { useLoop } from '@tresjs/core';
 
@@ -11,18 +11,18 @@ import { useLoop } from '@tresjs/core';
 // active PerspectiveCamera resolves via useTresContext() for any consumer (e.g.
 // DialogCameraDirector). Controls auto-disable while input is blocked (dialogs, etc).
 const props = withDefaults(defineProps<CameraControllerProps>(), {
-  position: () => [12.86, 12.57, 15.52],
-  near: 0.1,
-  far: 100,
-  controls: true,
-  fov: 40,
-  maxPolarAngle: Math.PI / 2,
-  minPolarAngle: Math.PI / 2,
-  maxDistance: 100,
-  minDistance: 0.1,
-  follow: false,
-  followHeight: 1.2,
-  followSmoothing: 6,
+  position: () => CAMERA_DEFAULTS.position,
+  near: CAMERA_DEFAULTS.near,
+  far: CAMERA_DEFAULTS.far,
+  controls: CAMERA_DEFAULTS.controls,
+  fov: CAMERA_DEFAULTS.fov,
+  maxPolarAngle: CAMERA_DEFAULTS.maxPolarAngle,
+  minPolarAngle: CAMERA_DEFAULTS.minPolarAngle,
+  maxDistance: CAMERA_DEFAULTS.maxDistance,
+  minDistance: CAMERA_DEFAULTS.minDistance,
+  follow: CAMERA_DEFAULTS.follow,
+  followHeight: CAMERA_DEFAULTS.followHeight,
+  followSmoothing: CAMERA_DEFAULTS.followSmoothing,
 })
 
 const gameStore = useGameStore()
@@ -40,6 +40,10 @@ const anchor = new Vector3()
 const smoothAnchor = new Vector3()
 const offset = new Vector3()
 let acquire: 'authored' | null = 'authored'
+
+// Turning follow back on (debug GUI, or a leader swap) has to re-seat: without
+// this the loop would resume from the offset the free camera was left at.
+watch(followId, (id) => { if (id) acquire = 'authored' })
 
 
 function readAnchor(): Vector3 | null {
