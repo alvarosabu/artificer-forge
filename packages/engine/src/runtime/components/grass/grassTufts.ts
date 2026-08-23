@@ -1,11 +1,11 @@
 import type { TresColor } from '@tresjs/core'
 import { BufferAttribute, Color, DoubleSide, InstancedBufferAttribute, InstancedBufferGeometry, Sphere, Texture, Vector3 } from 'three'
-import { attribute, float, Fn, mix, positionGeometry, rotateUV, step, texture, uniform, varying, vec2, vec3 } from 'three/tsl'
+import { attribute, Fn, If, mix, positionGeometry, rotateUV, step, texture, uniform, varying, vec2, vec3 } from 'three/tsl'
 import { MeshBasicNodeMaterial, MeshLambertNodeMaterial } from 'three/webgpu'
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js'
 import type { ColorRepresentation, UniformNode } from 'three/webgpu'
 import { createWindUniforms, windOffset, type WindSettings, type WindUniforms } from '../wind/wind'
-import { coverageNode, createDensityMapNode, createScatterBake, type DensityChannel } from '../scatter/density'
+import { coverageNode, createDensityMapNode, createScatterBake, MASK_EPSILON, PUNT_Y, type DensityChannel } from '../scatter/density'
 import { followAnchor, followFade, type ScatterFocus } from '../scatter/focus'
 import { trampleUv, type TrampleMap } from '../../trample/trample'
 import type { GradingContext } from '../../grading/grading'
@@ -256,62 +256,70 @@ export function buildGrassTuftsMaterial(options: GrassTuftsMaterialOptions) {
         // in and out on it
         const fade = focus ? followFade(focus, worldXZ, size).toVar() : null
 
-        const trampleAmt = trample ? texture(trample.texture, trampleUv(trample.uniforms, worldXZ)).r.toVar() : null
-
-        let tuftHeight = height
-            .mul(mix(0.7, random, 0.5))
-            .mul(instanceData.z)
-        // tufts are stiffer than blades: they flatten less when walked over
-        if (trampleAmt) tuftHeight = tuftHeight.mul(trampleAmt.mul(0.55).oneMinus())
-        if (fade) tuftHeight = tuftHeight.mul(fade)
-        tuftHeight = tuftHeight.toVar()
-
-        const local = vec3(
-            positionGeometry.x.mul(spread),
-            positionGeometry.y.mul(tuftHeight),
-            positionGeometry.z.mul(spread),
-        ).toVar()
-        local.xz.assign(rotateUV(local.xz, yaw, vec2(0)))
-
-        // baked: the buffer is sorted by coverage and instanceCount already cuts
-        // the rejects, so there is nothing to test here
-        const visible = baked
+        // The coverage test comes FIRST and everything else hangs off it: a tuft is
+        // ~144 triangles, and on a following field the CPU bake can only prune by
+        // the noise term, so the mask rejects survive into the draw. See the same
+        // note in grass.ts and scatter/density.
+        //
+        // baked: the buffer is sorted by the WHOLE test and instanceCount already
+        // cut the rejects, so there is nothing left to test.
+        const alive = baked
             ? null
             : step(threshold, coverageNode({
                 anchor: worldXZ, control, maskLow, maskHigh, densityMapNode, channel: densityChannel, random,
                 densityNoise: attribute<'float'>('densityNoise', 'float'),
-            })).toVar()
-        // failing instances collapse to zero area at the anchor
-        if (visible) local.mulAssign(visible)
-        if (fade) local.mulAssign(fade)
+            })).greaterThan(0.5).toVar()
+        const live = fade
+            ? (alive ? alive.and(fade.greaterThanEqual(MASK_EPSILON)) : fade.greaterThanEqual(MASK_EPSILON))
+            : alive
 
-        const pos = vec3(local.x.add(worldXZ.x), local.y, local.z.add(worldXZ.y)).toVar()
-        // sampled at the anchor, not per vertex: the whole tuft stands on one
-        // terrain height, so its blades keep their fan shape on a slope
-        if (heightField) pos.y.addAssign(sampleHeight(heightField, worldXZ))
+        const pos = vec3(0, PUNT_Y, 0).toVar()
 
-        // wind, same curve as grass: sway scales with height, weight bends the blade
-        let windVec = tuftWindOffset(worldXZ).mul(tuftHeight).mul(1.4)
-        if (trampleAmt) windVec = windVec.mul(trampleAmt.oneMinus())
-        windVec = windVec.toVar()
-        pos.addAssign(vec3(windVec.x.mul(bladeT), 0, windVec.y.mul(bladeT)))
-        // bend, don't stretch: drop by the arc approximation |w|²/2h
-        const droop = windVec.dot(windVec).div(tuftHeight.mul(2).max(1e-4)).min(tuftHeight.mul(0.3))
-        pos.y.subAssign(droop.mul(bladeT).mul(bladeT))
+        const body = () => {
+            const trampleAmt = trample ? texture(trample.texture, trampleUv(trample.uniforms, worldXZ)).r.toVar() : null
 
-        // live interactor: blades part away from whoever stands in the tuft
-        if (trample) {
-            const toTuft = worldXZ.sub(trample.uniforms.interactor)
-            const dist = toTuft.length().max(1e-3)
-            const push = dist.div(trample.uniforms.interactorRadius).oneMinus().max(0)
-            pos.addAssign(vec3(toTuft.x.div(dist), 0, toTuft.y.div(dist)).mul(push.mul(push)).mul(bladeT).mul(0.4))
-            pos.y.subAssign(push.mul(push).mul(tuftHeight).mul(0.25).mul(bladeT))
+            let tuftHeight = height
+                .mul(mix(0.7, random, 0.5))
+                .mul(instanceData.z)
+            // tufts are stiffer than blades: they flatten less when walked over
+            if (trampleAmt) tuftHeight = tuftHeight.mul(trampleAmt.mul(0.55).oneMinus())
+            if (fade) tuftHeight = tuftHeight.mul(fade)
+            tuftHeight = tuftHeight.toVar()
+
+            const local = vec3(
+                positionGeometry.x.mul(spread),
+                positionGeometry.y.mul(tuftHeight),
+                positionGeometry.z.mul(spread),
+            ).toVar()
+            local.xz.assign(rotateUV(local.xz, yaw, vec2(0)))
+            if (fade) local.mulAssign(fade)
+
+            pos.assign(vec3(local.x.add(worldXZ.x), local.y, local.z.add(worldXZ.y)))
+            // sampled at the anchor, not per vertex: the whole tuft stands on one
+            // terrain height, so its blades keep their fan shape on a slope
+            if (heightField) pos.y.addAssign(sampleHeight(heightField, worldXZ))
+
+            // wind, same curve as grass: sway scales with height, weight bends the blade
+            let windVec = tuftWindOffset(worldXZ).mul(tuftHeight).mul(1.4)
+            if (trampleAmt) windVec = windVec.mul(trampleAmt.oneMinus())
+            windVec = windVec.toVar()
+            pos.addAssign(vec3(windVec.x.mul(bladeT), 0, windVec.y.mul(bladeT)))
+            // bend, don't stretch: drop by the arc approximation |w|²/2h
+            const droop = windVec.dot(windVec).div(tuftHeight.mul(2).max(1e-4)).min(tuftHeight.mul(0.3))
+            pos.y.subAssign(droop.mul(bladeT).mul(bladeT))
+
+            // live interactor: blades part away from whoever stands in the tuft
+            if (trample) {
+                const toTuft = worldXZ.sub(trample.uniforms.interactor)
+                const dist = toTuft.length().max(1e-3)
+                const push = dist.div(trample.uniforms.interactorRadius).oneMinus().max(0)
+                pos.addAssign(vec3(toTuft.x.div(dist), 0, toTuft.y.div(dist)).mul(push.mul(push)).mul(bladeT).mul(0.4))
+                pos.y.subAssign(push.mul(push).mul(tuftHeight).mul(0.25).mul(bladeT))
+            }
         }
 
-        // zero area alone is not enough now that the ground is not at y = 0: a
-        // collapsed instance would still leave slivers on the terrain surface
-        if (visible) pos.y.addAssign(visible.lessThan(0.5).select(float(1000), float(0)))
-        if (fade) pos.y.addAssign(fade.lessThan(0.01).select(float(1000), float(0)))
+        if (live) If(live, body)
+        else body()
 
         return pos
     })()

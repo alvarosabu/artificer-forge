@@ -1,11 +1,11 @@
 import type { TresColor } from '@tresjs/core'
 import { BufferAttribute, Color, DoubleSide, InstancedBufferAttribute, InstancedBufferGeometry, Matrix4, Sphere, Spherical, Texture, Vector3 } from 'three'
-import { attribute, float, Fn, mix, positionGeometry, rotateUV, step, texture, uniform, varying, vec2, vec3 } from 'three/tsl'
+import { attribute, Fn, If, mix, positionGeometry, rotateUV, step, texture, uniform, varying, vec2, vec3 } from 'three/tsl'
 import { MeshBasicNodeMaterial, MeshLambertNodeMaterial } from 'three/webgpu'
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js'
 import type { ColorRepresentation, UniformNode } from 'three/webgpu'
 import { createWindUniforms, windOffset, type WindSettings, type WindUniforms } from '../wind/wind'
-import { coverageNode, createDensityMapNode, createScatterBake, type DensityChannel } from '../scatter/density'
+import { coverageNode, createDensityMapNode, createScatterBake, MASK_EPSILON, PUNT_Y, type DensityChannel } from '../scatter/density'
 import { followAnchor, followFade, type ScatterFocus } from '../scatter/focus'
 import { trampleUv, type TrampleMap } from '../../trample/trample'
 import type { GradingContext } from '../../grading/grading'
@@ -385,64 +385,74 @@ export function buildFlowersMaterial(options: FlowersMaterialOptions) {
         // popping in and out on it
         const fade = focus ? followFade(focus, worldXZ, size).toVar() : null
 
-        const trampleAmt = trample ? texture(trample.texture, trampleUv(trample.uniforms, worldXZ)).r.toVar() : null
-
-        let stemHeight = height
-            .mul(mix(0.75, random, 0.55))
-            .mul(instanceData.z)
-        if (trampleAmt) stemHeight = stemHeight.mul(trampleAmt.mul(0.85).oneMinus())
-        if (fade) stemHeight = stemHeight.mul(fade)
-        stemHeight = stemHeight.toVar()
-
-        // stem verts live in ±1 × 0-1 blade space, head verts in head-local units
-        // above the stem tip — one attribute switch instead of two draws
-        const isHead = step(0.5, part)
-        const local = vec3(
-            mix(positionGeometry.x.mul(stemWidth), positionGeometry.x.mul(headSize), isHead),
-            mix(positionGeometry.y.mul(stemHeight), positionGeometry.y.mul(headSize).add(stemHeight), isHead),
-            mix(positionGeometry.z.mul(stemWidth), positionGeometry.z.mul(headSize), isHead),
-        ).toVar()
-        local.xz.assign(rotateUV(local.xz, yaw, vec2(0)))
-
-        // baked: the buffer is sorted by coverage and instanceCount already cuts
-        // the rejects, so there is nothing to test here
-        const visible = baked
+        // The coverage test comes FIRST and everything else hangs off it. On a
+        // following field the CPU bake can only prune by the noise term (see
+        // scatter/density), so the mask rejects survive into the draw — and a
+        // rejected flower here is ~30 triangles of stem and petals. Running the
+        // height field, the trample fetch and the wind for it was most of the cost
+        // of a bed that is mostly road.
+        //
+        // baked: the buffer is sorted by the WHOLE test and instanceCount already
+        // cut the rejects, so there is nothing left to test.
+        const alive = baked
             ? null
             : step(threshold, coverageNode({
                 anchor: worldXZ, control, maskLow, maskHigh, densityMapNode, channel: densityChannel, random,
                 densityNoise: attribute<'float'>('densityNoise', 'float'),
-            })).toVar()
-        // failing instances collapse to zero area at the anchor
-        if (visible) local.mulAssign(visible)
-        if (fade) local.mulAssign(fade)
+            })).greaterThan(0.5).toVar()
+        const live = fade
+            ? (alive ? alive.and(fade.greaterThanEqual(MASK_EPSILON)) : fade.greaterThanEqual(MASK_EPSILON))
+            : alive
 
-        const pos = vec3(local.x.add(worldXZ.x), local.y, local.z.add(worldXZ.y)).toVar()
-        // sampled at the anchor, not per vertex: the whole flower stands on one
-        // terrain height, so a stem on a slope stays straight instead of shearing
-        if (heightField) pos.y.addAssign(sampleHeight(heightField, worldXZ))
+        const pos = vec3(0, PUNT_Y, 0).toVar()
 
-        // wind, same curve as grass: sway scales with height, weight bends the stem
-        let windVec = flowerWindOffset(worldXZ).mul(stemHeight).mul(1.8)
-        if (trampleAmt) windVec = windVec.mul(trampleAmt.oneMinus())
-        windVec = windVec.toVar()
-        pos.addAssign(vec3(windVec.x.mul(windWeight), 0, windVec.y.mul(windWeight)))
-        // bend, don't stretch: drop by the arc approximation |w|²/2h
-        const droop = windVec.dot(windVec).div(stemHeight.mul(2).max(1e-4)).min(stemHeight.mul(0.35))
-        pos.y.subAssign(droop.mul(windWeight).mul(windWeight))
+        const body = () => {
+            const trampleAmt = trample ? texture(trample.texture, trampleUv(trample.uniforms, worldXZ)).r.toVar() : null
 
-        // live interactor: flowers lean away from whoever is standing on them
-        if (trample) {
-            const toFlower = worldXZ.sub(trample.uniforms.interactor)
-            const dist = toFlower.length().max(1e-3)
-            const push = dist.div(trample.uniforms.interactorRadius).oneMinus().max(0)
-            pos.addAssign(vec3(toFlower.x.div(dist), 0, toFlower.y.div(dist)).mul(push.mul(push)).mul(windWeight).mul(0.5))
-            pos.y.subAssign(push.mul(push).mul(stemHeight).mul(0.3).mul(windWeight))
+            let stemHeight = height
+                .mul(mix(0.75, random, 0.55))
+                .mul(instanceData.z)
+            if (trampleAmt) stemHeight = stemHeight.mul(trampleAmt.mul(0.85).oneMinus())
+            if (fade) stemHeight = stemHeight.mul(fade)
+            stemHeight = stemHeight.toVar()
+
+            // stem verts live in ±1 × 0-1 blade space, head verts in head-local units
+            // above the stem tip — one attribute switch instead of two draws
+            const isHead = step(0.5, part)
+            const local = vec3(
+                mix(positionGeometry.x.mul(stemWidth), positionGeometry.x.mul(headSize), isHead),
+                mix(positionGeometry.y.mul(stemHeight), positionGeometry.y.mul(headSize).add(stemHeight), isHead),
+                mix(positionGeometry.z.mul(stemWidth), positionGeometry.z.mul(headSize), isHead),
+            ).toVar()
+            local.xz.assign(rotateUV(local.xz, yaw, vec2(0)))
+            if (fade) local.mulAssign(fade)
+
+            pos.assign(vec3(local.x.add(worldXZ.x), local.y, local.z.add(worldXZ.y)))
+            // sampled at the anchor, not per vertex: the whole flower stands on one
+            // terrain height, so a stem on a slope stays straight instead of shearing
+            if (heightField) pos.y.addAssign(sampleHeight(heightField, worldXZ))
+
+            // wind, same curve as grass: sway scales with height, weight bends the stem
+            let windVec = flowerWindOffset(worldXZ).mul(stemHeight).mul(1.8)
+            if (trampleAmt) windVec = windVec.mul(trampleAmt.oneMinus())
+            windVec = windVec.toVar()
+            pos.addAssign(vec3(windVec.x.mul(windWeight), 0, windVec.y.mul(windWeight)))
+            // bend, don't stretch: drop by the arc approximation |w|²/2h
+            const droop = windVec.dot(windVec).div(stemHeight.mul(2).max(1e-4)).min(stemHeight.mul(0.35))
+            pos.y.subAssign(droop.mul(windWeight).mul(windWeight))
+
+            // live interactor: flowers lean away from whoever is standing on them
+            if (trample) {
+                const toFlower = worldXZ.sub(trample.uniforms.interactor)
+                const dist = toFlower.length().max(1e-3)
+                const push = dist.div(trample.uniforms.interactorRadius).oneMinus().max(0)
+                pos.addAssign(vec3(toFlower.x.div(dist), 0, toFlower.y.div(dist)).mul(push.mul(push)).mul(windWeight).mul(0.5))
+                pos.y.subAssign(push.mul(push).mul(stemHeight).mul(0.3).mul(windWeight))
+            }
         }
 
-        // zero area alone is not enough now that the ground is not at y = 0: a
-        // collapsed instance would still leave slivers on the terrain surface
-        if (visible) pos.y.addAssign(visible.lessThan(0.5).select(float(1000), float(0)))
-        if (fade) pos.y.addAssign(fade.lessThan(0.01).select(float(1000), float(0)))
+        if (live) If(live, body)
+        else body()
 
         return pos
     })()

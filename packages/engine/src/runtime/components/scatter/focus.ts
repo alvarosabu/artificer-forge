@@ -80,3 +80,17 @@ export function followFade(focus: ScatterFocus, worldXZ: Node<'vec2'>, size: num
     const edge = local.x.max(local.y).div(size * 0.5)
     return edge.smoothstep(focus.fadeStart, 1).oneMinus()
 }
+
+/**
+ * The exact complement of `followFade`: 0 inside a window of `size`, 1 outside it,
+ * ramping across the same band.
+ *
+ * This is what makes a detail RING seamless. A near field of `size` fades out at
+ * its own edge; a far field multiplies this in for the same `size`, so across the
+ * band the two weights sum to 1 and the lawn keeps one continuous height. Give
+ * both rings the same blades per square metre and there is no seam to find — only
+ * the triangles per blade change.
+ */
+export function followFadeIn(focus: ScatterFocus, worldXZ: Node<'vec2'>, size: number) {
+    return followFade(focus, worldXZ, size).oneMinus()
+}

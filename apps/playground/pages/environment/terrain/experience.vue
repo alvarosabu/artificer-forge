@@ -49,15 +49,30 @@ const LEVEL_ORIGIN: [number, number] = [-7.4813, 11.8386]
 // density together, because the instance count is fixed: the same grid inside a
 // smaller radius is a thicker lawn.
 //
-// 70 puts the edge fade exactly where the day preset's fog saturates, so the
-// blades shrink away inside ground that has already dissolved into haze and the
-// boundary can never be seen. Narrower and the ring shows on open ground; wider
-// only pays for grass behind the fog.
+// The rule for the grass radius: put the edge fade at or past where the day
+// preset's fog saturates (~70 m), so the blades shrink away inside ground that has
+// already dissolved into haze and the boundary can never be seen. Narrower and the
+// ring shows on open ground; wider spends blades on grass behind the fog, and
+// thins the lawn, because the grid below is a fixed count.
 //
 // Flowers and tufts stay short on purpose: they are details you read up close,
 // and their fade disappears into the grass long before the fog does.
-const GRASS_RADIUS = 100
+const GRASS_RADIUS = 150
 const SCATTER_RADIUS = 60
+
+// Grass runs as two rings sharing one focus. Inside NEAR_RADIUS the blades are
+// `curved` (3 triangles, bends along its length) because that ground is metres
+// from the camera and the silhouette is many pixels wide; past it they are `flat`
+// (1 triangle), where a blade is about a pixel and the curve is unreadable.
+//
+// The handover is exact, not eyeballed: the near ring fades out at its own edge
+// and the far ring ramps in over the SAME band (see followFadeIn), so the two
+// weights sum to 1. The near ring's grid is SOLVED from these two numbers to hold
+// the far ring's blades per m² (see nearSubdivisions), so the crossfade cannot show
+// a density step — scale that expression up if you want the lawn thicker underfoot,
+// which then reads as a gradient rather than a seam.
+const NEAR_RADIUS = 30
+const GRASS_SUBDIVISIONS = 1024
 
 // useTexture's ref holds an empty Texture (image === null) until the file lands.
 // Truthiness is not enough: handing a pixel-less texture to a WebGPU material
@@ -533,17 +548,45 @@ const scatterFocus = createScatterFocus()
 // a drag and rebuilding 270k blades per tick would stall it: the slider stays
 // live, only the rebuild waits for you to let go. The fade is a uniform on the
 // focus, so that one moves per frame.
-const { scatterGrassRadius, scatterFlowerRadius, scatterFade } = useControls('scatter', {
+const { scatterGrassRadius, scatterNearRadius, scatterFlowerRadius, scatterFade } = useControls('scatter', {
   grassRadius: { value: GRASS_RADIUS, min: 20, max: 200, step: 5, type: 'range' },
+  // where curved blades hand over to flat ones
+  nearRadius: { value: NEAR_RADIUS, min: 5, max: 80, step: 5, type: 'range' },
   flowerRadius: { value: SCATTER_RADIUS, min: 10, max: 100, step: 5, type: 'range' },
   // where the edge fade starts, as a fraction of the radius. 1 = hard cut
   fade: { value: 0.85, min: 0.3, max: 1, step: 0.01, type: 'range' },
 }, { uuid })
 
 const grassRadius = refDebounced(scatterGrassRadius as Ref<number>, 250)
+const nearRadius = refDebounced(scatterNearRadius as Ref<number>, 250)
 const flowerRadius = refDebounced(scatterFlowerRadius as Ref<number>, 250)
 
+// The near ring's grid is SOLVED, not tuned: it holds the far ring's blades per m²
+// so the crossfade cannot show a density step. Both terms scale with radius, so
+// this stays true as either slider moves.
+const nearSubdivisions = computed(() =>
+  Math.max(4, Math.round(GRASS_SUBDIVISIONS * nearRadius.value / grassRadius.value)))
+
 watch(scatterFade!, (value) => { scatterFocus.setFadeStart(value as number) })
+
+// Blade shape. All pure uniforms now that they live per-field instead of at module
+// scope in grass.ts, so these are safe to drag — no rebuild, no re-upload.
+//
+// farWidth is a MULTIPLIER on the far ring only: a flat blade has no mid-width
+// pair, so it reads thinner than a curved one at the same width, and widening it
+// matches the two rings' apparent density. There is deliberately no far HEIGHT
+// knob — the crossfade sums the two rings' heights, so a height difference is
+// exactly the kind of step the band cannot hide.
+const { bladesWidth, bladesFarWidth, bladesHeight, bladesRandomness, bladesRootShade } = useControls('blades', {
+  width: { value: 0.1, min: 0.01, max: 0.4, step: 0.005, type: 'range' },
+  farWidth: { value: 1.3, min: 0.5, max: 3, step: 0.05, type: 'range' },
+  height: { value: 0.6, min: 0.1, max: 2.5, step: 0.05, type: 'range' },
+  randomness: { value: 0.6, min: 0, max: 1, step: 0.01, type: 'range' },
+  // NOT a cast shadow — grass never casts. This is the blade's own root darkening,
+  // an AO term that sinks the base into the lawn so the tips read as lit. It rides
+  // the engine's `shadowIntensity`, which is the misleading name it inherited.
+  rootShade: { value: 0.5, min: 0, max: 1, step: 0.01, type: 'range' },
+}, { uuid })
 
 // debug view: the texture's backing canvas rendered live in the bottom-right corner
 const { trampleDebug } = useControls('trample', {
@@ -739,18 +782,48 @@ onUnmounted(() => {
     :entity-id="entity.id"
     :grading="grading"
   />
- <!-- 520² blades inside the default 70 m radius is ~14 per m². The same grid over
-      the whole 512 m level was 0.3 per m², i.e. a haze. The window rides the party
-      leader, and the splat still spans the LEVEL so its colour variation does not
-      tile inside the window. Keyed on the radius: it is baked into the anchors. -->
+ <!-- Grass in two rings. Both ride the same focus and run the same blades per m²,
+      so the only thing that changes at the handover is triangles per blade: 3 for
+      the ground under the camera, 1 past nearRadius where a blade is a pixel wide.
+      Curved everywhere at this density would be ~3.1M triangles.
+
+      The splat spans the LEVEL in both, so its colour variation does not tile
+      inside a window. Keyed on the radii: they are baked into the anchors, and
+      innerSize is baked into the far ring's node graph. -->
  <Grass
     v-if="control && heightField && grassDiffuseMap"
-    :key="grassRadius"
-    :subdivisions="520"
+    :key="`near-${nearRadius}-${grassRadius}`"
+    :subdivisions="nearSubdivisions"
+    blade-detail="curved"
+    :diffuse-map="grassDiffuseMap"
+    :diffuse-map-size="LEVEL_SIZE"
+    :size="nearRadius * 2"
+    :focus="scatterFocus"
+    :blade-width="bladesWidth"
+    :blade-height="bladesHeight"
+    :blade-height-randomness="bladesRandomness"
+    :shadow-intensity="bladesRootShade"
+    :grading="grading"
+    :height-field="heightField"
+    :control="control"
+    :trample="trampleMap"
+    :mask-low="0.25"
+    :mask-high="0.6"
+  />
+ <Grass
+    v-if="control && heightField && grassDiffuseMap"
+    :key="`far-${nearRadius}-${grassRadius}`"
+    :subdivisions="GRASS_SUBDIVISIONS"
+    blade-detail="flat"
     :diffuse-map="grassDiffuseMap"
     :diffuse-map-size="LEVEL_SIZE"
     :size="grassRadius * 2"
+    :inner-size="nearRadius * 2"
     :focus="scatterFocus"
+    :blade-width="bladesWidth * bladesFarWidth"
+    :blade-height="bladesHeight"
+    :blade-height-randomness="bladesRandomness"
+    :shadow-intensity="bladesRootShade"
     :grading="grading"
     :height-field="heightField"
     :control="control"

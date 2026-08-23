@@ -117,6 +117,17 @@ function smoothstep(low: number, high: number, x: number) {
  */
 export const MASK_EPSILON = 0.01
 
+/**
+ * Where a rejected instance is parked. Far above the far plane, so its triangles
+ * are clipped whole and never shaded.
+ *
+ * This is also the DEFAULT position in the scatter vertex programs, not a
+ * correction applied at the end: an instance the mask kills returns here without
+ * running the height field, the trample fetch or the wind, which is the only cull
+ * a following field gets (see the `moving` note above).
+ */
+export const PUNT_Y = 10000
+
 /** a per-instance array, reordered in step with the anchors */
 export interface ScatterAttribute {
     array: Float32Array

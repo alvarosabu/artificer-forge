@@ -17,6 +17,7 @@ const props = withDefaults(defineProps<GrassOptions>(), {
   maskHigh: 0.6,
   heightField: null,
   focus: null,
+  bladeDetail: 'curved',
 })
 
 const { geometry, material, uniforms, setMaskBand, dispose } = createGrass(props)
@@ -34,6 +35,11 @@ watch([() => props.maskLow, () => props.maskHigh], ([low, high]) => {
 })
 watch(() => props.windAngle, (angle) => uniforms.wind.direction.value.set(Math.sin(angle), Math.cos(angle)))
 watch(() => props.windStrength, (val) => { uniforms.wind.strength.value = val })
+// blade shape is pure uniforms — safe to drag, no rebuild
+watch(() => props.bladeWidth, (val) => { if (val !== undefined) uniforms.bladeWidth.value = val })
+watch(() => props.bladeHeight, (val) => { if (val !== undefined) uniforms.bladeHeight.value = val })
+watch(() => props.bladeHeightRandomness, (val) => { if (val !== undefined) uniforms.bladeHeightRandomness.value = val })
+watch(() => props.shadowIntensity, (val) => { if (val !== undefined) uniforms.shadowIntensity.value = val })
 
 const { onBeforeRender } = useLoop()
 onBeforeRender(({ delta }) => advanceWindTime(uniforms.wind, delta))
