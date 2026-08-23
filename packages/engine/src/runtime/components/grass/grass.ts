@@ -3,7 +3,7 @@ import { BufferAttribute, Color, DoubleSide, InstancedBufferAttribute, Instanced
 import { attribute, float, Fn, mix, positionGeometry, rotateUV, texture, uniform, varying, vec2, vec3 } from 'three/tsl'
 import { MeshBasicNodeMaterial, MeshLambertNodeMaterial } from 'three/webgpu'
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js'
-import type { ColorRepresentation, TextureNode, UniformNode } from 'three/webgpu'
+import type { ColorRepresentation, UniformNode } from 'three/webgpu'
 import { createWindUniforms, windOffset, type WindSettings, type WindUniforms } from '../wind/wind'
 import { trampleUv, type TrampleMap } from '../../trample/trample'
 import type { GradingContext } from '../../grading/grading'
@@ -12,6 +12,7 @@ import { HeightField } from '../../terrain/heightField'
 import { sampleHeight } from '../../terrain/heightField'
 import { ControlMap, controlUv } from '../../terrain/controlMap'
 import { createScatterBake, MASK_EPSILON } from '../scatter/density'
+import { followAnchor, followFade, type ScatterFocus } from '../scatter/focus'
 
 const bladeWidth = uniform(0.1)
 const bladeHeight = uniform(0.6)
@@ -36,12 +37,24 @@ export interface GrassOptions extends WindSettings {
     colorA: TresColor
     colorB: TresColor
     diffuseMap?: Texture | null
+    /**
+     * World extent the diffuse map spans, defaulting to `size`. A field that
+     * follows the character is far smaller than the level, so the splat that tints
+     * it has to be mapped over the level instead of over the window.
+     */
+    diffuseMapSize?: number
     trample?: TrampleMap | null
     grading?: GradingContext | null
     heightField?: HeightField | null
     control?: ControlMap | null
     maskLow?: number
     maskHigh?: number
+    /**
+     * With a focus the field becomes a `size` x `size` window that rides along with
+     * it, instead of a patch pinned to the origin. Blades stay on their world
+     * lattice; only which copy of it is drawn changes.
+     */
+    focus?: ScatterFocus | null
 }
 
 export function createGrassGeometry(options: GrassOptions) {
@@ -87,6 +100,9 @@ export function createGrassGeometry(options: GrassOptions) {
     control: options.control,
     maskLow: options.maskLow ?? 0.25,
     maskHigh: options.maskHigh ?? 0.6,
+    // a following field has no static term at all — coverage here IS the mask, and
+    // the mask moves with the window — so this declines and every blade is drawn
+    moving: !!options.focus,
   })
 
   const geometry = new InstancedBufferGeometry()
@@ -119,19 +135,22 @@ export function createGrassGeometry(options: GrassOptions) {
   return { geometry, bake, rebake }
 }
 
-export function buildGrassMaterial(options: { 
-  colorAUniform: UniformNode<'color', Color>, 
-  colorBUniform: UniformNode<'color', Color>, 
-  windUniforms: WindUniforms, 
-  diffuseMapNode?: TextureNode | null, 
+export function buildGrassMaterial(options: {
+  colorAUniform: UniformNode<'color', Color>,
+  colorBUniform: UniformNode<'color', Color>,
+  windUniforms: WindUniforms,
+  diffuseMap?: Texture | null,
+  diffuseMapSize: number,
   trample?: TrampleMap | null,
   grading?: GradingContext | null,
   heightField?: HeightField | null,
   control?: ControlMap | null,
   maskLow?: UniformNode<'float', number> | null,
-  maskHigh?: UniformNode<'float', number> | null
-}): MeshBasicNodeMaterial | MeshLambertNodeMaterial {
-    const { colorAUniform, colorBUniform, windUniforms, diffuseMapNode, trample, grading, heightField, control, maskLow, maskHigh } = options
+  maskHigh?: UniformNode<'float', number> | null,
+  size: number,
+  focus?: ScatterFocus | null,
+}) {
+    const { colorAUniform, colorBUniform, windUniforms, diffuseMap, diffuseMapSize, trample, grading, heightField, control, maskLow, maskHigh, size, focus } = options
     // graded blades catch drop shadows — Lambert base only so the catcher runs
     const material = grading ? new MeshLambertNodeMaterial() : new MeshBasicNodeMaterial()
     material.side = DoubleSide
@@ -139,6 +158,9 @@ export function buildGrassMaterial(options: {
 
     const anchor = attribute<'vec2'>('anchor', 'vec2')
     const windWeight = attribute<'float'>('windWeight', 'float')
+    // the blade's world XZ after the follow wrap, carried to the fragment stage so
+    // the diffuse splat is sampled at the position the blade actually stands on
+    const bladeXZ = varying(vec2(), 'bladeXZ')
 
     // patchiness noises are anchor-only, baked into instanced attributes at build time
     const groundColor = mix(colorAUniform, colorBUniform, attribute<'float'>('colorNoise', 'float'))
@@ -147,14 +169,20 @@ export function buildGrassMaterial(options: {
         const random = attribute<'float'>('random', 'float')
         const yaw = attribute<'float'>('yaw', 'float')
 
-        const worldXZ = anchor.toVar()
+        // with a focus the lattice anchor is folded into the window around it
+        const worldXZ = (focus ? followAnchor(focus, anchor, size) : anchor).toVar()
+        bladeXZ.assign(worldXZ)
 
-        const visible = control ? 
+        const visible = control ?
           texture(control.texture, controlUv(control.uniforms, worldXZ))
               .g.smoothstep(maskLow, maskHigh).toVar()
         : float(1).toVar()
+        // blades sink into the ground towards the wrap boundary rather than popping
+        // out of existence on it. Applied to width AND height, so they shrink away
+        const fade = focus ? followFade(focus, worldXZ, size).toVar() : null
+        if (fade) visible.mulAssign(fade)
 
-        const trampleAmt = trample ? texture(trample.texture, trampleUv(trample.uniforms, anchor)).r.toVar() : null
+        const trampleAmt = trample ? texture(trample.texture, trampleUv(trample.uniforms, worldXZ)).r.toVar() : null
 
         // height: per-blade random × perlin patchiness, crushed where trampled
         const heightVariation = attribute<'float'>('heightNoise', 'float')
@@ -163,6 +191,7 @@ export function buildGrassMaterial(options: {
           .mul(heightVariation)
           .mul(heightVariation)
         if (trampleAmt) height = height.mul(trampleAmt.mul(0.75).oneMinus())
+        if (fade) height = height.mul(fade)
 
         // unit blade → world scale, spun around its own base by the per-blade yaw
         const local = vec3(
@@ -177,18 +206,18 @@ export function buildGrassMaterial(options: {
 
         // wind: taller blades sway more, weight curves the blade along its length.
         // Trampled blades are pinned down, so damp their sway too
-        let windVec = grassWindOffset(anchor).mul(height).mul(2)
+        let windVec = grassWindOffset(worldXZ).mul(height).mul(2)
         if (trampleAmt) windVec = windVec.mul(trampleAmt.oneMinus())
         windVec = windVec.toVar()
         pos.addAssign(vec3(windVec.x.mul(windWeight), 0, windVec.y.mul(windWeight)))
         // blades bend rather than stretch: drop by the arc approximation |w|²/2h,
         // clamped so extreme gusts don't flatten them; weight² so the tip drops most
-        const droop = windVec.dot(windVec).div(height.mul(2)).min(height.mul(0.35))
+        const droop = windVec.dot(windVec).div(height.mul(2).max(1e-4)).min(height.mul(0.35))
         pos.y.subAssign(droop.mul(windWeight).mul(windWeight))
 
         // live interactor: blades part radially away from the character under them
         if (trample) {
-          const toBlade = anchor.sub(trample.uniforms.interactor)
+          const toBlade = worldXZ.sub(trample.uniforms.interactor)
           const dist = toBlade.length().max(1e-3)
           const push = dist.div(trample.uniforms.interactorRadius).oneMinus().max(0)
           pos.addAssign(vec3(toBlade.x.div(dist), 0, toBlade.y.div(dist)).mul(push.mul(push)).mul(windWeight).mul(0.5))
@@ -201,6 +230,13 @@ export function buildGrassMaterial(options: {
 
         return pos
     })()
+
+    // The splat is mapped over `diffuseMapSize` of WORLD, not over the field: a
+    // following field is a window a few dozen metres wide, and tiling the whole
+    // splat inside it would turn the level's colour variation into wallpaper.
+    const diffuseMapNode = diffuseMap
+      ? texture(diffuseMap, bladeXZ.div(diffuseMapSize).add(0.5))
+      : null
 
     // sampled at the anchor only → constant across the blade (flat color per blade)
     const base = varying(diffuseMapNode ? diffuseMapNode.rgb : groundColor)
@@ -218,7 +254,8 @@ export function buildGrassMaterial(options: {
         const ao = varying(windWeight).oneMinus().mul(shadowIntensity)
         material.colorNode = mix(base, base.mul(0.35), ao)  // 0.35 = shadow darkness, tune in leches
     }
-    return material
+    // the node comes back out so a texture swap can reach it without a rebuild
+    return { material, diffuseMapNode }
 }
 
 export function createGrass(options: GrassOptions) {
@@ -229,22 +266,20 @@ export function createGrass(options: GrassOptions) {
     const maskHigh = uniform(options.maskHigh ?? 0.6)
     const windUniforms = createWindUniforms(options)
 
-    // anchor ∈ [-size/2, size/2] → normalized field UV [0, 1]
-    const diffuseMapNode = options.diffuseMap
-      ? texture(options.diffuseMap, attribute<'vec2'>('anchor', 'vec2').div(options.size).add(0.5))
-      : null
-
-    const material = buildGrassMaterial({
+    const { material, diffuseMapNode } = buildGrassMaterial({
       colorAUniform,
       colorBUniform,
       windUniforms,
-      diffuseMapNode,
+      diffuseMap: options.diffuseMap,
+      diffuseMapSize: options.diffuseMapSize ?? options.size,
       trample: options.trample,
       grading: options.grading,
       heightField: options.heightField,
       control: options.control,
       maskLow,
       maskHigh,
+      size: options.size,
+      focus: options.focus,
     })
     // the mask alone decides the draw count, and MASK_EPSILON is the same cutoff the
     // vertex stage punts at — so every blade dropped here was already invisible

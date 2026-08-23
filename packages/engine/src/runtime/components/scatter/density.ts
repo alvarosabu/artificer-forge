@@ -1,4 +1,4 @@
-import { attribute, mix, texture } from 'three/tsl'
+import { mix, texture } from 'three/tsl'
 import type { Node, TextureNode, UniformNode } from 'three/webgpu'
 import type { Texture } from 'three'
 import { CONTROL_CHANNEL, controlUv, readControlPixels, sampleControlChannel, type ControlMap } from '../../terrain/controlMap'
@@ -32,10 +32,17 @@ export function channelNode(node: TextureNode, channel: DensityChannel) {
     return node.r
 }
 
-/** anchor ∈ [-size/2, size/2] → field UV [0, 1], same mapping as the grass splat */
-export function createDensityMapNode(map: Texture | null | undefined, size: number) {
+/**
+ * world XZ ∈ [-size/2, size/2] → map UV [0, 1], same mapping as the grass splat.
+ *
+ * Sampled at the position the instance actually stands on, not at its grid anchor:
+ * on a following field those differ by whole field widths (see scatter/focus), and
+ * a painted mask is painted over the LEVEL, so `size` is the map's world extent
+ * rather than the field's.
+ */
+export function createDensityMapNode(map: Texture | null | undefined, worldXZ: Node<'vec2'>, size: number) {
     if (!map) return null
-    return texture(map, attribute<'vec2'>('anchor', 'vec2').div(size).add(0.5))
+    return texture(map, worldXZ.div(size).add(0.5))
 }
 
 /**
@@ -88,6 +95,13 @@ export function coverageNode(options: CoverageOptions) {
  *
  * The two paths have to agree, so they live side by side in this file. When the
  * CPU cannot reproduce the test the bake declines and the shader keeps it.
+ *
+ * A field that FOLLOWS the character (`moving`) is the half-way case: its world
+ * position changes every frame, so the mask cannot be baked, but the noise term
+ * still can. Sorting by noise alone leaves a prefix that is a superset of the
+ * passing set — an instance whose noise is already under the threshold can never
+ * be rescued by a mask of at most 1 — so the draw count still shrinks and the
+ * shader still runs the real test on what survives.
  */
 
 /** matches TSL `.smoothstep(low, high)` */
@@ -125,11 +139,25 @@ export interface ScatterBakeInput {
     maskHigh: number
     /** an extra mask the bake cannot read; its presence declines the bake */
     densityMap?: Texture | null
+    /**
+     * The field follows the character (see scatter/focus), so an instance's world
+     * position — and with it the control mask — changes every frame. Only the noise
+     * term stays static, so only that gets baked and the shader keeps the mask test.
+     */
+    moving?: boolean
 }
 
 export interface ScatterBake {
     /** coverage in buffer order, descending. null = the shader still tests */
     coverage: Float32Array | null
+    /**
+     * The baked coverage is the WHOLE test, mask included, so the shader can drop
+     * it. False on a moving field, where the prefix is only a SUPERSET: the mask is
+     * at most 1, so an instance whose noise is under the threshold can never pass
+     * and is safe to cut, but one above it can still fail on the mask. The shader
+     * has to finish that job.
+     */
+    masked: boolean
     /** instances to draw at this threshold; the whole grid when not baked */
     countFor: (threshold: number) => number
     /** re-evaluate and re-sort for a new mask band; false when not baked */
@@ -159,13 +187,18 @@ export function countAbove(coverage: Float32Array, threshold: number) {
 }
 
 export function createScatterBake(input: ScatterBakeInput): ScatterBake {
-    const { count, anchors, attributes, noise, control, densityMap } = input
-    const pixels = control ? readControlPixels(control) : null
+    const { count, anchors, attributes, noise, control, densityMap, moving = false } = input
+    // a moving field samples the mask live in the vertex stage, so there is nothing
+    // static to read here
+    const pixels = control && !moving ? readControlPixels(control) : null
+    // a mask this reader cannot reproduce has to stay in the shader
+    const masked = !!pixels
 
-    // No mask to bake against, an image that has not decoded, or a densityMap
+    // No mask to bake against, an image that has not decoded, a moving field with
+    // no static term of its own (grass, whose coverage IS the mask), or a densityMap
     // whose own uv mapping and flipY this reader does not share: leave it alone.
-    if (!control || !pixels || densityMap) {
-        return { coverage: null, countFor: () => count, rebake: () => false }
+    if (densityMap || (!pixels && !(moving && noise))) {
+        return { coverage: null, masked: false, countFor: () => count, rebake: () => false }
     }
 
     // keep the unsorted originals: a mask change re-sorts from these, not from
@@ -180,9 +213,11 @@ export function createScatterBake(input: ScatterBakeInput): ScatterBake {
 
     function run(maskLow: number, maskHigh: number) {
         for (let i = 0; i < count; i++) {
-            const mask = smoothstep(maskLow, maskHigh, sampleControlChannel(
-                control!, pixels!, srcAnchors[i * 2], srcAnchors[i * 2 + 1], CONTROL_CHANNEL.grass,
-            ))
+            const mask = pixels
+                ? smoothstep(maskLow, maskHigh, sampleControlChannel(
+                    control!, pixels, srcAnchors[i * 2], srcAnchors[i * 2 + 1], CONTROL_CHANNEL.grass,
+                ))
+                : 1
             if (noise) {
                 // mix(densityNoise, random, jitter)
                 const patch = noise.densityNoises[i]
@@ -213,7 +248,13 @@ export function createScatterBake(input: ScatterBakeInput): ScatterBake {
 
     return {
         coverage,
+        masked,
         countFor: threshold => countAbove(coverage, threshold),
-        rebake: (maskLow, maskHigh) => { run(maskLow, maskHigh); return true },
+        // without a readable mask the band is not part of the bake, so nothing to redo
+        rebake: (maskLow, maskHigh) => {
+            if (!pixels) return false
+            run(maskLow, maskHigh)
+            return true
+        },
     }
 }

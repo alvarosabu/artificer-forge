@@ -3,10 +3,12 @@ import { Group, Mesh, SRGBColorSpace } from 'three'
 import type { Color, DirectionalLight, Object3D, Texture } from 'three'
 import type { TresPointerEvent } from '@tresjs/core'
 import { TargetIndicator } from '@artificer-forge/vfx'
-import { applyGradingToModel, Character, createControlMap, createGradingContext, createHeightMap, createTerrainUniforms, createTrampleMap, createWaterUniforms, extractCanopyReferences, Flowers, Grass, GrassTufts, readHeightPixels, sampleHeight, sampleHeightAt, TerrainQuadtree, Trees, useEnvironmentStore, useGameStore, useSceneRefs, Water, type ControlMap, type HeightField, type HeightMapMeta, WindLines } from '@artificer-forge/engine/runtime'
+import { applyGradingToModel, Character, createControlMap, createGradingContext, createHeightMap, createScatterFocus, createTerrainUniforms, createTrampleMap, createWaterUniforms, extractCanopyReferences, Flowers, Grass, GrassTufts, readHeightPixels, sampleHeight, sampleHeightAt, TerrainQuadtree, Trees, useEnvironmentStore, useGameStore, useSceneRefs, Water, type ControlMap, type HeightField, type HeightMapMeta, WindLines } from '@artificer-forge/engine/runtime'
 import type { DayCycleName } from '~/utils/dayCyclePresets'
 import { MeshBasicNodeMaterial } from 'three/webgpu'
 import { positionWorld, vec4 } from 'three/tsl'
+import { refDebounced } from '@vueuse/core'
+import type { Ref } from 'vue'
 
 // The terrain is GENERATED from this map, not loaded from the GLB. Everything
 // below is a transcription of public/levels/level-512.height-2048.json, written by
@@ -41,6 +43,21 @@ const HEIGHT_MAP_URL = '/levels/level-512.height-2048.rgb.png'
 // outside this square the paint clamps, so the far terrain reads as bare ground.
 const LEVEL_SIZE = 512
 const LEVEL_ORIGIN: [number, number] = [-7.4813, 11.8386]
+
+// How far vegetation reaches from the party leader, as a radius — the field is
+// the square window of twice this around the focus. It sets draw distance AND
+// density together, because the instance count is fixed: the same grid inside a
+// smaller radius is a thicker lawn.
+//
+// 70 puts the edge fade exactly where the day preset's fog saturates, so the
+// blades shrink away inside ground that has already dissolved into haze and the
+// boundary can never be seen. Narrower and the ring shows on open ground; wider
+// only pays for grass behind the fog.
+//
+// Flowers and tufts stay short on purpose: they are details you read up close,
+// and their fade disappears into the grass long before the fog does.
+const GRASS_RADIUS = 100
+const SCATTER_RADIUS = 60
 
 // useTexture's ref holds an empty Texture (image === null) until the file lands.
 // Truthiness is not enough: handing a pixel-less texture to a WebGPU material
@@ -192,7 +209,7 @@ const dayCycle = useDayCycle()
 // backwards from where fog should land: the overview camera sits ~50m out, so
 // day's 0.315/1.25 over span 55 starts the haze at ~67m and saturates past the
 // far edge — only the last stretch of ground dissolves, not the whole level
-const grading = createGradingContext({ sceneNear: 50, sceneFar: 4000 })
+const grading = createGradingContext({ sceneNear: 50, sceneFar: 1000 })
 
 watch(scene, (s) => {
   if (!s) return
@@ -505,6 +522,29 @@ const { daisiesDensity, daisiesHeight, daisiesColor } = useControls('daisies', {
 // re-uploaded on every fade frame, so drop the resolution first if this bites.
 const trampleMap = createTrampleMap({ size: 60, resolution: 512 })
 
+// Every scatter field rides this one centre, driven from the party leader below.
+// The level is 512 x 1024 m and a fixed instance budget spread over that is a
+// haze; spread over the window around the character it is a lawn. Bruno's trick:
+// the fields wrap around the focus, so the same blade count follows the camera.
+const scatterFocus = createScatterFocus()
+
+// Radius is baked into the grid anchors, so moving it REBUILDS the geometry — the
+// fields are keyed on it below. Debounced because a range fires on every pixel of
+// a drag and rebuilding 270k blades per tick would stall it: the slider stays
+// live, only the rebuild waits for you to let go. The fade is a uniform on the
+// focus, so that one moves per frame.
+const { scatterGrassRadius, scatterFlowerRadius, scatterFade } = useControls('scatter', {
+  grassRadius: { value: GRASS_RADIUS, min: 20, max: 200, step: 5, type: 'range' },
+  flowerRadius: { value: SCATTER_RADIUS, min: 10, max: 100, step: 5, type: 'range' },
+  // where the edge fade starts, as a fraction of the radius. 1 = hard cut
+  fade: { value: 0.85, min: 0.3, max: 1, step: 0.01, type: 'range' },
+}, { uuid })
+
+const grassRadius = refDebounced(scatterGrassRadius as Ref<number>, 250)
+const flowerRadius = refDebounced(scatterFlowerRadius as Ref<number>, 250)
+
+watch(scatterFade!, (value) => { scatterFocus.setFadeStart(value as number) })
+
 // debug view: the texture's backing canvas rendered live in the bottom-right corner
 const { trampleDebug } = useControls('trample', {
   debug: { value: false, type: 'boolean' },
@@ -622,7 +662,11 @@ onBeforeRender(({ delta }) => {
     if (pos) trampleMap.stamp(pos.x, pos.z)
   }
   const leaderPos = playerId.value ? getCharacterRef(playerId.value)?.getPosition() : null
-  if (leaderPos) trampleMap.setInteractor(leaderPos.x, leaderPos.z)
+  if (leaderPos) {
+    trampleMap.setInteractor(leaderPos.x, leaderPos.z)
+    // one write moves grass, tufts and all three flower species
+    scatterFocus.set(leaderPos.x, leaderPos.z)
+  }
 }, 10)
 
 onUnmounted(() => {
@@ -695,11 +739,18 @@ onUnmounted(() => {
     :entity-id="entity.id"
     :grading="grading"
   />
+ <!-- 520² blades inside the default 70 m radius is ~14 per m². The same grid over
+      the whole 512 m level was 0.3 per m², i.e. a haze. The window rides the party
+      leader, and the splat still spans the LEVEL so its colour variation does not
+      tile inside the window. Keyed on the radius: it is baked into the anchors. -->
  <Grass
     v-if="control && heightField && grassDiffuseMap"
-    :subdivisions="300"
+    :key="grassRadius"
+    :subdivisions="520"
     :diffuse-map="grassDiffuseMap"
-    :size="LEVEL_SIZE"
+    :diffuse-map-size="LEVEL_SIZE"
+    :size="grassRadius * 2"
+    :focus="scatterFocus"
     :grading="grading"
     :height-field="heightField"
     :control="control"
@@ -711,8 +762,10 @@ onUnmounted(() => {
        against a flower's ~60, so tufts stay coarse and lean on density instead -->
   <GrassTufts
     v-if="control && heightField"
+    :key="flowerRadius"
     :subdivisions="40"
-    :size="60"
+    :size="flowerRadius * 2"
+    :focus="scatterFocus"
     :grading="grading"
     :height-field="heightField"
     :control="control"
@@ -727,9 +780,11 @@ onUnmounted(() => {
   />
   <Flowers
     v-if="control && heightField"
+    :key="flowerRadius"
     shape="puff"
-    :subdivisions="90"
-    :size="60"
+    :subdivisions="200"
+    :size="flowerRadius * 2"
+    :focus="scatterFocus"
     :grading="grading"
     :height-field="heightField"
     :control="control"
@@ -742,9 +797,11 @@ onUnmounted(() => {
   />
   <Flowers
     v-if="control && heightField"
+    :key="flowerRadius"
     shape="poppy"
-    :subdivisions="60"
-    :size="60"
+    :subdivisions="100"
+    :size="flowerRadius * 2"
+    :focus="scatterFocus"
     :grading="grading"
     :height-field="heightField"
     :control="control"
@@ -757,9 +814,11 @@ onUnmounted(() => {
   />
   <Flowers
     v-if="control && heightField"
+    :key="flowerRadius"
     shape="daisy"
-    :subdivisions="40"
-    :size="60"
+    :subdivisions="80"
+    :size="flowerRadius * 2"
+    :focus="scatterFocus"
     :grading="grading"
     :height-field="heightField"
     :control="control"

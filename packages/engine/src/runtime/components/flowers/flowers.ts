@@ -3,9 +3,10 @@ import { BufferAttribute, Color, DoubleSide, InstancedBufferAttribute, Instanced
 import { attribute, float, Fn, mix, positionGeometry, rotateUV, step, texture, uniform, varying, vec2, vec3 } from 'three/tsl'
 import { MeshBasicNodeMaterial, MeshLambertNodeMaterial } from 'three/webgpu'
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js'
-import type { ColorRepresentation, TextureNode, UniformNode } from 'three/webgpu'
+import type { ColorRepresentation, UniformNode } from 'three/webgpu'
 import { createWindUniforms, windOffset, type WindSettings, type WindUniforms } from '../wind/wind'
 import { coverageNode, createDensityMapNode, createScatterBake, type DensityChannel } from '../scatter/density'
+import { followAnchor, followFade, type ScatterFocus } from '../scatter/focus'
 import { trampleUv, type TrampleMap } from '../../trample/trample'
 import type { GradingContext } from '../../grading/grading'
 import { createDropShadowCatcher, stylizedOutput } from '../../grading/stylizedOutput'
@@ -89,6 +90,8 @@ export interface FlowersOptions extends WindSettings {
     density?: number
     /** extra coverage mask sampled at the anchor, one species per channel */
     densityMap?: Texture | null
+    /** world extent the density map spans, defaulting to `size` */
+    densityMapSize?: number
     densityChannel?: DensityChannel
     /** terrain control map; its grass channel is the primary placement mask */
     control?: ControlMap | null
@@ -106,6 +109,11 @@ export interface FlowersOptions extends WindSettings {
     seed?: string
     trample?: TrampleMap | null
     grading?: GradingContext | null
+    /**
+     * With a focus the field becomes a `size` x `size` window that rides along with
+     * it, instead of a bed pinned to the origin. See scatter/focus.
+     */
+    focus?: ScatterFocus | null
 }
 
 // stem: the grass blade strip — 2 base verts, 2 at mid width, 1 tip (hidden under the head).
@@ -293,6 +301,8 @@ export function createFlowersGeometry(options: FlowersOptions & { preset: Flower
         maskLow: options.maskLow ?? 0.25,
         maskHigh: options.maskHigh ?? 0.6,
         densityMap: options.densityMap,
+        // a following field can only bake the noise term; the mask stays in the shader
+        moving: !!options.focus,
     })
 
     const geometry = new InstancedBufferGeometry()
@@ -306,7 +316,7 @@ export function createFlowersGeometry(options: FlowersOptions & { preset: Flower
     geometry.setAttribute('instanceData', instanceAttribute)
     // only the shader path reads this, and leaving it off keeps a vertex buffer
     // free against the WebGPU limit of 8
-    if (!bake.coverage) geometry.setAttribute('densityNoise', new InstancedBufferAttribute(densityNoises, 1))
+    if (!bake.masked) geometry.setAttribute('densityNoise', new InstancedBufferAttribute(densityNoises, 1))
     geometry.boundingSphere = new Sphere(new Vector3(), (size / 2) * Math.SQRT2 + 2)
 
     const rebake = (maskLow: number, maskHigh: number) => {
@@ -330,7 +340,9 @@ interface FlowersMaterialOptions {
     threshold: UniformNode<'float', number>
     shadowIntensity: UniformNode<'float', number>
     windUniforms: WindUniforms
-    densityMapNode?: TextureNode | null
+    densityMap?: Texture | null
+    /** world extent the density map spans; the LEVEL, not the field */
+    densityMapSize: number
     densityChannel: DensityChannel
     control?: ControlMap | null
     maskLow?: UniformNode<'float', number> | null
@@ -340,10 +352,12 @@ interface FlowersMaterialOptions {
     grading?: GradingContext | null
     /** coverage already baked on the CPU: drop the whole test from the shader */
     baked?: boolean
+    size: number
+    focus?: ScatterFocus | null
 }
 
 export function buildFlowersMaterial(options: FlowersMaterialOptions) {
-    const { petalA, petalB, stem, center, height, headSize, stemWidth, threshold, shadowIntensity, windUniforms, densityMapNode, densityChannel, control, maskLow, maskHigh, heightField, trample, grading, baked = false } = options
+    const { petalA, petalB, stem, center, height, headSize, stemWidth, threshold, shadowIntensity, windUniforms, densityMap, densityMapSize, densityChannel, control, maskLow, maskHigh, heightField, trample, grading, baked = false, size, focus } = options
     // graded flowers catch drop shadows — Lambert base only so the catcher runs
     const material = grading ? new MeshLambertNodeMaterial() : new MeshBasicNodeMaterial()
     material.side = DoubleSide
@@ -356,17 +370,28 @@ export function buildFlowersMaterial(options: FlowersMaterialOptions) {
     const part = vertexData.y
     // packed per-instance: x = random, y = yaw, z = height noise, w = color noise
     const instanceData = attribute<'vec4'>('instanceData', 'vec4')
+    // with a focus the lattice anchor is folded into the window around it
+    const worldAnchor = focus ? followAnchor(focus, anchor, size) : anchor
+    // a painted mask covers the level, so it is read at the position the flower
+    // stands on rather than at its lattice anchor
+    const densityMapNode = createDensityMapNode(densityMap, worldAnchor, densityMapSize)
 
     material.positionNode = Fn(() => {
         const random = instanceData.x
         const yaw = instanceData.y
 
-        const trampleAmt = trample ? texture(trample.texture, trampleUv(trample.uniforms, anchor)).r.toVar() : null
+        const worldXZ = worldAnchor.toVar()
+        // flowers shrink into the ground towards the wrap boundary instead of
+        // popping in and out on it
+        const fade = focus ? followFade(focus, worldXZ, size).toVar() : null
+
+        const trampleAmt = trample ? texture(trample.texture, trampleUv(trample.uniforms, worldXZ)).r.toVar() : null
 
         let stemHeight = height
             .mul(mix(0.75, random, 0.55))
             .mul(instanceData.z)
         if (trampleAmt) stemHeight = stemHeight.mul(trampleAmt.mul(0.85).oneMinus())
+        if (fade) stemHeight = stemHeight.mul(fade)
         stemHeight = stemHeight.toVar()
 
         // stem verts live in ±1 × 0-1 blade space, head verts in head-local units
@@ -384,29 +409,30 @@ export function buildFlowersMaterial(options: FlowersMaterialOptions) {
         const visible = baked
             ? null
             : step(threshold, coverageNode({
-                anchor, control, maskLow, maskHigh, densityMapNode, channel: densityChannel, random,
+                anchor: worldXZ, control, maskLow, maskHigh, densityMapNode, channel: densityChannel, random,
                 densityNoise: attribute<'float'>('densityNoise', 'float'),
             })).toVar()
         // failing instances collapse to zero area at the anchor
         if (visible) local.mulAssign(visible)
+        if (fade) local.mulAssign(fade)
 
-        const pos = vec3(local.x.add(anchor.x), local.y, local.z.add(anchor.y)).toVar()
+        const pos = vec3(local.x.add(worldXZ.x), local.y, local.z.add(worldXZ.y)).toVar()
         // sampled at the anchor, not per vertex: the whole flower stands on one
         // terrain height, so a stem on a slope stays straight instead of shearing
-        if (heightField) pos.y.addAssign(sampleHeight(heightField, anchor))
+        if (heightField) pos.y.addAssign(sampleHeight(heightField, worldXZ))
 
         // wind, same curve as grass: sway scales with height, weight bends the stem
-        let windVec = flowerWindOffset(anchor).mul(stemHeight).mul(1.8)
+        let windVec = flowerWindOffset(worldXZ).mul(stemHeight).mul(1.8)
         if (trampleAmt) windVec = windVec.mul(trampleAmt.oneMinus())
         windVec = windVec.toVar()
         pos.addAssign(vec3(windVec.x.mul(windWeight), 0, windVec.y.mul(windWeight)))
         // bend, don't stretch: drop by the arc approximation |w|²/2h
-        const droop = windVec.dot(windVec).div(stemHeight.mul(2)).min(stemHeight.mul(0.35))
+        const droop = windVec.dot(windVec).div(stemHeight.mul(2).max(1e-4)).min(stemHeight.mul(0.35))
         pos.y.subAssign(droop.mul(windWeight).mul(windWeight))
 
         // live interactor: flowers lean away from whoever is standing on them
         if (trample) {
-            const toFlower = anchor.sub(trample.uniforms.interactor)
+            const toFlower = worldXZ.sub(trample.uniforms.interactor)
             const dist = toFlower.length().max(1e-3)
             const push = dist.div(trample.uniforms.interactorRadius).oneMinus().max(0)
             pos.addAssign(vec3(toFlower.x.div(dist), 0, toFlower.y.div(dist)).mul(push.mul(push)).mul(windWeight).mul(0.5))
@@ -416,6 +442,7 @@ export function buildFlowersMaterial(options: FlowersMaterialOptions) {
         // zero area alone is not enough now that the ground is not at y = 0: a
         // collapsed instance would still leave slivers on the terrain surface
         if (visible) pos.y.addAssign(visible.lessThan(0.5).select(float(1000), float(0)))
+        if (fade) pos.y.addAssign(fade.lessThan(0.01).select(float(1000), float(0)))
 
         return pos
     })()
@@ -440,7 +467,8 @@ export function buildFlowersMaterial(options: FlowersMaterialOptions) {
         material.colorNode = mix(base, base.mul(0.35), ao)
     }
 
-    return material
+    // the node comes back out so a texture swap can reach it without a rebuild
+    return { material, densityMapNode }
 }
 
 export function createFlowers(options: FlowersOptions) {
@@ -464,11 +492,11 @@ export function createFlowers(options: FlowersOptions) {
     const maskHigh = uniform(options.maskHigh ?? 0.6)
     const windUniforms = createWindUniforms(options)
 
-    const densityMapNode = createDensityMapNode(options.densityMap, options.size)
-
-    const material = buildFlowersMaterial({
+    const { material, densityMapNode } = buildFlowersMaterial({
         petalA, petalB, stem, center, height, headSize, stemWidth, threshold, shadowIntensity,
-        windUniforms, densityMapNode,
+        windUniforms,
+        densityMap: options.densityMap,
+        densityMapSize: options.densityMapSize ?? options.size,
         densityChannel: options.densityChannel ?? 'r',
         control: options.control,
         maskLow,
@@ -476,7 +504,10 @@ export function createFlowers(options: FlowersOptions) {
         heightField: options.heightField,
         trample: options.trample,
         grading: options.grading,
-        baked: bake.coverage !== null,
+        // only a bake that includes the mask can retire the shader test
+        baked: bake.masked,
+        size: options.size,
+        focus: options.focus,
     })
 
     // baked: density picks how much of the coverage-sorted prefix to draw.

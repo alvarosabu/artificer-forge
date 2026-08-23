@@ -15,12 +15,33 @@ import type { Node, UniformNode } from 'three/webgpu'
  */
 export interface ScatterFocus {
     center: UniformNode<'vec2', Vector2>
+    /**
+     * Where the edge fade starts, as a fraction of the half-window. Lives here
+     * rather than on each field because it is a property of the window, and
+     * because a uniform is tunable live — a per-field number would be baked into
+     * the node graph and need a rebuild to move.
+     */
+    fadeStart: UniformNode<'float', number>
     set: (x: number, z: number) => void
+    setFadeStart: (value: number) => void
 }
 
-export function createScatterFocus(x = 0, z = 0): ScatterFocus {
+export interface ScatterFocusSettings {
+    x?: number
+    z?: number
+    fadeStart?: number
+}
+
+export function createScatterFocus(settings: ScatterFocusSettings = {}): ScatterFocus {
+    const { x = 0, z = 0, fadeStart = 0.85 } = settings
     const center = uniform(new Vector2(x, z))
-    return { center, set: (nx, nz) => center.value.set(nx, nz) }
+    const fade = uniform(fadeStart)
+    return {
+        center,
+        fadeStart: fade,
+        set: (nx, nz) => center.value.set(nx, nz),
+        setFadeStart: (value) => { fade.value = value },
+    }
 }
 
 /**
@@ -54,8 +75,8 @@ export function followAnchor(focus: ScatterFocus, anchor: Node<'vec2'>, size: nu
  * a square, so fading to the square's own edge wastes no instances in the
  * corners the way a circle would.
  */
-export function followFade(focus: ScatterFocus, worldXZ: Node<'vec2'>, size: number, fadeStart = 0.85) {
+export function followFade(focus: ScatterFocus, worldXZ: Node<'vec2'>, size: number) {
     const local = worldXZ.sub(focus.center).abs()
     const edge = local.x.max(local.y).div(size * 0.5)
-    return edge.smoothstep(fadeStart, 1).oneMinus()
+    return edge.smoothstep(focus.fadeStart, 1).oneMinus()
 }

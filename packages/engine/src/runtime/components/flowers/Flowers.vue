@@ -17,6 +17,7 @@ const props = withDefaults(defineProps<FlowersOptions>(), {
   maskLow: 0.25,
   maskHigh: 0.6,
   heightField: null,
+  focus: null,
 })
 
 const { geometry, material, uniforms, setDensity, setMaskBand, dispose } = createFlowers(props)
@@ -53,5 +54,13 @@ onUnmounted(dispose)
 </script>
 
 <template>
-  <TresMesh :geometry="geometry" :material="material" :name="`Flowers:${props.shape}`" receive-shadow />
+  <!-- A following field is centred on the camera target, so it is never off screen
+       and the origin-centred bounding sphere would only cull it by mistake -->
+  <TresMesh
+    :geometry="geometry"
+    :material="material"
+    :frustum-culled="!props.focus"
+    :name="`Flowers:${props.shape}`"
+    receive-shadow
+  />
 </template>

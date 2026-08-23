@@ -6,6 +6,7 @@ import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js'
 import type { ColorRepresentation, UniformNode } from 'three/webgpu'
 import { createWindUniforms, windOffset, type WindSettings, type WindUniforms } from '../wind/wind'
 import { coverageNode, createDensityMapNode, createScatterBake, type DensityChannel } from '../scatter/density'
+import { followAnchor, followFade, type ScatterFocus } from '../scatter/focus'
 import { trampleUv, type TrampleMap } from '../../trample/trample'
 import type { GradingContext } from '../../grading/grading'
 import { createDropShadowCatcher, stylizedOutput } from '../../grading/stylizedOutput'
@@ -41,6 +42,8 @@ export interface GrassTuftsOptions extends WindSettings {
     spread?: number
     density?: number
     densityMap?: Texture | null
+    /** world extent the density map spans, defaulting to `size` */
+    densityMapSize?: number
     densityChannel?: DensityChannel
     /** terrain control map; its grass channel is the primary placement mask */
     control?: ControlMap | null
@@ -56,6 +59,11 @@ export interface GrassTuftsOptions extends WindSettings {
     seed?: string
     trample?: TrampleMap | null
     grading?: GradingContext | null
+    /**
+     * With a focus the field becomes a `size` x `size` window that rides along with
+     * it, instead of a patch pinned to the origin. See scatter/focus.
+     */
+    focus?: ScatterFocus | null
 }
 
 function hashSeed(str: string): number {
@@ -168,6 +176,8 @@ export function createGrassTuftsGeometry(options: GrassTuftsOptions) {
         maskLow: options.maskLow ?? 0.25,
         maskHigh: options.maskHigh ?? 0.6,
         densityMap: options.densityMap,
+        // a following field can only bake the noise term; the mask stays in the shader
+        moving: !!options.focus,
     })
 
     const geometry = new InstancedBufferGeometry()
@@ -181,7 +191,7 @@ export function createGrassTuftsGeometry(options: GrassTuftsOptions) {
     geometry.setAttribute('instanceData', instanceAttribute)
     // only the shader path reads this, and leaving it off keeps a vertex buffer
     // free against the WebGPU limit of 8
-    if (!bake.coverage) geometry.setAttribute('densityNoise', new InstancedBufferAttribute(densityNoises, 1))
+    if (!bake.masked) geometry.setAttribute('densityNoise', new InstancedBufferAttribute(densityNoises, 1))
     geometry.boundingSphere = new Sphere(new Vector3(), (size / 2) * Math.SQRT2 + (options.height ?? 2.2) + 2)
 
     const rebake = (maskLow: number, maskHigh: number) => {
@@ -202,7 +212,9 @@ interface GrassTuftsMaterialOptions {
     threshold: UniformNode<'float', number>
     shadowIntensity: UniformNode<'float', number>
     windUniforms: WindUniforms
-    densityMapNode?: ReturnType<typeof createDensityMapNode>
+    densityMap?: Texture | null
+    /** world extent the density map spans; the LEVEL, not the field */
+    densityMapSize: number
     densityChannel: DensityChannel
     control?: ControlMap | null
     maskLow?: UniformNode<'float', number> | null
@@ -212,10 +224,12 @@ interface GrassTuftsMaterialOptions {
     grading?: GradingContext | null
     /** coverage already baked on the CPU: drop the whole test from the shader */
     baked?: boolean
+    size: number
+    focus?: ScatterFocus | null
 }
 
 export function buildGrassTuftsMaterial(options: GrassTuftsMaterialOptions) {
-    const { colorA, colorB, height, spread, threshold, shadowIntensity, windUniforms, densityMapNode, densityChannel, control, maskLow, maskHigh, heightField, trample, grading, baked = false } = options
+    const { colorA, colorB, height, spread, threshold, shadowIntensity, windUniforms, densityMap, densityMapSize, densityChannel, control, maskLow, maskHigh, heightField, trample, grading, baked = false, size, focus } = options
     // graded tufts catch drop shadows — Lambert base only so the catcher runs
     const material = grading ? new MeshLambertNodeMaterial() : new MeshBasicNodeMaterial()
     material.side = DoubleSide
@@ -227,17 +241,29 @@ export function buildGrassTuftsMaterial(options: GrassTuftsMaterialOptions) {
     // packed per-instance: x = random, y = yaw, z = height noise, w = color noise
     const instanceData = attribute<'vec4'>('instanceData', 'vec4')
 
+    // with a focus the lattice anchor is folded into the window around it
+    const worldAnchor = focus ? followAnchor(focus, anchor, size) : anchor
+    // a painted mask covers the level, so it is read at the position the tuft
+    // stands on rather than at its lattice anchor
+    const densityMapNode = createDensityMapNode(densityMap, worldAnchor, densityMapSize)
+
     material.positionNode = Fn(() => {
         const random = instanceData.x
         const yaw = instanceData.y
 
-        const trampleAmt = trample ? texture(trample.texture, trampleUv(trample.uniforms, anchor)).r.toVar() : null
+        const worldXZ = worldAnchor.toVar()
+        // tufts shrink into the ground towards the wrap boundary instead of popping
+        // in and out on it
+        const fade = focus ? followFade(focus, worldXZ, size).toVar() : null
+
+        const trampleAmt = trample ? texture(trample.texture, trampleUv(trample.uniforms, worldXZ)).r.toVar() : null
 
         let tuftHeight = height
             .mul(mix(0.7, random, 0.5))
             .mul(instanceData.z)
         // tufts are stiffer than blades: they flatten less when walked over
         if (trampleAmt) tuftHeight = tuftHeight.mul(trampleAmt.mul(0.55).oneMinus())
+        if (fade) tuftHeight = tuftHeight.mul(fade)
         tuftHeight = tuftHeight.toVar()
 
         const local = vec3(
@@ -252,29 +278,30 @@ export function buildGrassTuftsMaterial(options: GrassTuftsMaterialOptions) {
         const visible = baked
             ? null
             : step(threshold, coverageNode({
-                anchor, control, maskLow, maskHigh, densityMapNode, channel: densityChannel, random,
+                anchor: worldXZ, control, maskLow, maskHigh, densityMapNode, channel: densityChannel, random,
                 densityNoise: attribute<'float'>('densityNoise', 'float'),
             })).toVar()
         // failing instances collapse to zero area at the anchor
         if (visible) local.mulAssign(visible)
+        if (fade) local.mulAssign(fade)
 
-        const pos = vec3(local.x.add(anchor.x), local.y, local.z.add(anchor.y)).toVar()
+        const pos = vec3(local.x.add(worldXZ.x), local.y, local.z.add(worldXZ.y)).toVar()
         // sampled at the anchor, not per vertex: the whole tuft stands on one
         // terrain height, so its blades keep their fan shape on a slope
-        if (heightField) pos.y.addAssign(sampleHeight(heightField, anchor))
+        if (heightField) pos.y.addAssign(sampleHeight(heightField, worldXZ))
 
         // wind, same curve as grass: sway scales with height, weight bends the blade
-        let windVec = tuftWindOffset(anchor).mul(tuftHeight).mul(1.4)
+        let windVec = tuftWindOffset(worldXZ).mul(tuftHeight).mul(1.4)
         if (trampleAmt) windVec = windVec.mul(trampleAmt.oneMinus())
         windVec = windVec.toVar()
         pos.addAssign(vec3(windVec.x.mul(bladeT), 0, windVec.y.mul(bladeT)))
         // bend, don't stretch: drop by the arc approximation |w|²/2h
-        const droop = windVec.dot(windVec).div(tuftHeight.mul(2)).min(tuftHeight.mul(0.3))
+        const droop = windVec.dot(windVec).div(tuftHeight.mul(2).max(1e-4)).min(tuftHeight.mul(0.3))
         pos.y.subAssign(droop.mul(bladeT).mul(bladeT))
 
         // live interactor: blades part away from whoever stands in the tuft
         if (trample) {
-            const toTuft = anchor.sub(trample.uniforms.interactor)
+            const toTuft = worldXZ.sub(trample.uniforms.interactor)
             const dist = toTuft.length().max(1e-3)
             const push = dist.div(trample.uniforms.interactorRadius).oneMinus().max(0)
             pos.addAssign(vec3(toTuft.x.div(dist), 0, toTuft.y.div(dist)).mul(push.mul(push)).mul(bladeT).mul(0.4))
@@ -284,6 +311,7 @@ export function buildGrassTuftsMaterial(options: GrassTuftsMaterialOptions) {
         // zero area alone is not enough now that the ground is not at y = 0: a
         // collapsed instance would still leave slivers on the terrain surface
         if (visible) pos.y.addAssign(visible.lessThan(0.5).select(float(1000), float(0)))
+        if (fade) pos.y.addAssign(fade.lessThan(0.01).select(float(1000), float(0)))
 
         return pos
     })()
@@ -305,7 +333,8 @@ export function buildGrassTuftsMaterial(options: GrassTuftsMaterialOptions) {
         material.colorNode = mix(base, base.mul(0.35), ao)
     }
 
-    return material
+    // the node comes back out so a texture swap can reach it without a rebuild
+    return { material, densityMapNode }
 }
 
 export function createGrassTufts(options: GrassTuftsOptions) {
@@ -321,10 +350,10 @@ export function createGrassTufts(options: GrassTuftsOptions) {
     const maskLow = uniform(options.maskLow ?? 0.25)
     const maskHigh = uniform(options.maskHigh ?? 0.6)
     const windUniforms = createWindUniforms(options)
-    const densityMapNode = createDensityMapNode(options.densityMap, options.size)
-
-    const material = buildGrassTuftsMaterial({
-        colorA, colorB, height, spread, threshold, shadowIntensity, windUniforms, densityMapNode,
+    const { material, densityMapNode } = buildGrassTuftsMaterial({
+        colorA, colorB, height, spread, threshold, shadowIntensity, windUniforms,
+        densityMap: options.densityMap,
+        densityMapSize: options.densityMapSize ?? options.size,
         densityChannel: options.densityChannel ?? 'r',
         control: options.control,
         maskLow,
@@ -332,7 +361,10 @@ export function createGrassTufts(options: GrassTuftsOptions) {
         heightField: options.heightField,
         trample: options.trample,
         grading: options.grading,
-        baked: bake.coverage !== null,
+        // only a bake that includes the mask can retire the shader test
+        baked: bake.masked,
+        size: options.size,
+        focus: options.focus,
     })
 
     // baked: density picks how much of the coverage-sorted prefix to draw.

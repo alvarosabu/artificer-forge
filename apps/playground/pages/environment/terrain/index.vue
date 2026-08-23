@@ -8,7 +8,7 @@ const camera = {
   fov: 40,
   position: [0, 24, 48] as [number, number, number],
   target: [0, 0, 0] as [number, number, number],
-  far: 400,
+  far: 1000,
   maxPolarAngle: Math.PI * 80 / 180,
   minPolarAngle: Math.PI * 10 / 180,
   maxDistance: 42,
