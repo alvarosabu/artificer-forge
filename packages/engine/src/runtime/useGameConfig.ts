@@ -9,6 +9,8 @@ export interface BloomConfig {
   radius: number
   threshold: number
   smoothWidth: number
+  /** Bloom mip-chain scale: 1 = three's stock half-res chain, 0.5 = quarter res. */
+  resolutionScale: number
 }
 
 export interface OutlinePreset {
@@ -25,7 +27,7 @@ const GAME_CONFIG_KEY: InjectionKey<GameConfig> = Symbol('af-game-config')
 
 export function defaultGameConfig(): GameConfig {
   return {
-    bloom: { strength: 0.7, radius: 0.4, threshold: 0.8, smoothWidth: 0.3 },
+    bloom: { strength: 0.7, radius: 0.4, threshold: 0.8, smoothWidth: 0.3, resolutionScale: 0.5 },
     outlinePresets: {
       party: { visibleEdgeColor: '#00e5ff', edgeThickness: 3 },
       interactive: { visibleEdgeColor: '#ffcc00', edgeThickness: 3 },

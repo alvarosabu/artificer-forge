@@ -51,11 +51,12 @@ const cameraProps = computed<CameraProps>(() => ({
   controls: toValue(cameraOrbit),
 }))
 
-const { postprocessingBloomStrength, postprocessingBloomThreshold, postprocessingBloomRadius, postprocessingBloomSmoothWidth } = useControls('postprocessing', {
+const { postprocessingBloomStrength, postprocessingBloomThreshold, postprocessingBloomRadius, postprocessingBloomSmoothWidth, postprocessingBloomResolutionScale } = useControls('postprocessing', {
   bloomStrength: { value: config.bloom.strength, min: 0, max: 3, step: 0.01, type: 'range' },
   bloomRadius: { value: config.bloom.radius, min: 0, max: 1, step: 0.01, type: 'range' },
   bloomThreshold: { value: config.bloom.threshold, min: 0, max: 1, step: 0.01, type: 'range' },
   bloomSmoothWidth: { value: config.bloom.smoothWidth, min: 0, max: 1, step: 0.01, type: 'range' },
+  bloomResolutionScale: { value: config.bloom.resolutionScale, min: 0.1, max: 1, step: 0.05, type: 'range' },
 }, { uuid })
 
 // Keep the provided config in sync with the debug GUI.
@@ -64,6 +65,7 @@ watchEffect(() => {
   config.bloom.radius = toValue(postprocessingBloomRadius)
   config.bloom.threshold = toValue(postprocessingBloomThreshold)
   config.bloom.smoothWidth = toValue(postprocessingBloomSmoothWidth)
+  config.bloom.resolutionScale = toValue(postprocessingBloomResolutionScale)
 })
 </script>
 

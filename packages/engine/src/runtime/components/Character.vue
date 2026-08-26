@@ -19,6 +19,7 @@ import { useStatusEffectAnimations } from '../useStatusEffectAnimations'
 import { useStatusEffectTexts } from '../useStatusEffectTexts'
 import { usePortraitRenderer } from '../portrait/usePortraitRenderer'
 import type { GradingContext } from '../grading/grading'
+import type { Node } from 'three/webgpu'
 import { applyGradingToModel } from '../grading/applyGradingToModel'
 import { useCombatStore } from '../stores/combat'
 import { useGameStore } from '../stores/game'
@@ -33,9 +34,18 @@ const props = withDefaults(defineProps<{
   entityId: string
   /** opt-in stylized grading (the trample pattern): swaps GLB materials for the graded finish */
   grading?: GradingContext | null
+  /**
+   * World height of the ground under each fragment, for the grading's
+   * contact-occlusion term. Defaults to y = 0 (flat pages). On generated terrain
+   * pass sampleHeight(field, positionWorld.xz), or the whole character reads as
+   * buried wherever the ground is not at 0 and darkens. Must be set before the
+   * rig loads — grading is applied once and never re-applied.
+   */
+  groundHeight?: Node<'float'> | null
 }>(), {
   entityId: '',
   grading: null,
+  groundHeight: null,
 })
 
 const gameStore = useGameStore()
@@ -76,9 +86,10 @@ function useSingleGltfRig() {
 
 const singleGltf = isModular ? undefined : useSingleGltfRig()
 
-const rig = isModular
-  ? useModularRig(() => entity.value?.appearance, useModularArmor(() => props.entityId)).rig
-  : singleGltf!.rig
+const modular = isModular
+  ? useModularRig(() => entity.value?.appearance, useModularArmor(() => props.entityId))
+  : undefined
+const rig = modular ? modular.rig : singleGltf!.rig
 
 const { actions, currentAnimName, play, stop } = useCharacterAnimations(rig, rigSize.value, singleGltf?.animations)
 
@@ -99,7 +110,7 @@ const isLeader = computed(() => gameStore.party.leader === props.entityId)
 const effectiveWeaponSlot = computed<'mainHand' | 'offHand' | 'none' | undefined>(() => isLeader.value ? activeWeaponSlot.value : undefined)
 useEquipment(rig, equipment, effectiveWeaponSlot, {
   onAttach: (object) => {
-    if (props.grading) applyGradingToModel(object, props.grading)
+    if (props.grading) applyGradingToModel(object, props.grading, { groundHeight: props.groundHeight ?? undefined })
   },
 })
 useStatusEffectOverlay(rig, computed(() => props.entityId))
@@ -148,7 +159,14 @@ watch(characterRef, (group) => {
   }
 }, { immediate: true })
 
-watch(rig, (rigValue) => {
+// Modular parts attach AFTER the rig root exists (each async load bumps
+// version), so this watch keys on version too — a one-shot watch on rig would
+// grade an empty skeleton and leave every part on its raw GLB material.
+// Registered after useModularRig, so within one version flush the rig's own
+// effects (attach, tint, segment overrides, armor atlas) have already run:
+// the grading snapshot sees tinted materials, and custom node materials
+// (ghost arm) are already in place for applyGradingToModel to skip.
+watch([rig, () => modular?.version.value], ([rigValue]) => {
   if (rigValue) {
     rigValue.traverse((child: Mesh) => {
       if(child.isMesh) {
@@ -158,8 +176,7 @@ watch(rig, (rigValue) => {
         // characters cast only; the finish's core shadow does their shading
       }
     })
-    // before the ghost-arm watch below, so its material override wins
-    if (props.grading) applyGradingToModel(rigValue, props.grading)
+    if (props.grading) applyGradingToModel(rigValue, props.grading, { groundHeight: props.groundHeight ?? undefined })
   }
 }, { immediate: true })
 

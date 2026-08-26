@@ -1,4 +1,4 @@
-import { computed, onUnmounted, reactive, ref, shallowRef, toValue, watch, watchEffect, type MaybeRefOrGetter, type ShallowRef } from 'vue'
+import { computed, onUnmounted, reactive, ref, shallowRef, toValue, watch, watchEffect, type MaybeRefOrGetter, type Ref, type ShallowRef } from 'vue'
 import { useTresContext } from '@tresjs/core'
 import {
   Color,
@@ -60,7 +60,7 @@ function loadAtlas(url: string): Texture {
 export function useModularRig(
   appearance: MaybeRefOrGetter<CharacterAppearance | undefined>,
   armor?: MaybeRefOrGetter<ArmorPiece[]>,
-): { rig: ShallowRef<Object3D | undefined> } {
+): { rig: ShallowRef<Object3D | undefined>, version: Ref<number> } {
   const rig = shallowRef<Object3D>()
   const boneByName = new Map<string, Bone>()
 
@@ -433,7 +433,10 @@ export function useModularRig(
       obj.traverse((o) => {
         const mats = (o as Mesh).userData?.materials as Material[] | undefined
         mats?.forEach((m) => {
-          if (m !== hornSet?.std && m !== hornFallback) m.dispose()
+          if (m === hornSet?.std || m === hornFallback) return
+          // applyGradingToModel caches its swap on the source material
+          ;(m.userData.gradedMaterial as Material | undefined)?.dispose()
+          m.dispose()
         })
       })
     }
@@ -457,5 +460,7 @@ export function useModularRig(
     hornFallback = null
   })
 
-  return { rig }
+  // version bumps on every load/attach — watch it to react to parts arriving
+  // after the rig root exists (e.g. re-applying grading to late meshes).
+  return { rig, version }
 }

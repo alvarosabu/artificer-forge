@@ -62,6 +62,7 @@ function handlePointerMissed() {
         radius: config.bloom.radius,
         threshold: config.bloom.threshold,
         smoothWidth: config.bloom.smoothWidth,
+        resolutionScale: config.bloom.resolutionScale,
       }"
     />
   </TresCanvas>

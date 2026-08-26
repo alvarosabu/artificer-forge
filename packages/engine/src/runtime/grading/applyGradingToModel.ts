@@ -1,4 +1,4 @@
-import type { Material, Mesh, MeshStandardMaterial, Object3D } from 'three'
+import type { Mesh, MeshStandardMaterial, Object3D } from 'three'
 import { Color } from 'three'
 import { float, normalWorld, positionWorld, texture, uniform, uv } from 'three/tsl'
 import { MeshLambertNodeMaterial } from 'three/webgpu'
@@ -22,18 +22,25 @@ export interface ApplyGradingOptions {
  * the grading (skinning is untouched — NodeMaterial applies it automatically).
  * Lambert base ONLY so the drop-shadow catcher runs; its lighting is unused.
  * Shared source materials stay shared: one graded material per source.
+ *
+ * Safe to call repeatedly on the same tree (modular rigs attach parts as they
+ * load, and segment overrides restore ungraded base materials on every part
+ * change): the graded material is cached on its source, so re-applying swaps
+ * the cached one back in. The base color (tint × map) is snapshot when the
+ * graded material is FIRST built — appearance changes after that don't reach it.
  */
 export function applyGradingToModel(root: Object3D, grading: GradingContext, { groundHeight }: ApplyGradingOptions = {}) {
-    const graded = new Map<Material, MeshLambertNodeMaterial>()
-
     root.traverse((child) => {
         if (!(child as Mesh).isMesh) return
         const mesh = child as Mesh
         if (Array.isArray(mesh.material)) return // multi-material meshes: none in our GLBs, skip rather than guess
         const source = mesh.material
         if (source.userData.graded) return // idempotent: re-running a watch must not grade a graded material
+        // Custom finishes (ghost arm, horn gradients) are node materials and
+        // keep their own look — only plain GLB PBR materials get the grading.
+        if ((source as { isNodeMaterial?: boolean }).isNodeMaterial) return
 
-        let material = graded.get(source)
+        let material = source.userData.gradedMaterial as MeshLambertNodeMaterial | undefined
         if (!material) {
             material = new MeshLambertNodeMaterial()
             material.side = source.side
@@ -55,7 +62,7 @@ export function applyGradingToModel(root: Object3D, grading: GradingContext, { g
             material.receivedShadowNode = dropShadow.receivedShadowNode
             material.outputNode = stylizedOutput(baseColor, grading, { hasMidTone: true, hasRim: true, hasSpecular: true, aoNode, dropShadowNode: dropShadow.shadowFactor })
 
-            graded.set(source, material)
+            source.userData.gradedMaterial = material
         }
         mesh.material = material
     })

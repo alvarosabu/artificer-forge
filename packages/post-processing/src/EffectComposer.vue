@@ -6,7 +6,7 @@ import { Color, RenderPipeline, WebGPURenderer } from 'three/webgpu'
 import { NoToneMapping } from 'three'
 import { pass, float, uniform, renderOutput } from 'three/tsl'
 import { outline } from 'three/addons/tsl/display/OutlineNode.js'
-import { bloom } from 'three/addons/tsl/display/BloomNode.js'
+import { scaledBloom } from './ScaledBloomNode'
 import { useOutlinePass } from './useOutlinePass'
 
 export interface OutlinePreset {
@@ -22,6 +22,8 @@ export interface BloomConfig {
   radius?: number
   threshold?: number
   smoothWidth?: number
+  /** Scale of the bloom mip chain. 1 = three's stock half-res chain, 0.5 = quarter res (default). */
+  resolutionScale?: number
 }
 
 const props = withDefaults(defineProps<{
@@ -49,52 +51,55 @@ watch(
     const cameraObj = currentCamera as unknown as Camera
 
     const renderPipeline = new RenderPipeline(webgpuRenderer)
+    // PERF TEST: samples: 1 disables MSAA on the scene pass (it otherwise
+    // inherits the renderer's 4x, paid on a HalfFloat target).
     const scenePass = pass(sceneObj, cameraObj)
     const scenePassColor = scenePass.getTextureNode('output')
 
     // Build one outline pass per preset and accumulate outline color
     let composedOutline: any = null
 
-    for (const [name, preset] of Object.entries(props.outlinePresets)) {
-      const selectedObjectsArray: Object3D[] = []
-
-      const edgeStrength = uniform(preset.edgeStrength ?? 3)
-      const visibleEdgeColor = uniform(new Color(preset.visibleEdgeColor ?? '#ffffff'))
-      const hiddenEdgeColor = uniform(new Color(preset.hiddenEdgeColor ?? '#4e3636'))
-
-      const outlinePass = outline(sceneObj, cameraObj, {
-        selectedObjects: selectedObjectsArray,
-        edgeGlow: float(preset.edgeGlow ?? 0),
-        edgeThickness: float(preset.edgeThickness ?? 1),
-      })
-
-      const { visibleEdge, hiddenEdge } = outlinePass
-      const outlineColor = visibleEdge.mul(visibleEdgeColor).add(hiddenEdge.mul(hiddenEdgeColor)).mul(edgeStrength)
-
-      composedOutline = composedOutline ? composedOutline.add(outlineColor) : outlineColor
-
-      // Watch group changes and sync to the pass's selectedObjects array
-      const groupRef = getGroup(name)
-      watch(
-        groupRef,
-        (newSelection) => {
-          selectedObjectsArray.length = 0
-          selectedObjectsArray.push(...newSelection)
-          outlinePass.selectedObjects = selectedObjectsArray
-        },
-        { immediate: true },
-      )
-    }
+//     for (const [name, preset] of Object.entries(props.outlinePresets)) {
+//       const selectedObjectsArray: Object3D[] = []
+// 
+//       const edgeStrength = uniform(preset.edgeStrength ?? 3)
+//       const visibleEdgeColor = uniform(new Color(preset.visibleEdgeColor ?? '#ffffff'))
+//       const hiddenEdgeColor = uniform(new Color(preset.hiddenEdgeColor ?? '#4e3636'))
+// 
+//       const outlinePass = outline(sceneObj, cameraObj, {
+//         selectedObjects: selectedObjectsArray,
+//         edgeGlow: float(preset.edgeGlow ?? 0),
+//         edgeThickness: float(preset.edgeThickness ?? 1),
+//       })
+// 
+//       const { visibleEdge, hiddenEdge } = outlinePass
+//       const outlineColor = visibleEdge.mul(visibleEdgeColor).add(hiddenEdge.mul(hiddenEdgeColor)).mul(edgeStrength)
+// 
+//       composedOutline = composedOutline ? composedOutline.add(outlineColor) : outlineColor
+// 
+//       // Watch group changes and sync to the pass's selectedObjects array
+//       const groupRef = getGroup(name)
+//       watch(
+//         groupRef,
+//         (newSelection) => {
+//           selectedObjectsArray.length = 0
+//           selectedObjectsArray.push(...newSelection)
+//           outlinePass.selectedObjects = selectedObjectsArray
+//         },
+//         { immediate: true },
+//       )
+//     }
 
     // Compose output: scene + outlines + bloom
     let outputNode = composedOutline ? composedOutline.add(scenePassColor) : scenePassColor
 
     if (props.bloom) {
-      const bloomPass = bloom(scenePassColor)
+      const bloomPass = scaledBloom(scenePassColor)
       bloomPass.strength.value = props.bloom.strength ?? 0.5
       bloomPass.radius.value = props.bloom.radius ?? 0
       bloomPass.threshold.value = props.bloom.threshold ?? 0
       bloomPass.smoothWidth.value = props.bloom.smoothWidth ?? 0.01
+      bloomPass.resolutionScale = props.bloom.resolutionScale ?? 0.5
 
       watch(
         () => props.bloom,
@@ -104,6 +109,8 @@ watch(
           bloomPass.radius.value = config.radius ?? 0
           bloomPass.threshold.value = config.threshold ?? 0
           bloomPass.smoothWidth.value = config.smoothWidth ?? 0.01
+          // Applied next frame: BloomNode re-runs setSize from updateBefore every frame.
+          bloomPass.resolutionScale = config.resolutionScale ?? 0.5
         },
         { deep: true },
       )
@@ -119,6 +126,8 @@ watch(
     }
     renderPipeline.outputNode = outputNode
     postProcessing.value = renderPipeline
+    // PERF TEST instrumentation — remove when done
+    console.info('[EffectComposer] pipeline built (src)', { samples: 1, bloomScale: props.bloom?.resolutionScale ?? 0.5, outline: 'disabled' })
     renderer.replaceRenderFunction((notifySuccess) => {
       renderPipeline.render()
       notifySuccess()

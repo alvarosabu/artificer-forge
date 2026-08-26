@@ -180,6 +180,14 @@ function groundHeight(x: number, z: number): number | null {
   return sampleHeightAt(field, pixels, x, z)
 }
 
+// Same fix as the props above: the grading's contact-occlusion assumes ground at
+// y = 0, and the spawn area sits below that, so without this node the whole
+// character reads as buried and darkens. Grading happens once, when the rig
+// loads, so the characters are gated on this in the template — mounting them
+// earlier would bake ground 0 in for good.
+const characterGroundHeight = computed(() =>
+  heightField.value ? sampleHeight(heightField.value, positionWorld.xz) : null)
+
 const gameStore = useGameStore()
 const { setCharacterRef, getCharacterRef } = useSceneRefs()
 const playerId = shallowRef<string | null>(null)
@@ -191,7 +199,7 @@ onMounted(async () => {
   // Debug spawn: out in the duplicated half. The two halves meet at z = -244, so
   // this stands 268 m into the new one. y is ignored — the grounding pass below
   // raycasts the terrain every frame and overwrites it.
-  const id = await gameStore.spawnFromTemplate('hero', { x: 0, y: 0, z: 0 })
+  const id = await gameStore.spawnFromTemplate('cedric', { x: 0, y: 0, z: 0 })
   gameStore.addToParty(id)
   gameStore.selectEntity(id)
   playerId.value = id
@@ -775,13 +783,16 @@ onUnmounted(() => {
     :height="1.2"
     :pulse-speed="3"
   />
-  <Character
-    v-for="entity in characterEntities"
-    :ref="(el: any) => setCharacterRef(entity.id, el)"
-    :key="entity.id"
-    :entity-id="entity.id"
-    :grading="grading"
-  />
+  <template v-if="characterGroundHeight">
+    <Character
+      v-for="entity in characterEntities"
+      :ref="(el: any) => setCharacterRef(entity.id, el)"
+      :key="entity.id"
+      :entity-id="entity.id"
+      :grading="grading"
+      :ground-height="characterGroundHeight"
+    />
+  </template>
  <!-- Grass in two rings. Both ride the same focus and run the same blades per m²,
       so the only thing that changes at the handover is triangles per blade: 3 for
       the ground under the camera, 1 past nearRadius where a blade is a pixel wide.
