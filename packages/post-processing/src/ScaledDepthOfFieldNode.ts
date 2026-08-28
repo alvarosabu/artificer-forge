@@ -1,11 +1,6 @@
-// three's DepthOfFieldNode (r183) runs its CoC pass at full resolution and the
-// four bokeh passes at a fixed half resolution, re-sizing from the input texture
-// every frame. The two 64-tap bokeh passes are the bulk of the cost, and the
-// only pass that has to stay full-res is the composite (it reads the sharp
-// beauty back). This subclass scales everything else. resolutionScale = 0.5 is
-// close to stock (CoC drops to half-res too), 0.25 runs the blur at quarter res
-// for ~4x fewer bokeh taps. The tap spacing stays in full-res pixels via
-// _invSize, so the bokeh size on screen does not change with the scale.
+// three's DepthOfFieldNode (r183) has no resolution option. Only the composite must
+// stay full-res (it reads the sharp beauty back); _invSize stays in full-res pixels
+// so the bokeh size on screen does not change with the scale.
 import DepthOfFieldNode from 'three/addons/tsl/display/DepthOfFieldNode.js'
 import { nodeObject } from 'three/tsl'
 import type { Node } from 'three/webgpu'

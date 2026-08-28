@@ -1,26 +1,13 @@
 /**
- * Bakes a terrain mesh out of a level GLB into a height map PNG plus the sidecar
- * json that gives it a scale.
- *
- * This is the build-time half of the runtime terrain: createHeightMap() reads the
- * PNG and TerrainQuadtree generates the surface from it, so the mesh in the GLB
- * stops being shipped geometry and becomes an authoring source. Re-run this
- * whenever the terrain is re-exported from Blender.
+ * Bakes the terrain mesh in a level GLB into a height PNG plus the sidecar json
+ * createHeightMap() reads. Re-run after every terrain re-export from Blender.
  *
  * Usage:
  *   node scripts/bake-heightmap.mjs <glb> [--node Terrain] [--resolution 2048]
  *                                        [--size 512] [--origin x,z]
  *                                        [--name stem] [--out dir]
  *
- * The window is SQUARE, because heightUv() divides by one `size` on both axes. By
- * default it is the mesh's bounding square, so nothing is cropped and a non-square
- * level gets padded. Pass --size and --origin to bake a chosen window instead —
- * that is how you crop a big level down to its playable region.
- *
- * Writes, next to the GLB by default:
- *   <name>.height-<res>.png       8-bit grey, the map the runtime loads
- *   <name>.height-<res>.rgb.png   24-bit packed, same data, for when 8 bits terrace
- *   <name>.height-<res>.json      size / origin / min / max — the scale
+ * Writes <name>.height-<res>.png (8-bit grey), .rgb.png (24-bit packed) and .json (scale).
  */
 
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -30,8 +17,6 @@ import { NodeIO } from '@gltf-transform/core'
 import { KHRONOS_EXTENSIONS } from '@gltf-transform/extensions'
 import draco3d from 'draco3dgltf'
 import sharp from 'sharp'
-
-// --- args ---
 
 const argv = process.argv.slice(2)
 if (!argv.length || argv[0].startsWith('--')) {
@@ -51,8 +36,6 @@ const originOverride = flag('origin') ? flag('origin').split(',').map(Number) : 
 // a cropped bake needs its own name, or it overwrites the full-extent one
 const nameOverride = flag('name')
 
-// --- read the GLB ---
-
 const io = new NodeIO()
   .registerExtensions(KHRONOS_EXTENSIONS)
   .registerDependencies({
@@ -62,8 +45,7 @@ const io = new NodeIO()
 const document = await io.read(glbPath)
 const root = document.getRoot()
 
-// The terrain is found by NODE name, the same contract the runtime uses. A rename
-// in Blender has to fail loudly here rather than silently baking a rock.
+// found by node name, same contract as the runtime; a Blender rename must fail loudly
 const terrainNodes = root.listNodes().filter(node => node.getName() === nodeName)
 if (!terrainNodes.length) {
   const names = root.listNodes().map(n => n.getName()).join(', ')
@@ -71,7 +53,6 @@ if (!terrainNodes.length) {
   process.exit(1)
 }
 
-/** world-space triangle soup of every primitive under the named node(s) */
 function collectTriangles() {
   const triangles = []
 
@@ -110,8 +91,6 @@ if (!triangles.length) {
   process.exit(1)
 }
 
-// --- bounds ---
-
 let minX = Infinity, maxX = -Infinity
 let minY = Infinity
 let maxY = -Infinity
@@ -128,23 +107,17 @@ for (const t of triangles) {
   }
 }
 
-// A SQUARE window, because heightUv() divides by one `size` on both axes. The
-// larger extent wins so nothing is cropped; the origin is the middle of the real
-// bounds, which is not the world origin unless the mesh was centred in Blender.
-// A non-square level therefore pads — --size/--origin crop instead.
+// square window because heightUv() divides by one size on both axes; a non-square
+// level pads unless --size/--origin crop it
 const size = sizeOverride ?? Math.max(maxX - minX, maxZ - minZ)
 const origin = originOverride ?? [(minX + maxX) / 2, (minZ + maxZ) / 2]
 const halfSize = size / 2
 
-// --- rasterise ---
-
-// Highest surface per texel, which is what a top-down ortho bake with a depth
-// test produces: for overhangs and for the seam where two shells meet, the roof
-// wins. Terrain the character walks on is the top surface.
+// highest surface per texel wins, same as a top-down ortho bake with a depth test
 const height = new Float64Array(resolution * resolution).fill(Number.NEGATIVE_INFINITY)
 
-// texel centre -> world, the exact inverse of heightUv() plus the sampler's
-// half-texel offset. Get this wrong by half a texel and every slope shifts.
+// exact inverse of heightUv() plus the sampler's half-texel offset; off by half
+// a texel and every slope shifts
 const texelSize = size / resolution
 const worldAt = i => origin[0] - halfSize + (i + 0.5) * texelSize
 const worldAtZ = j => origin[1] - halfSize + (j + 0.5) * texelSize
@@ -152,8 +125,7 @@ const worldAtZ = j => origin[1] - halfSize + (j + 0.5) * texelSize
 for (const t of triangles) {
   const [ax, ay, az, bx, by, bz, cx, cy, cz] = t
 
-  // barycentric setup in the XZ plane; a triangle seen edge-on from above has
-  // zero area there and covers no texel
+  // edge-on from above: zero XZ area, covers no texel
   const area = (bx - ax) * (cz - az) - (cx - ax) * (bz - az)
   if (Math.abs(area) < 1e-12) continue
   const inverseArea = 1 / area
@@ -171,8 +143,7 @@ for (const t of triangles) {
       const w0 = ((bx - px) * (cz - pz) - (cx - px) * (bz - pz)) * inverseArea
       const w1 = ((cx - px) * (az - pz) - (ax - px) * (cz - pz)) * inverseArea
       const w2 = 1 - w0 - w1
-      // a hair of slack, so a texel centre sitting exactly on a shared edge is
-      // claimed by one of the two triangles rather than by neither
+      // slack so a texel centre on a shared edge is claimed by one triangle, not neither
       if (w0 < -1e-9 || w1 < -1e-9 || w2 < -1e-9) continue
       const y = w0 * ay + w1 * by + w2 * cy
       const at = rowStart + i
@@ -181,9 +152,8 @@ for (const t of triangles) {
   }
 }
 
-// The height range has to come from what actually landed in the WINDOW. Using the
-// whole mesh's range would spend most of the 8-bit ladder on terrain that was
-// cropped away, which is the difference between 5 cm and 50 cm steps.
+// range from the window only: the full mesh range would spend the 8-bit ladder on
+// terrain that was cropped away
 if (sizeOverride || originOverride) {
   let windowMin = Infinity
   let windowMax = -Infinity
@@ -198,19 +168,15 @@ if (sizeOverride || originOverride) {
   }
 }
 
-// --- fill the texels no triangle claimed ---
-
-// A non-square level pads, so this can be half the map. Fill it the way the
-// sampler itself would: ClampToEdge outward, linear across an interior gap. Two
-// O(n) sweeps, rows then columns — the obvious iterative flood is O(n x resolution)
-// and takes billions of steps on a half-empty 2048 map.
+// Unclaimed texels filled like the sampler would (clamp outward, ramp across gaps).
+// Two O(n) sweeps; an iterative flood is O(n * resolution) on a half-empty map.
 let empty = 0
 for (let i = 0; i < height.length; i++) if (height[i] === Number.NEGATIVE_INFINITY) empty++
 
 if (empty) {
   const EMPTY = Number.NEGATIVE_INFINITY
 
-  // one line of the grid, gaps closed in place. `stride` walks a row or a column.
+  // stride 1 walks a row, stride resolution walks a column
   const fillLine = (start, stride, count) => {
     let previous = -1
     let any = false
@@ -219,11 +185,9 @@ if (empty) {
       if (height[at] === EMPTY) continue
       any = true
       if (previous === -1) {
-        // leading gap: clamp to the first known value
         for (let k = 0; k < n; k++) height[start + k * stride] = height[at]
       }
       else if (n - previous > 1) {
-        // interior gap: ramp between the two known ends
         const a = height[start + previous * stride]
         const b = height[at]
         const span = n - previous
@@ -233,7 +197,6 @@ if (empty) {
       }
       previous = n
     }
-    // trailing gap
     if (any && previous < count - 1) {
       const last = height[start + previous * stride]
       for (let k = previous + 1; k < count; k++) height[start + k * stride] = last
@@ -245,7 +208,7 @@ if (empty) {
   for (let j = 0; j < resolution; j++) {
     if (!fillLine(j * resolution, 1, resolution)) emptyRows.push(j)
   }
-  // rows that held nothing at all get their values down the columns instead
+  // rows with no samples at all are filled down the columns instead
   if (emptyRows.length) {
     for (let i = 0; i < resolution; i++) fillLine(i, resolution, resolution)
   }
@@ -254,8 +217,6 @@ if (empty) {
     if (height[i] === EMPTY) height[i] = minY
   }
 }
-
-// --- encode ---
 
 const range = maxY - minY || 1
 const grey = Buffer.alloc(resolution * resolution * 3)
@@ -269,8 +230,7 @@ for (let i = 0; i < height.length; i++) {
   grey[i * 3 + 1] = byte
   grey[i * 3 + 2] = byte
 
-  // 24-bit big-endian across r/g/b, matching the json's documented unpack:
-  // (r * 65536 + g * 256 + b) / 16777215
+  // must match unpackRgb in heightField.ts
   const value = Math.round(t * 16777215)
   packed[i * 3] = (value >> 16) & 0xFF
   packed[i * 3 + 1] = (value >> 8) & 0xFF
@@ -281,8 +241,7 @@ const stem = nameOverride ?? basename(glbPath).replace(/\.glb$/i, '')
 const base = join(outDir, `${stem}.height-${resolution}`)
 const pngOptions = { width: resolution, height: resolution, channels: 3 }
 
-// compressionLevel 9 and no dithering: this is data, and a dithered height map
-// reads as noise in the vertex shader
+// palette: false, this is data; a palettised PNG would quantise the heights
 await sharp(grey, { raw: pngOptions }).png({ compressionLevel: 9, palette: false }).toFile(`${base}.png`)
 await sharp(packed, { raw: pngOptions }).png({ compressionLevel: 9, palette: false }).toFile(`${base}.rgb.png`)
 

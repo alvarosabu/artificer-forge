@@ -1,6 +1,4 @@
-// Game scene configuration shared between the engine's <Game> host and the app.
-// The engine ships sane defaults; the app overrides them (e.g. from a debug GUI)
-// via provideGameConfig() at a level above <Game>, which reads it with useGameConfig().
+// provideGameConfig() must run above <Game>, which reads it with useGameConfig().
 
 import { inject, provide, reactive, type InjectionKey } from 'vue'
 
@@ -17,13 +15,11 @@ export interface DofConfig {
   enabled: boolean
   /** Depth band (world units) around the focus plane before a fragment is fully blurred. */
   focalLength: number
-  /** Blur radius multiplier. */
   bokehScale: number
-  /** Fallback focus depth when nothing has claimed the focus (no party leader in scene). */
+  /** Focus depth when nothing has claimed the focus. */
   focusDistance: number
-  /** Y offset added to the focus target origin (character origin is at the feet). */
+  /** Added to the focus target's Y (character origin is at the feet). */
   focusHeight: number
-  /** Exponential smoothing rate for the tracked focus depth. */
   smoothing: number
   /** Scale of the CoC + bokeh passes. 0.5 ~ three's stock chain, 0.25 = quarter res. */
   resolutionScale: number
@@ -34,7 +30,7 @@ export interface OutlinePreset {
   edgeThickness: number
 }
 
-/** See EffectComposer's AntialiasMode: msaa = 4x on the scene pass (expensive), fxaa = cheap post AA, none. */
+/** Must match EffectComposer's AntialiasMode. */
 export type AntialiasMode = 'msaa' | 'fxaa' | 'none'
 
 export interface GameConfig {
@@ -50,8 +46,8 @@ export function defaultGameConfig(): GameConfig {
   return {
     antialias: 'msaa',
     bloom: { strength: 0.7, radius: 0.4, threshold: 0.8, smoothWidth: 0.3, resolutionScale: 0.5 },
-    // Off by default: on a top-down camera the whole play area sits near one depth,
-    // so DOF reads as tilt-shift. Scenes opt in and tune the band per look.
+    // Off by default: a top-down camera puts the whole play area near one depth,
+    // so DOF reads as tilt-shift.
     dof: { enabled: false, focalLength: 6, bokehScale: 2, focusDistance: 15, focusHeight: 1, smoothing: 8, resolutionScale: 0.25 },
     outlinePresets: {
       party: { visibleEdgeColor: '#00e5ff', edgeThickness: 3 },
@@ -63,11 +59,7 @@ export function defaultGameConfig(): GameConfig {
   }
 }
 
-/**
- * Provide a reactive GameConfig to descendant <Game> hosts. Returns the reactive
- * object so callers can keep its fields in sync with their own sources (debug GUI,
- * settings store, …). Omitted fields fall back to engine defaults.
- */
+/** Returns the reactive object so a debug GUI can keep mutating it after provide. */
 export function provideGameConfig(overrides: Partial<GameConfig> = {}): GameConfig {
   const base = defaultGameConfig()
   const config = reactive<GameConfig>({
@@ -80,7 +72,6 @@ export function provideGameConfig(overrides: Partial<GameConfig> = {}): GameConf
   return config
 }
 
-/** Read the provided GameConfig, falling back to engine defaults when none is provided. */
 export function useGameConfig(): GameConfig {
   return inject(GAME_CONFIG_KEY, undefined) ?? reactive(defaultGameConfig())
 }

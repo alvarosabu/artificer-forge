@@ -4,7 +4,7 @@ import { provide, inject, shallowRef, type InjectionKey, type ShallowRef } from 
 type Object3DLike = any
 
 export interface DofFocusApi {
-  /** The object the depth-of-field pass keeps in focus; null = fall back to the fixed focusDistance. */
+  /** null = the pass falls back to its fixed focusDistance. */
   target: ShallowRef<Object3DLike | null>
   setFocusTarget: (object: Object3DLike | null) => void
   /** Clears the target only if it is still `object`, so a stale unmount cannot drop a newer target. */
@@ -13,11 +13,6 @@ export interface DofFocusApi {
 
 export const DofFocusKey: InjectionKey<DofFocusApi> = Symbol('dof-focus')
 
-/**
- * Provider for the depth-of-field focus target.
- * Used by Game.vue so any scene object (the party leader, a dialog speaker, …)
- * can claim the focus without knowing about the render pipeline.
- */
 export function useDofFocusProvider() {
   const target = shallowRef<Object3DLike | null>(null)
 
@@ -34,10 +29,7 @@ export function useDofFocusProvider() {
   return api
 }
 
-/**
- * Consumer hook. Returns null when no provider exists so components stay usable
- * in scenes without post-processing.
- */
+/** null when no provider exists, so scenes without post-processing still work. */
 export function useDofFocus(): DofFocusApi | null {
   return inject(DofFocusKey, null)
 }

@@ -32,15 +32,12 @@ watch(() => props.stemColor, val => setColor(uniforms.stemColor, val))
 watch(() => props.centerColor, val => setColor(uniforms.centerColor, val))
 watch(() => props.height, (val) => { if (val !== undefined) uniforms.height.value = val })
 watch(() => props.headSize, (val) => { if (val !== undefined) uniforms.headSize.value = val })
-// coverage is baked and sorted, so density only moves the draw count. No rebuild
-// either way: on the shader fallback it is still just a threshold.
 watch(() => props.density, (val) => { setDensity(val ?? 0.55) })
-// texture reference is swappable; presence/absence is decided at creation (remount to switch modes)
+// presence is fixed at creation; remount to add or remove a map
 watch(() => props.densityMap, (val) => {
   if (val && uniforms.densityMap) uniforms.densityMap.value = val
 })
-// the band feeds the bake, so this re-sorts and re-uploads the instance buffer.
-// Cheap enough for a slider drag, not for a per-frame animation.
+// re-sorts and re-uploads the instance buffer; fine for a slider, not per frame
 watch([() => props.maskLow, () => props.maskHigh], ([low, high]) => {
   setMaskBand(low ?? 0.25, high ?? 0.6)
 })
@@ -54,8 +51,7 @@ onUnmounted(dispose)
 </script>
 
 <template>
-  <!-- A following field is centred on the camera target, so it is never off screen
-       and the origin-centred bounding sphere would only cull it by mistake -->
+  <!-- a following field is never off screen; the origin-centred bounding sphere would only cull it by mistake -->
   <TresMesh
     :geometry="geometry"
     :material="material"

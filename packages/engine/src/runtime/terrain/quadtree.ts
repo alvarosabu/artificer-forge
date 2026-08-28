@@ -1,43 +1,22 @@
-/**
- * A distance-driven quadtree over the level's XZ square. No geometry and no Three
- * types in here on purpose: it answers one question — "which squares, at which
- * sizes, cover the level from where the camera is standing?" — and the mesh layer
- * turns that answer into instances.
- *
- * Rebuilt from scratch every frame. That sounds expensive and is not: the whole
- * traversal is a few hundred float compares, and the node objects come out of a
- * pool, so a frame allocates nothing once the pool has warmed up. The alternative
- * (an incremental tree that patches itself) costs more code than it saves work.
- */
+// Which squares, at which sizes, cover the level from the camera's position. Rebuilt
+// every frame from a node pool: a few hundred compares and no allocations once warm,
+// which is cheaper than an incremental tree that patches itself.
 
-/** One leaf of the tree: an axis-aligned square in world XZ, at its LOD depth. */
+/** leaf square in world XZ; x/z are the minimum corner, not the centre */
 export interface QuadtreeNode {
-  /** world X of the square's minimum corner */
   x: number
-  /** world Z of the square's minimum corner */
   z: number
-  /** edge length in metres */
   size: number
-  /** 0 is the whole level; each level down halves the size */
   depth: number
 }
 
 export interface QuadtreeSettings {
-  /** edge length of the root square, in metres */
   size: number
-  /** world XZ centre of that square */
+  /** world XZ centre, not corner */
   origin?: [number, number]
-  /**
-   * How many times a square may split. The finest node is size / 2^maxDepth, and
-   * pushing that below the height map's texel size buys vertices that all sample
-   * the same texels.
-   */
+  /** finest node is size / 2^maxDepth; going below the height map texel size buys nothing */
   maxDepth?: number
-  /**
-   * Split radius as a multiple of the node's own edge. A node splits when the
-   * camera is closer than `splitFactor * size` to it, so the whole tree scales
-   * with itself: raise this for more detail further out, at more triangles.
-   */
+  /** a node splits when the camera is within splitFactor * size of it */
   splitFactor?: number
 }
 
@@ -46,14 +25,9 @@ export interface Quadtree {
   origin: [number, number]
   maxDepth: number
   splitFactor: number
-  /**
-   * The leaves from the last update. Pooled and reused, so only the first `count`
-   * entries are live and the array must be read, never held.
-   */
+  /** pooled; only the first `count` entries are live, so read it, never hold it */
   nodes: QuadtreeNode[]
-  /** how many entries of `nodes` the last update filled */
   count: number
-  /** re-run the traversal for a camera at this world XZ; returns the new count */
   update: (cameraX: number, cameraZ: number) => number
 }
 
@@ -77,8 +51,6 @@ export function createQuadtree({
   }
 
   function emit(x: number, z: number, nodeSize: number, depth: number) {
-    // grow the pool once, then only ever overwrite: a frame that needs more nodes
-    // than the last one is the only frame that allocates
     const existing = nodes[tree.count]
     if (existing) {
       existing.x = x
@@ -98,10 +70,8 @@ export function createQuadtree({
       return
     }
 
-    // Distance to the NEAREST POINT of the square, not to its centre. Centre
-    // distance is what makes the node you are standing on refuse to split: for a
-    // big node the camera can be inside it and still be further from the middle
-    // than the split radius.
+    // distance to the nearest point of the square, not its centre: centre distance
+    // stops the node the camera stands in from splitting
     const nearestX = cameraX < x ? x : cameraX > x + nodeSize ? x + nodeSize : cameraX
     const nearestZ = cameraZ < z ? z : cameraZ > z + nodeSize ? z + nodeSize : cameraZ
     const dx = cameraX - nearestX

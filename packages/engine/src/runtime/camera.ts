@@ -1,6 +1,3 @@
-// Per-scene camera override forwarded from <Game> to the default CameraController.
-// Shared so the host (Game.vue), the controller, and app-level wrappers agree on
-// one shape instead of redeclaring it.
 export interface CameraControllerProps {
   position?: [number, number, number]
   lookAt?: [number, number, number]
@@ -20,7 +17,6 @@ export interface CameraControllerProps {
   followSmoothing?: number
 }
 
-// Public alias used by <Game> and app-level wrappers.
 export type CameraProps = CameraControllerProps
 
 type CameraDefaults = Required<Pick<
@@ -29,9 +25,7 @@ type CameraDefaults = Required<Pick<
   | 'maxDistance' | 'minDistance' | 'follow' | 'followHeight' | 'followSmoothing'
 >>
 
-// The controller's fallbacks live here rather than only in withDefaults() so a
-// debug GUI can seed its sliders from the same numbers instead of a second copy
-// that drifts.
+// Kept out of withDefaults() so a debug GUI can seed its sliders from the same numbers.
 export const CAMERA_DEFAULTS: CameraDefaults = {
   position: [12.86, 12.57, 15.52],
   near: 0.1,

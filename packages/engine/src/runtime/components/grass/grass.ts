@@ -21,30 +21,17 @@ const BLADE_DEFAULTS = {
   shadowIntensity: 0.5,
 }
 
-/**
- * The blade template, at two levels of detail. Same unit space either way: x spans
- * ±1 (scaled by bladeWidth), y spans 0-1 (scaled by height).
- *
- * `curved` is 5 verts / 3 triangles — a mid-width pair at 70% height carrying a
- * partial wind weight, so the blade BENDS along its length. `flat` is Bruno's
- * blade: 3 verts, one triangle, hinging from the base.
- *
- * Which to use is a real budget decision, not a default to pick blindly. The
- * blade count is the same either way; only the triangles differ, 3x. At the
- * densities a following field runs (10+ blades per m²) an individual silhouette
- * is around a pixel wide, so the mid-width is invisible and `flat` is close to
- * free. Sparse, tall, or close-up grass is where the curve earns its keep.
- */
+// `curved` (3 tris) bends along its length, `flat` (1 tri) hinges at the base. Same blade
+// count either way; at 10+ blades/m² a blade is ~1px wide, so `flat` is the free choice there.
 const BLADE_TEMPLATES = {
   curved: {
     positions: new Float32Array([
-      -1, 0, 0, // bottom-left
-      1, 0, 0, // bottom-right
-      -0.5, 0.7, 0, // mid-left
-      0.5, 0.7, 0, // mid-right
-      0, 1, 0, // tip
+      -1, 0, 0,
+      1, 0, 0,
+      -0.5, 0.7, 0,
+      0.5, 0.7, 0,
+      0, 1, 0,
     ]),
-    // base static, mid partial, tip full → the blade curves instead of hinging
     windWeight: new Float32Array([0, 0, 0.7, 0.7, 1]),
     indices: [0, 1, 2, 1, 3, 2, 2, 3, 4],
   },
@@ -67,11 +54,7 @@ export interface GrassOptions extends WindSettings {
     colorA: TresColor
     colorB: TresColor
     diffuseMap?: Texture | null
-    /**
-     * World extent the diffuse map spans, defaulting to `size`. A field that
-     * follows the character is far smaller than the level, so the splat that tints
-     * it has to be mapped over the level instead of over the window.
-     */
+    /** World extent the diffuse map spans (default `size`). A following field must map the splat over the level, not the window. */
     diffuseMapSize?: number
     trample?: TrampleMap | null
     grading?: GradingContext | null
@@ -79,36 +62,19 @@ export interface GrassOptions extends WindSettings {
     control?: ControlMap | null
     maskLow?: number
     maskHigh?: number
-    /**
-     * With a focus the field becomes a `size` x `size` window that rides along with
-     * it, instead of a patch pinned to the origin. Blades stay on their world
-     * lattice; only which copy of it is drawn changes.
-     */
+    /** Turns the field into a `size` x `size` window that follows the focus. See scatter/focus. */
     focus?: ScatterFocus | null
-    /**
-     * Triangles per blade: `curved` = 3, `flat` = 1. See BLADE_TEMPLATES — this is
-     * the only lever that cuts grass triangles without touching blade density.
-     */
+    /** The only lever that cuts triangles without changing blade density. See BLADE_TEMPLATES. */
     bladeDetail?: BladeDetail
     /**
-     * Punches a hole of this window size out of the middle of the field, ramping in
-     * across the same band a field of that size fades out over.
-     *
-     * This is how a detail RING is built: a small `curved` field for the ground the
-     * camera is actually close to, and a wide `flat` one with `innerSize` set to the
-     * small field's `size`. The weights are exact complements, so give both the same
-     * blades per square metre and the lawn has one continuous height across the
-     * handover — only the triangles per blade change. Blades inside the hole are
-     * punted by the early-out, so they cost one texture fetch.
+     * Hole of this window size in the middle, fading in over the band a field of that size
+     * fades out over. Set it to the inner ring's `size` and give both rings the same blades per m².
      */
     innerSize?: number
-    /** blade half-width in world units, before the mask scales it */
+    /** half-width: the template spans x = ±1 */
     bladeWidth?: number
-    /** tallest blade in world units, before the per-blade random and patch noise */
     bladeHeight?: number
-    /** 0 = every blade the full height, 1 = each blade's own random fraction of it */
     bladeHeightRandomness?: number
-    /** how dark the blade base sits against its tip */
     shadowIntensity?: number
 }
 
@@ -119,7 +85,7 @@ export function createGrassGeometry(options: GrassOptions) {
   const anchors = new Float32Array(count * 2)
   const randoms = new Float32Array(count)
   const yaws = new Float32Array(count)
-  // anchor-only noises baked at build time instead of per-vertex in the shader
+  // baked here instead of per-vertex in the shader
   const heightNoises = new Float32Array(count)
   const colorNoises = new Float32Array(count)
   const noise = new ImprovedNoise()
@@ -128,21 +94,18 @@ export function createGrassGeometry(options: GrassOptions) {
     for (let iZ = 0; iZ < subdivisions; iZ++) {
       const i = iX * subdivisions + iZ
 
-      // cell center + jitter
       anchors[i * 2] = (iX + 0.5) / subdivisions * size - size / 2 + (Math.random() - 0.5) * fragmentSize
       anchors[i * 2 + 1] = (iZ + 0.5) / subdivisions * size - size / 2 + (Math.random() - 0.5) * fragmentSize
       randoms[i] = Math.random()
       yaws[i] = Math.random() * Math.PI * 2
-      // perlin patchiness, remapped like the old shader noise: height [0.5, 1.5], color [0, 1]
+      // height noise in [0.5, 1.5], color noise in [0, 1]
       heightNoises[i] = noise.noise(anchors[i * 2] * 0.0321, anchors[i * 2 + 1] * 0.0321, 0) * 0.5 + 1
       colorNoises[i] = noise.noise(anchors[i * 2] * 0.02, anchors[i * 2 + 1] * 0.02, 0) * 0.5 + 0.5
     }
   }
 
-  // Coverage here is the bare control mask: no patch noise, no jitter. Blades where
-  // it collapses to nothing already get punted out of view in the vertex stage, so
-  // sorting by mask and drawing only the live prefix removes them from the dispatch
-  // without changing a pixel. Over half this field is road, water and off-band.
+  // Sort by control mask and draw only the live prefix. The vertex stage punts those blades
+  // anyway, so this only removes dead work (over half the field is road, water and off-band).
   const bake = createScatterBake({
     count,
     anchors,
@@ -155,8 +118,7 @@ export function createGrassGeometry(options: GrassOptions) {
     control: options.control,
     maskLow: options.maskLow ?? 0.25,
     maskHigh: options.maskHigh ?? 0.6,
-    // a following field has no static term at all — coverage here IS the mask, and
-    // the mask moves with the window — so this declines and every blade is drawn
+    // the mask moves with the window, so a following field cannot be pre-sorted; every blade is drawn
     moving: !!options.focus,
   })
 
@@ -166,7 +128,6 @@ export function createGrassGeometry(options: GrassOptions) {
   geometry.setIndex([...blade.indices])
   geometry.setAttribute('position', new BufferAttribute(blade.positions, 3))
   geometry.setAttribute('windWeight', new BufferAttribute(blade.windWeight, 1))
-  // held so a mask-band change can re-upload them after a re-sort
   const instanced = [
     new InstancedBufferAttribute(anchors, 2),
     new InstancedBufferAttribute(randoms, 1),
@@ -179,7 +140,7 @@ export function createGrassGeometry(options: GrassOptions) {
   geometry.setAttribute('yaw', instanced[2])
   geometry.setAttribute('heightNoise', instanced[3])
   geometry.setAttribute('colorNoise', instanced[4])
-  // real bounds (field half-diagonal + sway/height margin) so frustum culling can skip the draw
+  // half-diagonal plus a sway/height margin, so frustum culling can skip the draw
   geometry.boundingSphere = new Sphere(new Vector3(), (size / 2) * Math.SQRT2 + 2)
 
   const rebake = (low: number, high: number) => {
@@ -212,25 +173,22 @@ export function buildGrassMaterial(options: {
   shadowIntensity: UniformNode<'float', number>,
 }) {
     const { colorAUniform, colorBUniform, windUniforms, diffuseMap, diffuseMapSize, trample, grading, heightField, control, maskLow, maskHigh, size, focus, innerSize, bladeWidth, bladeHeight, bladeHeightRandomness, shadowIntensity } = options
-    // graded blades catch drop shadows — Lambert base only so the catcher runs
+    // Lambert only so the drop-shadow catcher runs
     const material = grading ? new MeshLambertNodeMaterial() : new MeshBasicNodeMaterial()
     material.side = DoubleSide
     const grassWindOffset = windOffset(windUniforms)
 
     const anchor = attribute<'vec2'>('anchor', 'vec2')
     const windWeight = attribute<'float'>('windWeight', 'float')
-    // the blade's world XZ after the follow wrap, carried to the fragment stage so
-    // the diffuse splat is sampled at the position the blade actually stands on
+    // post-wrap XZ, so the diffuse splat is sampled where the blade actually stands
     const bladeXZ = varying(vec2(), 'bladeXZ')
 
-    // patchiness noises are anchor-only, baked into instanced attributes at build time
     const groundColor = mix(colorAUniform, colorBUniform, attribute<'float'>('colorNoise', 'float'))
 
     material.positionNode = Fn(() => {
         const random = attribute<'float'>('random', 'float')
         const yaw = attribute<'float'>('yaw', 'float')
 
-        // with a focus the lattice anchor is folded into the window around it
         const worldXZ = (focus ? followAnchor(focus, anchor, size) : anchor).toVar()
         bladeXZ.assign(worldXZ)
 
@@ -238,28 +196,20 @@ export function buildGrassMaterial(options: {
           texture(control.texture, controlUv(control.uniforms, worldXZ))
               .g.smoothstep(maskLow, maskHigh).toVar()
         : float(1).toVar()
-        // Blades sink into the ground towards the wrap boundary rather than popping
-        // out of existence on it. Applied to width AND height, so they shrink away.
-        // With innerSize the same ramp runs inwards too, carving out the hole the
-        // finer ring fills.
+        // blades shrink into the ground at the wrap boundary instead of popping;
+        // innerSize runs the same ramp inwards to carve the hole the finer ring fills
         let fadeNode = focus ? followFade(focus, worldXZ, size) : null
         if (fadeNode && innerSize) fadeNode = fadeNode.mul(followFadeIn(focus!, worldXZ, innerSize))
         const fade = fadeNode ? fadeNode.toVar() : null
         if (fade) visible.mulAssign(fade)
 
-        // Everything past this point is skipped for a blade the mask has already
-        // killed. That matters because the CPU bake CANNOT cull a following field
-        // (see scatter/density) — over 90% of a window can be road, water and bare
-        // dirt, and every one of those blades used to run the whole program before
-        // being punted. The branch is worth taking here even on a GPU: instances are
-        // laid out in lattice order, so neighbours are spatially adjacent and the
-        // mask is coherent — a subgroup is almost always all-dead or all-alive.
+        // Early-out: the CPU bake cannot cull a following field (see scatter/density), so dead
+        // blades skip the rest here. Lattice order keeps the mask coherent, so the branch is cheap.
         const pos = vec3(0, PUNT_Y, 0).toVar()
 
         If(visible.greaterThanEqual(MASK_EPSILON), () => {
             const trampleAmt = trample ? texture(trample.texture, trampleUv(trample.uniforms, worldXZ)).r.toVar() : null
 
-            // height: per-blade random × perlin patchiness, crushed where trampled
             const heightVariation = attribute<'float'>('heightNoise', 'float')
             let height = bladeHeight
               .mul(mix(1, random, bladeHeightRandomness))
@@ -269,7 +219,6 @@ export function buildGrassMaterial(options: {
             if (fade) height = height.mul(fade)
             height = height.toVar()
 
-            // unit blade → world scale, spun around its own base by the per-blade yaw
             const local = vec3(
               positionGeometry.x.mul(bladeWidth).mul(visible),
               positionGeometry.y.mul(height),
@@ -280,18 +229,14 @@ export function buildGrassMaterial(options: {
             pos.assign(vec3(local.x.add(worldXZ.x), local.y, local.z.add(worldXZ.y)))
             if (heightField) pos.y.addAssign(sampleHeight(heightField, worldXZ))
 
-            // wind: taller blades sway more, weight curves the blade along its length.
-            // Trampled blades are pinned down, so damp their sway too
             let windVec = grassWindOffset(worldXZ).mul(height).mul(2)
             if (trampleAmt) windVec = windVec.mul(trampleAmt.oneMinus())
             windVec = windVec.toVar()
             pos.addAssign(vec3(windVec.x.mul(windWeight), 0, windVec.y.mul(windWeight)))
-            // blades bend rather than stretch: drop by the arc approximation |w|²/2h,
-            // clamped so extreme gusts don't flatten them; weight² so the tip drops most
+            // arc approximation |w|²/2h so blades bend instead of stretching; the clamp keeps gusts from flattening them
             const droop = windVec.dot(windVec).div(height.mul(2).max(1e-4)).min(height.mul(0.35))
             pos.y.subAssign(droop.mul(windWeight).mul(windWeight))
 
-            // live interactor: blades part radially away from the character under them
             if (trample) {
               const toBlade = worldXZ.sub(trample.uniforms.interactor)
               const dist = toBlade.length().max(1e-3)
@@ -304,20 +249,16 @@ export function buildGrassMaterial(options: {
         return pos
     })()
 
-    // The splat is mapped over `diffuseMapSize` of WORLD, not over the field: a
-    // following field is a window a few dozen metres wide, and tiling the whole
-    // splat inside it would turn the level's colour variation into wallpaper.
     const diffuseMapNode = diffuseMap
       ? texture(diffuseMap, bladeXZ.div(diffuseMapSize).add(0.5))
       : null
 
-    // sampled at the anchor only → constant across the blade (flat color per blade)
+    // evaluated in the vertex stage: one flat colour per blade
     const base = varying(diffuseMapNode ? diffuseMapNode.rgb : groundColor)
 
     if (grading) {
-        // blade normals after wind/trample bending are noisy — skip core shadows.
-        // Root darkening routes through the finish's AO (tints toward shadowColor,
-        // re-grades with the cycle) instead of the legacy gray multiply
+        // bent-blade normals are noisy, so no core shadows; root darkening goes through
+        // the finish AO so it re-grades with the day cycle
         const rootAo = varying(windWeight).oneMinus().mul(shadowIntensity).oneMinus()
         const dropShadow = createDropShadowCatcher()
         material.receivedShadowNode = dropShadow.receivedShadowNode
@@ -327,7 +268,7 @@ export function buildGrassMaterial(options: {
         const ao = varying(windWeight).oneMinus().mul(shadowIntensity)
         material.colorNode = mix(base, base.mul(0.35), ao)  // 0.35 = shadow darkness, tune in leches
     }
-    // the node comes back out so a texture swap can reach it without a rebuild
+    // returned so a texture swap can reach it without a rebuild
     return { material, diffuseMapNode }
 }
 
@@ -338,9 +279,7 @@ export function createGrass(options: GrassOptions) {
     const maskLow = uniform(options.maskLow ?? 0.25)
     const maskHigh = uniform(options.maskHigh ?? 0.6)
     const windUniforms = createWindUniforms(options)
-    // per-field, NOT module-level: two rings of the same lawn want their own blade
-    // width (a flat blade reads thinner at distance than a curved one), and a scene
-    // with two unrelated grass fields must be able to size them independently
+    // per-field, not module-level: two rings of one lawn need different blade widths
     const bladeWidth = uniform(options.bladeWidth ?? BLADE_DEFAULTS.width)
     const bladeHeight = uniform(options.bladeHeight ?? BLADE_DEFAULTS.height)
     const bladeHeightRandomness = uniform(options.bladeHeightRandomness ?? BLADE_DEFAULTS.heightRandomness)
@@ -366,8 +305,7 @@ export function createGrass(options: GrassOptions) {
       bladeHeightRandomness,
       shadowIntensity,
     })
-    // the mask alone decides the draw count, and MASK_EPSILON is the same cutoff the
-    // vertex stage punts at — so every blade dropped here was already invisible
+    // MASK_EPSILON is the same cutoff the vertex stage punts at, so nothing visible is dropped
     const applyMaskBand = () => {
       if (bake.coverage) geometry.instanceCount = bake.countFor(MASK_EPSILON)
     }

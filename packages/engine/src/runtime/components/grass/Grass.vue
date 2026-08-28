@@ -24,18 +24,16 @@ const { geometry, material, uniforms, setMaskBand, dispose } = createGrass(props
 
 watch(() => props.colorA, (val) => uniforms.colorA.value.set(new Color(val as ColorRepresentation)))
 watch(() => props.colorB, (val) => uniforms.colorB.value.set(new Color(val as ColorRepresentation)))
-// texture reference is swappable; presence/absence is decided at creation (remount to switch modes)
+// swap only; adding or removing the map needs a remount
 watch(() => props.diffuseMap, (val) => {
   if (val && uniforms.diffuseMap) uniforms.diffuseMap.value = val
 })
-// the band feeds the mask bake, so this re-sorts and re-uploads the instance buffer.
-// Cheap enough for a slider drag, not for a per-frame animation.
+// re-sorts and re-uploads the instance buffer: fine for a slider, not per frame
 watch([() => props.maskLow, () => props.maskHigh], ([low, high]) => {
   setMaskBand(low ?? 0.25, high ?? 0.6)
 })
 watch(() => props.windAngle, (angle) => uniforms.wind.direction.value.set(Math.sin(angle), Math.cos(angle)))
 watch(() => props.windStrength, (val) => { uniforms.wind.strength.value = val })
-// blade shape is pure uniforms — safe to drag, no rebuild
 watch(() => props.bladeWidth, (val) => { if (val !== undefined) uniforms.bladeWidth.value = val })
 watch(() => props.bladeHeight, (val) => { if (val !== undefined) uniforms.bladeHeight.value = val })
 watch(() => props.bladeHeightRandomness, (val) => { if (val !== undefined) uniforms.bladeHeightRandomness.value = val })
@@ -48,8 +46,7 @@ onUnmounted(dispose)
 </script>
 
 <template>
-  <!-- A following field is centred on the camera target, so it is never off screen
-       and the origin-centred bounding sphere would only cull it by mistake -->
+  <!-- a following field never leaves the screen, and the origin-centred bounds would cull it by mistake -->
   <TresMesh
     :geometry="geometry"
     :material="material"

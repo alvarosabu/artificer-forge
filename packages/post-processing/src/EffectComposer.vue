@@ -45,19 +45,15 @@ export interface DofConfig {
 }
 
 /**
- * How the scene pass is anti-aliased.
- * - msaa: the pass target inherits the renderer's sample count (4x). Correct edges, but
- *   the HalfFloat MSAA target costs several ms at full res, and any depth consumer
- *   (DOF) forces a full-res multisampled depth resolve on top.
- * - fxaa: single-sample pass, FXAA at the very end of the chain on the display-referred image.
- * - none: single-sample pass, no anti-aliasing.
+ * msaa inherits the renderer's 4x samples on a HalfFloat target, and any depth
+ * consumer (DOF) then forces a full-res multisampled depth resolve on top.
  */
 export type AntialiasMode = 'msaa' | 'fxaa' | 'none'
 
 const props = withDefaults(defineProps<{
   outlinePresets?: Record<string, OutlinePreset>
   bloom?: BloomConfig
-  /** Depth of field. Pass undefined to leave the pass out of the pipeline entirely. */
+  /** undefined leaves the DOF pass out of the graph entirely. */
   dof?: DofConfig
   antialias?: AntialiasMode
 }>(), {
@@ -75,7 +71,6 @@ const { onBeforeRender } = useLoop()
 const postProcessing = shallowRef<RenderPipeline | null>(null)
 
 // The pass graph is compiled once, so adding or removing DOF means a rebuild.
-// Watchers created inside a build are stopped before the next one.
 let buildWatchers: WatchStopHandle[] = []
 
 const dofFocusDistance = uniform(10)
@@ -86,9 +81,8 @@ const targetWorld = new Vector3()
 const camWorld = new Vector3()
 const camForward = new Vector3()
 
-// Focus depth is the distance along the camera axis, not the euclidean distance:
-// the node compares against -viewZ, so distanceTo() drifts the focus off the
-// target near the screen edges.
+// Distance along the camera axis, not euclidean: the node compares against -viewZ,
+// so distanceTo() drifts the focus off the target near the screen edges.
 onBeforeRender(({ delta, camera: active }) => {
   if (!props.dof) return
   const cam = toValue(active)
@@ -116,12 +110,10 @@ function buildPipeline(sceneObj: Scene, cameraObj: Camera) {
   const webgpuRenderer = renderer.instance as unknown as WebGPURenderer
 
   const renderPipeline = new RenderPipeline(webgpuRenderer)
-  // Without an explicit samples count the pass inherits the renderer's 4x MSAA,
-  // paid on a HalfFloat target. See AntialiasMode.
+  // Without explicit samples the pass inherits the renderer's 4x MSAA. See AntialiasMode.
   const scenePass = props.antialias === 'msaa' ? pass(sceneObj, cameraObj) : pass(sceneObj, cameraObj, { samples: 1 })
   const scenePassColor = scenePass.getTextureNode('output')
 
-  // Build one outline pass per preset and accumulate outline color
   let composedOutline: any = null
 
 //     for (const [name, preset] of Object.entries(props.outlinePresets)) {
@@ -155,15 +147,13 @@ function buildPipeline(sceneObj: Scene, cameraObj: Camera) {
 //       )
 //     }
 
-  // Compose output: scene -> dof -> outlines -> bloom. DOF runs on the raw scene
-  // colour: blurring after bloom smears the glow across depth edges, and
-  // outlines/bloom are screen-space overlays that should stay sharp.
+  // Order: scene -> dof -> outlines -> bloom. DOF blurs the raw scene only: after
+  // bloom it would smear the glow across depth edges, and the overlays must stay sharp.
   let sceneColor: any = scenePassColor
 
   if (props.dof) {
     dofFocalLength.value = props.dof.focalLength ?? 4
     dofBokehScale.value = props.dof.bokehScale ?? 2
-    // getViewZNode reads the pass's own depth attachment: no extra scene render.
     const dofPass = scaledDof(scenePassColor, scenePass.getViewZNode(), dofFocusDistance, dofFocalLength, dofBokehScale, props.dof.resolutionScale ?? 0.25)
     sceneColor = dofPass
 
@@ -208,9 +198,8 @@ function buildPipeline(sceneObj: Scene, cameraObj: Camera) {
     outputNode = outputNode.add(bloomPass)
   }
 
-  // Apply tone mapping + color space at the end from the renderer settings.
-  // FXAA has to see the display-referred image (it thresholds on perceived luma),
-  // so with fxaa the output transform always moves into the graph, before it.
+  // FXAA thresholds on perceived luma, so it must run after the output transform,
+  // which then has to move into the graph.
   const rendererToneMapping = webgpuRenderer.toneMapping
   const useFxaa = props.antialias === 'fxaa'
   if (rendererToneMapping !== NoToneMapping || useFxaa) {
@@ -220,7 +209,7 @@ function buildPipeline(sceneObj: Scene, cameraObj: Camera) {
   if (useFxaa) outputNode = fxaa(outputNode)
   renderPipeline.outputNode = outputNode
   postProcessing.value = renderPipeline
-  // PERF TEST instrumentation — remove when done
+  // PERF TEST instrumentation, remove when done
   console.info('[EffectComposer] pipeline built (src)', { antialias: props.antialias, bloomScale: props.bloom?.resolutionScale ?? 0.5, dof: !!props.dof, dofScale: props.dof?.resolutionScale ?? 0.25, outline: 'disabled' })
   renderer.replaceRenderFunction((notifySuccess) => {
     renderPipeline.render()
@@ -228,11 +217,8 @@ function buildPipeline(sceneObj: Scene, cameraObj: Camera) {
   })
 }
 
-// The anti-alias mode is fixed at first build. Materials that read scene depth
-// (viewportDepthTexture, e.g. the water) cache a GPU depth copy with the sample
-// count of the first scene pass and only recreate it on resize, so rebuilding
-// the pass with a different sample count leaves them binding a mismatched
-// texture and the frame goes black. A change needs a page reload.
+// Fixed at first build: depth readers (viewportDepthTexture, e.g. water) cache a depth
+// copy at the first pass's sample count, so rebuilding with another count goes black.
 watch(() => props.antialias, (mode, previous) => {
   if (postProcessing.value && mode !== previous) {
     console.warn(`[EffectComposer] antialias changed to "${mode}" after the pipeline was built; reload to apply.`)
@@ -243,8 +229,7 @@ watch(
   [scene, camera.activeCamera, () => !!props.dof],
   ([currentScene, currentCamera, wantsDof], previous) => {
     if (!currentScene || !currentCamera) return
-    // Build once; later scene/camera ref flips are ignored as before. Only a
-    // DOF toggle tears the compiled graph down and rebuilds it.
+    // Scene/camera ref flips are ignored; only a DOF toggle rebuilds the graph.
     if (postProcessing.value && wantsDof === previous?.[2]) return
     disposePipeline()
     buildPipeline(currentScene as unknown as Scene, currentCamera as unknown as Camera)
@@ -256,5 +241,4 @@ onUnmounted(disposePipeline)
 </script>
 
 <template>
-  <!-- Renderless component -->
 </template>

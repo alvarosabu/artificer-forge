@@ -9,19 +9,8 @@ import type { ControlMap } from './controlMap'
 import type { GradingContext } from '../grading/grading'
 import { createQuadtree, type Quadtree } from './quadtree'
 
-/**
- * One node's worth of grid, in unit space: x and z run 0..1, y is flat, and the
- * vertex shader stretches it over whichever square the quadtree hands it.
- *
- * The grid carries ONE extra ring of vertices on every side, clamped back onto the
- * border and flagged `skirt = 1`. The shader drops that ring straight down, which
- * plugs the crack where a fine node meets a coarse one — the two edges disagree by
- * up to the coarse node's sampling error, and a vertical curtain under both of them
- * covers the gap without anyone needing to know their neighbour's depth.
- *
- * Clamping is what makes it free: a skirt vertex sits at exactly the same XZ as the
- * border vertex above it, so the ring adds no footprint and no seam of its own.
- */
+// Unit grid for one node, stretched over its square in the vertex shader. The extra
+// ring (`skirt = 1`) is clamped onto the border and dropped by the shader to plug LOD cracks.
 function createNodeGrid(segments: number): BufferGeometry {
   const side = segments + 3 // interior grid (segments + 1) plus a ring on each side
   const count = side * side
@@ -31,7 +20,6 @@ function createNodeGrid(segments: number): BufferGeometry {
   const skirt = new Float32Array(count)
 
   for (let j = 0; j < side; j++) {
-    // the ring indices (-1/segments and (segments+1)/segments) clamp onto the edge
     const v = Math.min(Math.max((j - 1) / segments, 0), 1)
     for (let i = 0; i < side; i++) {
       const u = Math.min(Math.max((i - 1) / segments, 0), 1)
@@ -39,9 +27,8 @@ function createNodeGrid(segments: number): BufferGeometry {
       positions[k * 3] = u
       positions[k * 3 + 1] = 0
       positions[k * 3 + 2] = v
-      // flat +Y. The material replaces this with a height-derived normal, but the
-      // attribute has to exist: three's vertex-stage normal path reads it before
-      // the material's normalNode ever runs.
+      // three reads the normal attribute before normalNode runs, so it must exist
+      // even though the material replaces it
       normals[k * 3 + 1] = 1
       skirt[k] = (i === 0 || i === side - 1 || j === 0 || j === side - 1) ? 1 : 0
     }
@@ -75,7 +62,6 @@ function createNodeGrid(segments: number): BufferGeometry {
 }
 
 export interface TerrainQuadtreeSettings {
-  /** the height map; its size and origin define the root square */
   field: HeightField
   control: ControlMap
   grading?: GradingContext | null
@@ -84,11 +70,7 @@ export interface TerrainQuadtreeSettings {
   roadMap?: Texture
   rockMap?: Texture
   uniforms?: TerrainUniforms
-  /**
-   * Quads per side of ONE node. The whole tree is this grid reused, so this trades
-   * triangles per node against node count: 32 quads at depth 4 resolves the same
-   * 512 samples as 64 quads at depth 3, with smaller, better-culled pieces.
-   */
+  /** quads per side of one node; trades triangles per node against node count */
   segments?: number
   maxDepth?: number
   splitFactor?: number
@@ -100,17 +82,10 @@ export interface TerrainQuadtree {
   mesh: Mesh
   quadtree: Quadtree
   uniforms: TerrainUniforms
-  /** exposed so a debug panel can flip `wireframe`; see setWireframe */
   material: MeshLambertNodeMaterial
   skirtDepth: UniformNode<'float', number>
-  /**
-   * Draw the node grids as lines. WebGPU switches the pipeline topology to
-   * LineList for this, so the material has to be marked for a rebuild.
-   */
   setWireframe: (value: boolean) => void
-  /** live node count from the last update, for a debug readout */
   nodeCount: number
-  /** re-run the tree for a camera at this world XZ and upload the changed nodes */
   update: (cameraX: number, cameraZ: number) => void
   dispose: () => void
 }
@@ -118,15 +93,8 @@ export interface TerrainQuadtree {
 const _hit = new Vector3()
 const _normal = new Vector3(0, 1, 0)
 
-/**
- * A terrain mesh generated from a height map, not loaded from one.
- *
- * The whole level is a single draw call: one unit grid, instanced once per quadtree
- * leaf, with the leaf's world square in an instanced attribute. The vertex shader
- * places each vertex from that square and reads its height out of the map, so
- * changing LOD is changing three floats per instance — no geometry is rebuilt, and
- * nothing is allocated on a normal frame.
- */
+// One draw call: a unit grid instanced per quadtree leaf, placed and heightened in
+// the vertex shader. A LOD change is an attribute write, not a geometry rebuild.
 export function createTerrainQuadtree({
   field, control, grading, grassMap, groundMap, roadMap, rockMap, uniforms,
   segments = 32, maxDepth = 4, splitFactor = 1.5, skirtDepth = 4,
@@ -146,17 +114,14 @@ export function createTerrainQuadtree({
   }
   geometry.instanceCount = 0
 
-  // (x, z, size) of the node, packed into one attribute. Three floats in one
-  // buffer rather than two attributes: WebGPU allows only 8 vertex buffers per
-  // pipeline, and terrain is not the last thing that will want one.
+  // (x, z, size) packed in one attribute: WebGPU allows only 8 vertex buffers per pipeline
   let capacity = 256
   let nodeTransforms = new Float32Array(capacity * 3)
   let nodeAttribute = new InstancedBufferAttribute(nodeTransforms, 3)
   nodeAttribute.setUsage(DynamicDrawUsage)
   geometry.setAttribute('nodeTransform', nodeAttribute)
 
-  // the vertex shader moves every vertex, so the bounds of the unit grid mean
-  // nothing. One sphere around the whole level, and no per-frame culling maths.
+  // the shader moves every vertex, so bound the whole level instead of the unit grid
   geometry.boundingSphere = new Sphere(
     new Vector3(field.origin.x, field.minHeight + field.heightRange / 2, field.origin.y),
     Math.hypot(field.size, field.heightRange, field.size) / 2,
@@ -168,26 +133,21 @@ export function createTerrainQuadtree({
     control, grading, grassMap, groundMap, roadMap, rockMap, uniforms,
   })
 
-  // world XZ of this vertex: the node's corner plus the unit grid stretched over it
   const nodeTransform = attribute<'vec3'>('nodeTransform', 'vec3')
   const worldXZ = nodeTransform.xy.add(positionGeometry.xz.mul(nodeTransform.z))
 
   material.positionNode = Fn(() => {
     const xz = worldXZ.toVar()
     const height = sampleHeight(field, xz).toVar()
-    // Deeper skirt on a coarser node, because a coarse node's edge misses the real
-    // surface by more. Proportional to the node's own size, so one number tunes
-    // every level at once.
+    // skirt scales with node size: a coarser node's edge misses the surface by more
     const drop = attribute<'float'>('skirt', 'float')
       .mul(skirtDepthUniform)
       .mul(nodeTransform.z.div(field.size))
     return vec3(xz.x, height.sub(drop), xz.y)
   })()
 
-  // Normals from the map, not from the triangles. The geometry normal would be
-  // per-node-resolution and would visibly flatten as a node coarsens; central
-  // differences at one texel keep the shading (and so the rock-on-slope mask in
-  // terrainMaterial) identical at every LOD.
+  // Normals from the height map, not the triangles, so shading (and the rock-on-slope
+  // mask in terrainMaterial) is identical at every LOD.
   material.normalNode = Fn(() => {
     const xz = positionWorld.xz.toVar()
     const step = field.uniforms.texelSize
@@ -195,28 +155,22 @@ export function createTerrainQuadtree({
     const right = sampleHeight(field, xz.add(vec2(step, 0)))
     const back = sampleHeight(field, xz.sub(vec2(0, step)))
     const front = sampleHeight(field, xz.add(vec2(0, step)))
-    // gradient → normal: (-dh/dx, 1, -dh/dz), scaled by 2·step so the ratio holds
     const worldNormal = normalize(vec3(left.sub(right), step.mul(2), back.sub(front)))
-    // normalNode is read as a VIEW space normal: NodeMaterial.setupNormal() feeds it
-    // straight into normalView, and terrainMaterial's own normalWorld is derived
-    // back out of that. So rotate world -> view here, with the rotation block only
-    // (mat3) so the camera's translation does not move a direction.
+    // normalNode is read as a view-space normal (NodeMaterial.setupNormal feeds
+    // normalView), so rotate world -> view here; mat3 drops the camera translation
     return normalize(mat3(cameraViewMatrix).mul(worldNormal))
   })()
 
   const mesh = new Mesh(geometry, material)
   mesh.name = 'terrain-quadtree'
   mesh.receiveShadow = true
-  // positionNode emits WORLD coordinates, so any transform on this mesh would be
-  // applied on top of them and shift the terrain off its own height map
+  // positionNode emits world coordinates; any mesh transform would shift the
+  // terrain off its height map
   mesh.matrixAutoUpdate = false
   mesh.frustumCulled = false
 
-  /**
-   * Picking goes through the height map, not the triangles. The vertices the CPU
-   * can see are a flat unit square — the shape only exists on the GPU — so the
-   * default raycast would report hits on a 1 m plane at the origin.
-   */
+  // Pick against the height map: the CPU-side geometry is a flat unit square, so
+  // the default raycast would hit a 1 m plane at the origin.
   mesh.raycast = (raycaster: Raycaster, intersects: Intersection[]) => {
     const pixels = readHeightPixels(field)
     if (!pixels) return
@@ -250,8 +204,7 @@ export function createTerrainQuadtree({
     setWireframe(value: boolean) {
       if (material.wireframe === value) return
       material.wireframe = value
-      // the topology is baked into the compiled pipeline, so flipping the flag
-      // alone would keep drawing triangles until something else invalidated it
+      // topology is baked into the compiled pipeline; the flag alone keeps drawing triangles
       material.needsUpdate = true
     },
     nodeCount: 0,
@@ -265,15 +218,14 @@ export function createTerrainQuadtree({
         nodeTransforms[i * 3 + 1] = node.z
         nodeTransforms[i * 3 + 2] = node.size
       }
-      // Upload unconditionally. The tree is recomputed every frame anyway, and a
-      // 3 KB buffer write is cheaper than tracking which nodes moved.
+      // upload every frame: a 3 KB write is cheaper than tracking which nodes moved
       nodeAttribute.needsUpdate = true
       geometry.instanceCount = count
       api.nodeCount = count
     },
     dispose() {
-      // grid is NOT disposed: geometry took its attributes over, and disposing both
-      // fires a second release on the same buffers
+      // grid is not disposed: geometry took over its attributes, disposing both
+      // releases the same buffers twice
       geometry.dispose()
       material.dispose()
     },

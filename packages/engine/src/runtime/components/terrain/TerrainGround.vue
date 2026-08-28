@@ -14,7 +14,6 @@ const props = defineProps<{
   groundMap?: Texture
   roadMap?: Texture
   rockMap?: Texture
-  /** createTerrainUniforms() bag; write into `.value` to retune without a rebuild */
   uniforms?: TerrainUniforms
 }>()
 
@@ -27,8 +26,7 @@ function handleClick(event: TresPointerEvent) {
   emit('click', event)
 }
 
-// built once, on mount: the node graph bakes in which maps exist, so a map that
-// arrives later is ignored. Gate the mesh on its textures where you use it.
+// built once: the node graph bakes in which maps exist, so a map that arrives later is ignored
 const { material } = buildTerrainMaterial({
   control: props.control,
   uniforms: props.uniforms,
@@ -40,11 +38,8 @@ const { material } = buildTerrainMaterial({
 </script>
 
 <template>
-  <!-- receive only, never cast. Casting draws the whole ground a second time into
-       the shadow map, which at 512 m is another half a million triangles per frame,
-       and the finish takes its form from stylizedOutput's mid tone rather than from
-       terrain self-shadowing. The cost of that: a hill no longer shades the valley
-       behind it at a low sun. -->
+  <!-- receive only: casting draws the whole ground again into the shadow map (half a
+       million triangles at 512 m); the look comes from stylizedOutput's mid tone -->
   <TresMesh
     name="terrain"
     :geometry="props.geometry"

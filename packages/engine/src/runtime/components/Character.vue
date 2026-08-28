@@ -33,15 +33,9 @@ const combatStore = useCombatStore()
 
 const props = withDefaults(defineProps<{
   entityId: string
-  /** opt-in stylized grading (the trample pattern): swaps GLB materials for the graded finish */
   grading?: GradingContext | null
-  /**
-   * World height of the ground under each fragment, for the grading's
-   * contact-occlusion term. Defaults to y = 0 (flat pages). On generated terrain
-   * pass sampleHeight(field, positionWorld.xz), or the whole character reads as
-   * buried wherever the ground is not at 0 and darkens. Must be set before the
-   * rig loads — grading is applied once and never re-applied.
-   */
+  /** Ground height for the contact-occlusion term (default y = 0). On terrain, pass
+   * sampleHeight(field, positionWorld.xz) or the character darkens as buried. Read once, at first grading. */
   groundHeight?: Node<'float'> | null
 }>(), {
   entityId: '',
@@ -52,9 +46,7 @@ const props = withDefaults(defineProps<{
 const gameStore = useGameStore()
 const entity = computed(() => gameStore.getEntity(props.entityId))
 
-// Rig source is a setup-time decision: an entity is either modular (assembled
-// from appearance parts, skeleton named by its body part) or single-GLB — it
-// never switches.
+// Not reactive on purpose: an entity never switches between modular and single-GLB.
 const isModular = !!entity.value?.appearance
 const rigKey = computed(() => entity.value?.rig ?? 'Rig_Medium')
 const rigSize = computed<RigSize>(() => {
@@ -65,7 +57,7 @@ const rigSize = computed<RigSize>(() => {
 
 function useSingleGltfRig() {
   const { state, nodes } = useGLTF(entity.value?.model ?? '', { draco: true })
-  // Legacy single-GLB extra: ghost arm demo material.
+  // Ghost-arm demo, hardcoded to the ranger GLB.
   watch(nodes, (nodesValue) => {
     if (nodesValue?.Hero_ArmRight) {
       nodesValue.Hero_ArmRight.traverse((child: Mesh) => {
@@ -121,10 +113,8 @@ useStatusEffectAnimations(computed(() => props.entityId), play)
 const { numbers, showDamage, removeNumber } = useDamageNumbers()
 const { texts: statusTexts, removeText: removeStatusText } = useStatusEffectTexts(computed(() => props.entityId))
 
-// Three.js Group ref - controller operates directly on this
 const characterRef = ref<Group>()
 
-// Sync position back to store only when movement ends
 function syncToStore() {
   if (!characterRef.value) return
   const pos = characterRef.value.position
@@ -139,17 +129,14 @@ const { moveTo, update, target, onArrive, cancelMovement } = useCharacterControl
   speed: 3,
 })
 
-// Sync to store when movement ends
 onArrive(syncToStore)
 
-// Sync moveTarget to store when target changes
 watch(target, (newTarget) => {
   gameStore.updateEntity(props.entityId, {
     moveTarget: newTarget ? { x: newTarget.x, y: newTarget.y, z: newTarget.z } : null,
   })
 }, { immediate: true })
 
-// Initialize position from store once when characterRef is available
 watch(characterRef, (group) => {
   if (group && entity.value) {
     const { position, rotation } = entity.value
@@ -160,21 +147,16 @@ watch(characterRef, (group) => {
   }
 }, { immediate: true })
 
-// Modular parts attach AFTER the rig root exists (each async load bumps
-// version), so this watch keys on version too — a one-shot watch on rig would
-// grade an empty skeleton and leave every part on its raw GLB material.
-// Registered after useModularRig, so within one version flush the rig's own
-// effects (attach, tint, segment overrides, armor atlas) have already run:
-// the grading snapshot sees tinted materials, and custom node materials
-// (ghost arm) are already in place for applyGradingToModel to skip.
+// Keyed on version too: parts attach after the rig root exists, so a rig-only watch
+// would grade an empty skeleton. Registered after useModularRig so its tint/override
+// effects run first in the same flush and the grading snapshot sees final materials.
 watch([rig, () => modular?.version.value], ([rigValue]) => {
   if (rigValue) {
     rigValue.traverse((child: Mesh) => {
       if(child.isMesh) {
         child.castShadow = true
-        // NOT receiveShadow: at grazing sun angles the hair/head self-shadow
-        // stripes the face (bias can't fix near-parallel incidence) — toon
-        // characters cast only; the finish's core shadow does their shading
+        // Not receiveShadow: at grazing sun angles hair/head self-shadow stripes the
+        // face and bias cannot fix it. Cast only; the finish's core shadow shades them.
       }
     })
     if (props.grading) applyGradingToModel(rigValue, props.grading, { groundHeight: props.groundHeight ?? undefined })
@@ -184,8 +166,7 @@ watch([rig, () => modular?.version.value], ([rigValue]) => {
 const { onBeforeRender } = useLoop()
 onBeforeRender(({ delta }) => update(delta))
 
-// The leader owns the depth-of-field focus, matching what the camera follows.
-// Cleared by identity so a leader swap cannot be undone by the old leader's unmount.
+// The leader owns the DOF focus (it is what the camera follows).
 let focusedGroup: Group | null = null
 watch([isLeader, characterRef], ([leader, group]) => {
   if (!dofFocus) return

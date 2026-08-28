@@ -1,9 +1,5 @@
-// three's BloomNode re-reads the drawing-buffer size every frame and always
-// builds its mip chain from half of it, with no resolution option (r183). The
-// only hook is setSize, so this subclass scales the incoming size first.
-// resolutionScale = 1 is stock three (half-res chain); 0.5 starts the chain at
-// quarter res, ~4x fewer blurred pixels. Bloom is a blur, so the lower base
-// resolution does not show in the final image.
+// three's BloomNode (r183) has no resolution option and re-reads the drawing-buffer
+// size every frame; setSize is the only hook, so the incoming size is scaled here.
 import BloomNode from 'three/addons/tsl/display/BloomNode.js'
 import { nodeObject } from 'three/tsl'
 import type { Node } from 'three/webgpu'

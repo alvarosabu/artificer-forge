@@ -7,9 +7,7 @@ import { computed, shallowRef, toValue, watch } from 'vue';
 import { Camera, MathUtils, Vector3 } from 'three';
 import { useLoop } from '@tresjs/core';
 
-// Shared camera + orbit controls for every Game scene. Lives inside <Game> so the
-// active PerspectiveCamera resolves via useTresContext() for any consumer (e.g.
-// DialogCameraDirector). Controls auto-disable while input is blocked (dialogs, etc).
+// Lives inside <Game> so consumers (DialogCameraDirector) get the camera via useTresContext().
 const props = withDefaults(defineProps<CameraControllerProps>(), {
   position: () => CAMERA_DEFAULTS.position,
   near: CAMERA_DEFAULTS.near,
@@ -41,8 +39,7 @@ const smoothAnchor = new Vector3()
 const offset = new Vector3()
 let acquire: 'authored' | null = 'authored'
 
-// Turning follow back on (debug GUI, or a leader swap) has to re-seat: without
-// this the loop would resume from the offset the free camera was left at.
+// Re-seat when follow turns back on, or the loop resumes from the free camera's offset.
 watch(followId, (id) => { if (id) acquire = 'authored' })
 
 
@@ -71,9 +68,8 @@ onBeforeRender(({ delta, camera: active }) => {
     return
   }
 
-  // The offset OrbitControls left us this frame. The drag, the damping and the
-  // polar clamp are all already inside it, which is why we read it back rather
-  // than track angles of our own.
+  // Read the offset back from OrbitControls (drag, damping, polar clamp already
+  // applied) instead of tracking angles of our own.
   offset.copy(cam.position).sub(orbit.target)
 
   smoothAnchor.lerp(point, 1 - Math.exp(-props.followSmoothing * delta))

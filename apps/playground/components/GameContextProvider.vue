@@ -5,18 +5,14 @@ import { Game } from '@artificer-forge/engine'
 import { CAMERA_DEFAULTS, provideGameConfig } from '@artificer-forge/engine/runtime'
 import type { CameraProps } from '@artificer-forge/engine/runtime'
 
-// App-level context around the engine's <Game> host: positions the Leches debug GUI
-// and feeds its tunable values into the engine via provideGameConfig().
-
 const props = defineProps<{ camera?: CameraProps }>()
 
 const { uuid } = useSharedLechesControls()
 
 const config = provideGameConfig()
 
-// Camera knobs. Seeded from the page's camera prop (falling back to the engine's
-// own defaults) so the panel opens on whatever the scene authored instead of a
-// second set of numbers. Polar limits are degrees here, radians in the props.
+// Seeded from the page's camera so the panel opens on the scene's own values.
+// Polar limits are degrees here, radians in the props.
 const seed = { ...CAMERA_DEFAULTS, ...props.camera }
 
 const { cameraFov, cameraNear, cameraFar, cameraMinDistance, cameraMaxDistance, cameraMinPolar, cameraMaxPolar, cameraFollow, cameraFollowHeight, cameraFollowSmoothing, cameraOrbit } = useControls('camera', {
@@ -33,8 +29,6 @@ const { cameraFov, cameraNear, cameraFar, cameraMinDistance, cameraMaxDistance, 
   orbit: { value: seed.controls, type: 'boolean' },
 }, { uuid })
 
-// Everything the panel does not own (position, target, lookAt, a follow target
-// named by id) still comes from the page.
 const cameraProps = computed<CameraProps>(() => ({
   ...props.camera,
   fov: toValue(cameraFov),
@@ -69,7 +63,6 @@ const { dofEnabled, dofFocalLength, dofBokehScale, dofFocusDistance, dofFocusHei
   resolutionScale: { value: config.dof.resolutionScale, min: 0.1, max: 1, step: 0.05, type: 'range' },
 }, { uuid })
 
-// Keep the provided config in sync with the debug GUI.
 watchEffect(() => {
   config.bloom.strength = toValue(postprocessingBloomStrength)
   config.bloom.radius = toValue(postprocessingBloomRadius)
@@ -91,8 +84,8 @@ watchEffect(() => {
     <TresLeches :uuid="uuid" collapsed />
   </slot>
   <Game :camera="cameraProps">
-    <!-- Only forward these when the page actually provides them, otherwise an
-         empty slot would suppress Game's camera / systems / Hud defaults. -->
+    <!-- Forward only when the page provides them: an empty slot would suppress
+         Game's camera / systems / hud defaults. -->
     <template v-if="$slots.camera" #camera>
       <slot name="camera" />
     </template>
