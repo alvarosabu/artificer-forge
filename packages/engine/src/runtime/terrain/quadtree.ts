@@ -45,7 +45,7 @@ export function createQuadtree({
     count: 0,
     update(cameraX: number, cameraZ: number) {
       tree.count = 0
-      descend(origin[0] - size / 2, origin[1] - size / 2, size, 0, cameraX, cameraZ)
+      descend(tree.origin[0] - tree.size / 2, tree.origin[1] - tree.size / 2, tree.size, 0, cameraX, cameraZ)
       return tree.count
     },
   }

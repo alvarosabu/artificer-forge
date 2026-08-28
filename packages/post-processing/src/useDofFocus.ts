@@ -1,26 +1,24 @@
 import { provide, inject, shallowRef, type InjectionKey, type ShallowRef } from 'vue'
-
-// Using 'any' to avoid Three.js type mismatches between packages
-type Object3DLike = any
+import type { Object3D } from 'three'
 
 export interface DofFocusApi {
   /** null = the pass falls back to its fixed focusDistance. */
-  target: ShallowRef<Object3DLike | null>
-  setFocusTarget: (object: Object3DLike | null) => void
+  target: ShallowRef<Object3D | null>
+  setFocusTarget: (object: Object3D | null) => void
   /** Clears the target only if it is still `object`, so a stale unmount cannot drop a newer target. */
-  clearFocusTarget: (object: Object3DLike) => void
+  clearFocusTarget: (object: Object3D) => void
 }
 
 export const DofFocusKey: InjectionKey<DofFocusApi> = Symbol('dof-focus')
 
 export function useDofFocusProvider() {
-  const target = shallowRef<Object3DLike | null>(null)
+  const target = shallowRef<Object3D | null>(null)
 
-  function setFocusTarget(object: Object3DLike | null) {
+  function setFocusTarget(object: Object3D | null) {
     target.value = object
   }
 
-  function clearFocusTarget(object: Object3DLike) {
+  function clearFocusTarget(object: Object3D) {
     if (target.value === object) target.value = null
   }
 

@@ -27,7 +27,14 @@ export function applyGradingToModel(root: Object3D, grading: GradingContext, { g
         // Custom node materials (ghost arm, horns) keep their own look.
         if ((source as { isNodeMaterial?: boolean }).isNodeMaterial) return
 
+        // grading and groundHeight are baked into the graph, so a cache built for
+        // another scene (shared GLB material via the loader cache) must be rebuilt
         let material = source.userData.gradedMaterial as MeshLambertNodeMaterial | undefined
+        const stale = material && (source.userData.gradedGrading !== grading || source.userData.gradedGround !== groundHeight)
+        if (stale) {
+            material!.dispose()
+            material = undefined
+        }
         if (!material) {
             material = new MeshLambertNodeMaterial()
             material.side = source.side
@@ -48,6 +55,8 @@ export function applyGradingToModel(root: Object3D, grading: GradingContext, { g
             material.outputNode = stylizedOutput(baseColor, grading, { hasMidTone: true, hasRim: true, hasSpecular: true, aoNode, dropShadowNode: dropShadow.shadowFactor })
 
             source.userData.gradedMaterial = material
+            source.userData.gradedGrading = grading
+            source.userData.gradedGround = groundHeight
         }
         mesh.material = material
     })

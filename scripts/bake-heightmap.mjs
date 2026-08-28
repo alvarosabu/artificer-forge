@@ -26,13 +26,22 @@ if (!argv.length || argv[0].startsWith('--')) {
 const glbPath = argv[0]
 function flag(name, fallback) {
   const at = argv.indexOf(`--${name}`)
-  return at === -1 ? fallback : argv[at + 1]
+  if (at === -1) return fallback
+  const value = argv[at + 1]
+  if (value === undefined || value.startsWith('--')) throw new Error(`--${name} needs a value`)
+  return value
+}
+function numberFlag(name, fallback) {
+  const value = Number(flag(name, fallback))
+  if (Number.isNaN(value)) throw new Error(`--${name} must be a number`)
+  return value
 }
 const nodeName = flag('node', 'Terrain')
-const resolution = Number(flag('resolution', 2048))
+const resolution = numberFlag('resolution', 2048)
 const outDir = flag('out', dirname(glbPath))
-const sizeOverride = flag('size') ? Number(flag('size')) : null
+const sizeOverride = flag('size') ? numberFlag('size') : null
 const originOverride = flag('origin') ? flag('origin').split(',').map(Number) : null
+if (originOverride?.some(Number.isNaN)) throw new Error('--origin must be x,z')
 // a cropped bake needs its own name, or it overwrites the full-extent one
 const nameOverride = flag('name')
 
@@ -256,7 +265,9 @@ const meta = {
   maxHeight: round(maxY),
   texelSize: round(texelSize),
   flipY: false,
-  encoding: {
+  // HeightMapMeta.encoding is a string. The json describes `${base}.png`; set 'rgb' when loading `${base}.rgb.png`.
+  encoding: 'grey',
+  encodingNotes: {
     grey: 'r / 255 -> 0..1; height = minHeight + t * (maxHeight - minHeight)',
     rgb: '(r * 65536 + g * 256 + b) / 16777215 -> 0..1; sample NEAREST, NoColorSpace, no mipmaps',
   },
