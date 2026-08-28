@@ -176,9 +176,9 @@ watch(scene, (s) => {
 
 // Contact occlusion needs the terrain height per fragment: these rocks sit 4 to 6 m
 // below y = 0 and the default (ground at 0) would darken them as buried.
-watch([propsRoot, heightField], ([root, field]) => {
-  if (!root || !field) return
-  applyGradingToModel(root, grading, { groundHeight: sampleHeight(field, positionWorld.xz) })
+watch([propsRoot, characterGroundHeight], ([root, ground]) => {
+  if (!root || !ground) return
+  applyGradingToModel(root, grading, { groundHeight: ground })
   root.traverse((child) => {
     if (!(child instanceof Mesh)) return
     child.castShadow = true

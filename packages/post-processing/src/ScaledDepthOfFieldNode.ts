@@ -5,6 +5,9 @@ import DepthOfFieldNode from 'three/addons/tsl/display/DepthOfFieldNode.js'
 import { nodeObject } from 'three/tsl'
 import type { Node } from 'three/webgpu'
 
+// private fields of DepthOfFieldNode that setSize below resizes by hand (three r183)
+const PRIVATE_FIELDS = ['_invSize', '_compositeRT', '_CoCRT', '_CoCBlurredRT', '_blur64RT', '_blur16NearRT', '_blur16FarRT'] as const
+
 export class ScaledDepthOfFieldNode extends DepthOfFieldNode {
   resolutionScale: number
 
@@ -18,6 +21,9 @@ export class ScaledDepthOfFieldNode extends DepthOfFieldNode {
   ) {
     super(textureNode as any, viewZNode as any, focusDistanceNode as any, focalLengthNode as any, bokehScaleNode as any)
     this.resolutionScale = resolutionScale
+    for (const key of PRIVATE_FIELDS) {
+      if (!(key in this)) throw new Error(`[ScaledDepthOfFieldNode] DepthOfFieldNode.${key} is missing; the three version is not the one this override was written against`)
+    }
   }
 
   setSize(width: number, height: number): void {

@@ -156,12 +156,29 @@ export function intersectHeightField(
   // a near-horizontal ray is not a ground pick and would need thousands of steps
   if (Math.abs(dir.y) < 1e-4) return false
 
-  let t = 0
-  let previousT = 0
+  // Clip to the field's box first. This runs on every pointer move, and a sky ray
+  // would otherwise walk the whole maxDistance one texel at a time.
+  let tMin = 0
+  let tMax = maxDistance
+  const clip = (o: number, d: number, lo: number, hi: number) => {
+    if (Math.abs(d) < 1e-9) return o >= lo && o <= hi
+    const a = (lo - o) / d
+    const b = (hi - o) / d
+    tMin = Math.max(tMin, Math.min(a, b))
+    tMax = Math.min(tMax, Math.max(a, b))
+    return tMin <= tMax
+  }
+  const half = field.size / 2 + step
+  if (!clip(ray.origin.x, dir.x, field.origin.x - half, field.origin.x + half)) return false
+  if (!clip(ray.origin.z, dir.z, field.origin.y - half, field.origin.y + half)) return false
+  if (!clip(ray.origin.y, dir.y, field.minHeight, field.minHeight + field.heightRange)) return false
+
+  let t = tMin
+  let previousT = t
   let previousGap = 0
   let first = true
 
-  while (t <= maxDistance) {
+  for (;;) {
     const x = ray.origin.x + dir.x * t
     const y = ray.origin.y + dir.y * t
     const z = ray.origin.z + dir.z * t
@@ -191,7 +208,8 @@ export function intersectHeightField(
     first = false
     previousT = t
     previousGap = gap
-    t += step
+    // the last sample lands exactly on the box exit, so a valley floor at minHeight is not stepped past
+    if (t >= tMax) return false
+    t = Math.min(t + step, tMax)
   }
-  return false
 }

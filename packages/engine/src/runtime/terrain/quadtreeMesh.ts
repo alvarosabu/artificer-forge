@@ -74,7 +74,7 @@ export interface TerrainQuadtreeSettings {
   segments?: number
   maxDepth?: number
   splitFactor?: number
-  /** metres the skirt hangs below the ROOT node's edge; finer nodes scale down */
+  /** metres the skirt hangs below a ROOT-sized node's edge; finer nodes scale down with their parent size */
   skirtDepth?: number
 }
 
@@ -139,10 +139,11 @@ export function createTerrainQuadtree({
   material.positionNode = Fn(() => {
     const xz = worldXZ.toVar()
     const height = sampleHeight(field, xz).toVar()
-    // skirt scales with node size: a coarser node's edge misses the surface by more
+    // The crack at a LOD seam is the COARSER neighbour's interpolation error, and the
+    // finer node's skirt has to hide it, so scale by the parent size (one level up).
     const drop = attribute<'float'>('skirt', 'float')
       .mul(skirtDepthUniform)
-      .mul(nodeTransform.z.div(field.size))
+      .mul(nodeTransform.z.mul(2).div(field.size))
     return vec3(xz.x, height.sub(drop), xz.y)
   })()
 
@@ -193,6 +194,9 @@ export function createTerrainQuadtree({
     nodeAttribute = new InstancedBufferAttribute(nodeTransforms, 3)
     nodeAttribute.setUsage(DynamicDrawUsage)
     geometry.setAttribute('nodeTransform', nodeAttribute)
+    // BufferAttribute has no dispose; this is the only way to release the replaced
+    // buffer. The renderer re-initialises the geometry on the next frame.
+    geometry.dispose()
   }
 
   const api: TerrainQuadtree = {
