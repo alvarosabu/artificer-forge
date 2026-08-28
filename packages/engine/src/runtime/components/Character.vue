@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useGLTF, Html } from '@tresjs/cientos'
 import { useLoop, type TresPointerEvent } from '@tresjs/core'
 import { Mesh, Vector3, type Group } from 'three'
 import { useDamageNumbers, DamageNumber, ghostMaterial } from '@artificer-forge/vfx'
-import { useOutlinePass } from '@artificer-forge/post-processing'
+import { useDofFocus, useOutlinePass } from '@artificer-forge/post-processing'
 import { AnimationName, type RigSize, useCharacterAnimations } from '../useCharacterAnimations'
 import { useModularRig } from '../modular/useModularRig'
 import { useModularArmor } from '../modular/useModularArmor'
@@ -28,6 +28,7 @@ import StatusEffectText from './StatusEffectText.vue'
 
 const { open: openContextMenu } = useContextMenu()
 const { addToSelection, removeFromSelection } = useOutlinePass()
+const dofFocus = useDofFocus()
 const combatStore = useCombatStore()
 
 const props = withDefaults(defineProps<{
@@ -182,6 +183,24 @@ watch([rig, () => modular?.version.value], ([rigValue]) => {
 
 const { onBeforeRender } = useLoop()
 onBeforeRender(({ delta }) => update(delta))
+
+// The leader owns the depth-of-field focus, matching what the camera follows.
+// Cleared by identity so a leader swap cannot be undone by the old leader's unmount.
+let focusedGroup: Group | null = null
+watch([isLeader, characterRef], ([leader, group]) => {
+  if (!dofFocus) return
+  if (leader && group) {
+    dofFocus.setFocusTarget(group)
+    focusedGroup = group
+  }
+  else if (focusedGroup) {
+    dofFocus.clearFocusTarget(focusedGroup)
+    focusedGroup = null
+  }
+}, { immediate: true })
+onUnmounted(() => {
+  if (dofFocus && focusedGroup) dofFocus.clearFocusTarget(focusedGroup)
+})
 
 function handleContextMenu(event: TresPointerEvent) {
   event.nativeEvent.preventDefault()

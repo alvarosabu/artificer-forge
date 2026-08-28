@@ -59,6 +59,16 @@ const { postprocessingBloomStrength, postprocessingBloomThreshold, postprocessin
   bloomResolutionScale: { value: config.bloom.resolutionScale, min: 0.1, max: 1, step: 0.05, type: 'range' },
 }, { uuid })
 
+const { dofEnabled, dofFocalLength, dofBokehScale, dofFocusDistance, dofFocusHeight, dofSmoothing, dofResolutionScale } = useControls('dof', {
+  enabled: { value: config.dof.enabled, type: 'boolean' },
+  focalLength: { value: config.dof.focalLength, min: 0.1, max: 120, step: 0.1, type: 'range' },
+  bokehScale: { value: config.dof.bokehScale, min: 0, max: 10, step: 0.1, type: 'range' },
+  focusDistance: { value: config.dof.focusDistance, min: 0, max: 200, step: 0.5, type: 'range' },
+  focusHeight: { value: config.dof.focusHeight, min: -2, max: 5, step: 0.1, type: 'range' },
+  smoothing: { value: config.dof.smoothing, min: 0.5, max: 30, step: 0.5, type: 'range' },
+  resolutionScale: { value: config.dof.resolutionScale, min: 0.1, max: 1, step: 0.05, type: 'range' },
+}, { uuid })
+
 // Keep the provided config in sync with the debug GUI.
 watchEffect(() => {
   config.bloom.strength = toValue(postprocessingBloomStrength)
@@ -66,6 +76,13 @@ watchEffect(() => {
   config.bloom.threshold = toValue(postprocessingBloomThreshold)
   config.bloom.smoothWidth = toValue(postprocessingBloomSmoothWidth)
   config.bloom.resolutionScale = toValue(postprocessingBloomResolutionScale)
+  config.dof.enabled = toValue(dofEnabled)
+  config.dof.focalLength = toValue(dofFocalLength)
+  config.dof.bokehScale = toValue(dofBokehScale)
+  config.dof.focusDistance = toValue(dofFocusDistance)
+  config.dof.focusHeight = toValue(dofFocusHeight)
+  config.dof.smoothing = toValue(dofSmoothing)
+  config.dof.resolutionScale = toValue(dofResolutionScale)
 })
 </script>
 

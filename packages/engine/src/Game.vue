@@ -4,7 +4,7 @@
 // the HUD overlay (ui). Renderer and post-processing are engine policy; render
 // config (bloom, outline presets) comes from useGameConfig().
 import { NoToneMapping } from 'three'
-import { EffectComposer, useOutlinePassProvider } from '@artificer-forge/post-processing'
+import { EffectComposer, useDofFocusProvider, useOutlinePassProvider } from '@artificer-forge/post-processing'
 import { CameraController, CombatSystem, SurfaceSystem, createWebGPURenderer, useContextMenuProvider, useGameConfig } from '@artificer-forge/engine/runtime'
 import type { CameraProps } from '@artificer-forge/engine/runtime'
 import { Hud } from '@artificer-forge/engine/ui'
@@ -19,6 +19,8 @@ const config = useGameConfig()
 // the HUD (which injects it) share one instance.
 const { close } = useContextMenuProvider()
 useOutlinePassProvider()
+// The party leader claims the DOF focus from Character.vue; the pass reads it here.
+useDofFocusProvider()
 
 function handlePointerMissed() {
   close()
@@ -64,6 +66,8 @@ function handlePointerMissed() {
         smoothWidth: config.bloom.smoothWidth,
         resolutionScale: config.bloom.resolutionScale,
       }"
+      :dof="config.dof.enabled ? config.dof : undefined"
+      :antialias="config.antialias"
     />
   </TresCanvas>
   <slot name="hud">
