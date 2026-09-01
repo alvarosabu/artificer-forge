@@ -8,6 +8,7 @@ import { pass, float, uniform, renderOutput } from 'three/tsl'
 import { outline } from 'three/addons/tsl/display/OutlineNode.js'
 import { scaledBloom } from './ScaledBloomNode'
 import { scaledDof } from './ScaledDepthOfFieldNode'
+import { tiltShift } from './tiltShift'
 import { fxaa } from 'three/addons/tsl/display/FXAANode.js'
 import { useOutlinePass } from './useOutlinePass'
 import { useDofFocus } from './useDofFocus'
@@ -44,6 +45,29 @@ export interface DofConfig {
   resolutionScale?: number
 }
 
+export interface TiltShiftConfig {
+  /** Screen height of the sharp line, 0 = bottom, 1 = top. */
+  focusCenter?: number
+  /** Half-height of the fully sharp band, in screen fractions. */
+  bandWidth?: number
+  /** Ramp length from sharp to fully blurred, in screen fractions. */
+  feather?: number
+  /** Blur radius multiplier. 0 = no visible blur (the pass still runs). */
+  strength?: number
+  /** Depth band (world units) around the focus depth that stays sharp inside the ramp. */
+  focalRange?: number
+  /** Focus depth along the camera look direction, used when no focus target is registered. */
+  focusDistance?: number
+  /** Added to the focus target's origin on world Y (the character group's origin is at the feet). */
+  focusHeight?: number
+  /** Exponential smoothing rate for the tracked focus depth. Higher = snappier. */
+  smoothing?: number
+  /** Kernel taps = 3 + 2·sigma. Baked into the shader: changing it rebuilds the pipeline. */
+  sigma?: number
+  /** Scale of the blur passes. The sharp band stays full-res regardless. */
+  resolutionScale?: number
+}
+
 /**
  * msaa inherits the renderer's 4x samples on a HalfFloat target, and any depth
  * consumer (DOF) then forces a full-res multisampled depth resolve on top.
@@ -55,6 +79,8 @@ const props = withDefaults(defineProps<{
   bloom?: BloomConfig
   /** undefined leaves the DOF pass out of the graph entirely. */
   dof?: DofConfig
+  /** undefined leaves the tilt-shift pass out of the graph. Wins over dof when both are set. */
+  tiltShift?: TiltShiftConfig
   antialias?: AntialiasMode
 }>(), {
   outlinePresets: () => ({
@@ -73,9 +99,16 @@ const postProcessing = shallowRef<RenderPipeline | null>(null)
 // The pass graph is compiled once, so adding or removing DOF means a rebuild.
 let buildWatchers: WatchStopHandle[] = []
 
+// Shared by DOF and tilt-shift: both read the same smoothed focus depth.
 const dofFocusDistance = uniform(10)
 const dofFocalLength = uniform(4)
 const dofBokehScale = uniform(2)
+
+const tiltFocusCenter = uniform(0.5)
+const tiltBandWidth = uniform(0.1)
+const tiltFeather = uniform(0.35)
+const tiltStrength = uniform(1)
+const tiltFocalRange = uniform(12)
 
 const targetWorld = new Vector3()
 const camWorld = new Vector3()
@@ -84,18 +117,19 @@ const camForward = new Vector3()
 // Distance along the camera axis, not euclidean: the node compares against -viewZ,
 // so distanceTo() drifts the focus off the target near the screen edges.
 onBeforeRender(({ delta, camera: active }) => {
-  if (!props.dof) return
+  const focusConfig = props.tiltShift ?? props.dof
+  if (!focusConfig) return
   const cam = toValue(active)
   const target = dofFocus?.target.value
-  let wanted = props.dof.focusDistance ?? 10
+  let wanted = focusConfig.focusDistance ?? 10
   if (cam && target) {
     target.getWorldPosition(targetWorld)
-    targetWorld.y += props.dof.focusHeight ?? 1
+    targetWorld.y += focusConfig.focusHeight ?? 1
     cam.getWorldPosition(camWorld)
     cam.getWorldDirection(camForward)
     wanted = targetWorld.sub(camWorld).dot(camForward)
   }
-  const rate = props.dof.smoothing ?? 8
+  const rate = focusConfig.smoothing ?? 8
   dofFocusDistance.value += (wanted - dofFocusDistance.value) * (1 - Math.exp(-rate * delta))
 })
 
@@ -147,11 +181,47 @@ function buildPipeline(sceneObj: Scene, cameraObj: Camera) {
 //       )
 //     }
 
-  // Order: scene -> dof -> outlines -> bloom. DOF blurs the raw scene only: after
-  // bloom it would smear the glow across depth edges, and the overlays must stay sharp.
+  // Order: scene -> blur (dof OR tilt-shift) -> outlines -> bloom. The blur reads the
+  // raw scene only: after bloom it would smear the glow across depth edges, and the
+  // overlays must stay sharp.
   let sceneColor: any = scenePassColor
 
-  if (props.dof) {
+  if (props.tiltShift && props.dof) {
+    console.warn('[EffectComposer] dof and tiltShift are both set; they fight over the same blur budget, so tiltShift wins. Pass only one.')
+  }
+
+  if (props.tiltShift) {
+    const config = props.tiltShift
+    tiltFocusCenter.value = config.focusCenter ?? 0.5
+    tiltBandWidth.value = config.bandWidth ?? 0.1
+    tiltFeather.value = config.feather ?? 0.35
+    tiltStrength.value = config.strength ?? 1
+    tiltFocalRange.value = config.focalRange ?? 12
+    const tiltPass = tiltShift(scenePassColor, scenePass.getViewZNode(), {
+      focusCenter: tiltFocusCenter,
+      bandWidth: tiltBandWidth,
+      feather: tiltFeather,
+      strength: tiltStrength,
+      focusDistance: dofFocusDistance,
+      focalRange: tiltFocalRange,
+    }, { sigma: config.sigma ?? 8, resolutionScale: config.resolutionScale ?? 0.5 })
+    sceneColor = tiltPass.node
+
+    buildWatchers.push(watch(
+      () => props.tiltShift,
+      (next) => {
+        if (!next) return
+        tiltFocusCenter.value = next.focusCenter ?? 0.5
+        tiltBandWidth.value = next.bandWidth ?? 0.1
+        tiltFeather.value = next.feather ?? 0.35
+        tiltStrength.value = next.strength ?? 1
+        tiltFocalRange.value = next.focalRange ?? 12
+        // Applied next frame: GaussianBlurNode re-runs setSize from updateBefore every frame.
+        tiltPass.blur.resolutionScale = next.resolutionScale ?? 0.5
+      },
+      { deep: true },
+    ))
+  } else if (props.dof) {
     dofFocalLength.value = props.dof.focalLength ?? 4
     dofBokehScale.value = props.dof.bokehScale ?? 2
     const dofPass = scaledDof(scenePassColor, scenePass.getViewZNode(), dofFocusDistance, dofFocalLength, dofBokehScale, props.dof.resolutionScale ?? 0.25)
@@ -210,7 +280,7 @@ function buildPipeline(sceneObj: Scene, cameraObj: Camera) {
   renderPipeline.outputNode = outputNode
   postProcessing.value = renderPipeline
   // PERF TEST instrumentation, remove when done
-  console.info('[EffectComposer] pipeline built (src)', { antialias: props.antialias, bloomScale: props.bloom?.resolutionScale ?? 0.5, dof: !!props.dof, dofScale: props.dof?.resolutionScale ?? 0.25, outline: 'disabled' })
+  console.info('[EffectComposer] pipeline built (src)', { antialias: props.antialias, bloomScale: props.bloom?.resolutionScale ?? 0.5, dof: !!props.dof, dofScale: props.dof?.resolutionScale ?? 0.25, tiltShift: !!props.tiltShift, outline: 'disabled' })
   renderer.replaceRenderFunction((notifySuccess) => {
     renderPipeline.render()
     notifySuccess()
@@ -226,11 +296,12 @@ watch(() => props.antialias, (mode, previous) => {
 })
 
 watch(
-  [scene, camera.activeCamera, () => !!props.dof],
-  ([currentScene, currentCamera, wantsDof], previous) => {
+  [scene, camera.activeCamera, () => !!props.dof, () => !!props.tiltShift, () => props.tiltShift?.sigma],
+  ([currentScene, currentCamera, ...passKeys], previous) => {
     if (!currentScene || !currentCamera) return
-    // Scene/camera ref flips are ignored; only a DOF toggle rebuilds the graph.
-    if (postProcessing.value && wantsDof === previous?.[2]) return
+    // Scene/camera ref flips are ignored; only pass toggles rebuild the graph
+    // (and tilt sigma, which is baked into the blur kernel).
+    if (postProcessing.value && previous && passKeys.every((key, i) => key === previous[i + 2])) return
     disposePipeline()
     buildPipeline(currentScene as unknown as Scene, currentCamera as unknown as Camera)
   },

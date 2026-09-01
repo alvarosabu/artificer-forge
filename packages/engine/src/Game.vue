@@ -55,6 +55,7 @@ function handlePointerMissed() {
         resolutionScale: config.bloom.resolutionScale,
       }"
       :dof="config.dof.enabled ? config.dof : undefined"
+      :tilt-shift="config.tiltShift.enabled ? config.tiltShift : undefined"
       :antialias="config.antialias"
     />
   </TresCanvas>

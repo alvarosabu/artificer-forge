@@ -63,6 +63,20 @@ const { dofEnabled, dofFocalLength, dofBokehScale, dofFocusDistance, dofFocusHei
   resolutionScale: { value: config.dof.resolutionScale, min: 0.1, max: 1, step: 0.05, type: 'range' },
 }, { uuid })
 
+const { tiltshiftEnabled, tiltshiftFocusCenter, tiltshiftBandWidth, tiltshiftFeather, tiltshiftStrength, tiltshiftFocalRange, tiltshiftFocusDistance, tiltshiftFocusHeight, tiltshiftSmoothing, tiltshiftSigma, tiltshiftResolutionScale } = useControls('tiltshift', {
+  enabled: { value: config.tiltShift.enabled, type: 'boolean' },
+  focusCenter: { value: config.tiltShift.focusCenter, min: 0, max: 1, step: 0.01, type: 'range' },
+  bandWidth: { value: config.tiltShift.bandWidth, min: 0, max: 0.5, step: 0.01, type: 'range' },
+  feather: { value: config.tiltShift.feather, min: 0.01, max: 1, step: 0.01, type: 'range' },
+  strength: { value: config.tiltShift.strength, min: 0, max: 4, step: 0.05, type: 'range' },
+  focalRange: { value: config.tiltShift.focalRange, min: 0, max: 100, step: 0.5, type: 'range' },
+  focusDistance: { value: config.tiltShift.focusDistance, min: 0, max: 200, step: 0.5, type: 'range' },
+  focusHeight: { value: config.tiltShift.focusHeight, min: -2, max: 5, step: 0.1, type: 'range' },
+  smoothing: { value: config.tiltShift.smoothing, min: 0.5, max: 30, step: 0.5, type: 'range' },
+  sigma: { value: config.tiltShift.sigma, min: 2, max: 20, step: 1, type: 'range' },
+  resolutionScale: { value: config.tiltShift.resolutionScale, min: 0.1, max: 1, step: 0.05, type: 'range' },
+}, { uuid })
+
 watchEffect(() => {
   config.bloom.strength = toValue(postprocessingBloomStrength)
   config.bloom.radius = toValue(postprocessingBloomRadius)
@@ -76,6 +90,17 @@ watchEffect(() => {
   config.dof.focusHeight = toValue(dofFocusHeight)
   config.dof.smoothing = toValue(dofSmoothing)
   config.dof.resolutionScale = toValue(dofResolutionScale)
+  config.tiltShift.enabled = toValue(tiltshiftEnabled)
+  config.tiltShift.focusCenter = toValue(tiltshiftFocusCenter)
+  config.tiltShift.bandWidth = toValue(tiltshiftBandWidth)
+  config.tiltShift.feather = toValue(tiltshiftFeather)
+  config.tiltShift.strength = toValue(tiltshiftStrength)
+  config.tiltShift.focalRange = toValue(tiltshiftFocalRange)
+  config.tiltShift.focusDistance = toValue(tiltshiftFocusDistance)
+  config.tiltShift.focusHeight = toValue(tiltshiftFocusHeight)
+  config.tiltShift.smoothing = toValue(tiltshiftSmoothing)
+  config.tiltShift.sigma = toValue(tiltshiftSigma)
+  config.tiltShift.resolutionScale = toValue(tiltshiftResolutionScale)
 })
 </script>
 

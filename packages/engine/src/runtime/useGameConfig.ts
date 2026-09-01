@@ -25,6 +25,29 @@ export interface DofConfig {
   resolutionScale: number
 }
 
+export interface TiltShiftConfig {
+  enabled: boolean
+  /** Screen height of the sharp line, 0 = bottom, 1 = top. */
+  focusCenter: number
+  /** Half-height of the fully sharp band, in screen fractions. */
+  bandWidth: number
+  /** Ramp length from sharp to fully blurred, in screen fractions. */
+  feather: number
+  /** Blur radius multiplier. */
+  strength: number
+  /** Depth band (world units) around the focus depth that stays sharp inside the ramp. */
+  focalRange: number
+  /** Focus depth when nothing has claimed the focus. */
+  focusDistance: number
+  /** Added to the focus target's Y (character origin is at the feet). */
+  focusHeight: number
+  smoothing: number
+  /** Kernel taps = 3 + 2·sigma. Changing it rebuilds the pipeline. */
+  sigma: number
+  /** Scale of the blur passes; the sharp band stays full-res. */
+  resolutionScale: number
+}
+
 export interface OutlinePreset {
   visibleEdgeColor: string
   edgeThickness: number
@@ -37,6 +60,7 @@ export interface GameConfig {
   antialias: AntialiasMode
   bloom: BloomConfig
   dof: DofConfig
+  tiltShift: TiltShiftConfig
   outlinePresets: Record<string, OutlinePreset>
 }
 
@@ -49,6 +73,8 @@ export function defaultGameConfig(): GameConfig {
     // Off by default: a top-down camera puts the whole play area near one depth,
     // so DOF reads as tilt-shift.
     dof: { enabled: false, focalLength: 6, bokehScale: 2, focusDistance: 15, focusHeight: 1, smoothing: 8, resolutionScale: 0.25 },
+    // The screen-space miniature take on the same idea. Off by default; enable one of the two, not both.
+    tiltShift: { enabled: false, focusCenter: 0.5, bandWidth: 0.1, feather: 0.35, strength: 1, focalRange: 12, focusDistance: 15, focusHeight: 1, smoothing: 8, sigma: 8, resolutionScale: 0.5 },
     outlinePresets: {
       party: { visibleEdgeColor: '#00e5ff', edgeThickness: 3 },
       interactive: { visibleEdgeColor: '#ffcc00', edgeThickness: 3 },
@@ -66,6 +92,7 @@ export function provideGameConfig(overrides: Partial<GameConfig> = {}): GameConf
     antialias: overrides.antialias ?? base.antialias,
     bloom: { ...base.bloom, ...overrides.bloom },
     dof: { ...base.dof, ...overrides.dof },
+    tiltShift: { ...base.tiltShift, ...overrides.tiltShift },
     outlinePresets: { ...base.outlinePresets, ...overrides.outlinePresets },
   })
   provide(GAME_CONFIG_KEY, config)
