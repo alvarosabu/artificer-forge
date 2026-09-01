@@ -10,7 +10,4 @@ export default defineNuxtConfig({
       { name: 'Crimson Pro', provider: 'google', weights: [400, 500, 600, 700] },
     ],
   },
-  pwa: {
-    enabled: false,
-  },
 })

@@ -5,6 +5,7 @@
     "build": "nuxt build --extends docus"
   },
   "dependencies": {
+    "@barzhsieh/nuxt-content-mermaid": "catalog:",
     "@nuxt/eslint": "catalog:nuxt",
     "@nuxt/fonts": "catalog:nuxt",
     "@nuxt/icon": "catalog:nuxt",
@@ -13,8 +14,5 @@
     "nuxt": "catalog:nuxt",
     "zod": "catalog:nuxt",
     "zod-to-json-schema": "catalog:nuxt"
-  },
-  "devDependencies": {
-    "@barzhsieh/nuxt-content-mermaid": "catalog:"
   }
 }

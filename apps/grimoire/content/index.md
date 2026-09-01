@@ -55,10 +55,10 @@ Engine Features
   icon: i-heroicons-user
   ---
   #title
-  Character System
+  Modular Characters
 
   #description
-  GLTF model loading with animation packs. Crossfade transitions, type-safe animation names.
+  Swap heads, hair and armor on a shared skeleton. Animation packs with crossfade and type-safe names.
   :::
 
   :::u-page-feature
@@ -66,10 +66,21 @@ Engine Features
   icon: i-heroicons-puzzle-piece
   ---
   #title
-  Domain Packages
+  Engine Package
 
   #description
-  Modular packages for characters, combat, dialog, and inventory systems.
+  One engine package with core rules, runtime scene components and HUD widgets. VFX and post-processing ship as siblings.
+  :::
+
+  :::u-page-feature
+  ---
+  icon: i-heroicons-sun
+  ---
+  #title
+  Stylized Environment
+
+  #description
+  TSL grading, day cycle, instanced grass and flowers, quadtree terrain and depth-buffer water on WebGPU.
   :::
 
   :::u-page-feature

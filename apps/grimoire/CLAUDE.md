@@ -1,6 +1,6 @@
 # Grimoire
 
-Documentation site for Artificer Forge. Built with **Nuxt UI Pro + @nuxt/content**.
+Documentation site for Artificer Forge. Built with **Docus 5** (Nuxt 4 + @nuxt/content + Nuxt UI) plus `@barzhsieh/nuxt-content-mermaid` for diagrams.
 
 ## Commands
 
@@ -11,59 +11,66 @@ pnpm -F @artificer-forge/grimoire build
 
 ## Content Structure
 
+One numbered folder per section; each folder has a `.navigation.yml` (`title`, `icon: i-lucide-*`). Pages are `N.slug.md`; zero-pad (`01.`) once a folder passes 9 pages, because ordering is a string sort on the prefix.
+
 ```
 content/
-├── index.md                      # Landing page (Nuxt UI Pro components)
-├── 1.getting-started/
-│   └── 1.introduction.md
-├── 2.core-concepts/
-│   └── 1.game-store.md           # Pinia store: entities, party, inventory
-├── 3.entities/
-│   ├── 1.overview.md             # Template vs instance pattern
-│   ├── 2.templates.md            # YAML definitions, schema
-│   └── 3.rendering.md            # Smart/dumb component pattern
-├── 4.characters/
-│   ├── 1.model-loading.md        # useGLTF, primitive
-│   ├── 2.animations.md           # Animation system
-│   └── 4.equipment.md            # Bone attachment with useEquipment
-├── 8.environment/
-│   ├── 1.overview.md             # Environment systems overview
-│   └── 2.foliage.md              # Procedural billboard foliage
-└── 9.inventory/
-    ├── 1.overview.md             # Item-entity model, containerId/slot
-    ├── 2.store-api.md            # moveItem primitive, queries, MoveResult
-    ├── 3.ui-components.md        # Modal, bag grid, doll, slots, cells
-    ├── 4.interactions.md         # Hotkey, drag-and-drop, context menu
-    ├── 5.stackables-and-weight.md # Stack merging, encumbrance, capacity
-    └── 6.loot.md                 # Chests, corpses, world drops, popover
+├── index.md                  # Landing (u-page-hero + u-page-section; seo frontmatter only)
+├── 01.getting-started/       # introduction, installation, quick-start
+├── 02.engine-architecture/   # overview, three-layers, game-component, game-config
+├── 03.core-concepts/         # game-store, scene-refs, commands, command-palette
+├── 04.entities/              # overview, templates, rendering, scenes, interactables
+├── 05.characters/            # model-loading, animations, controller, equipment,
+│   └── 5.status-effects/     #   status-effects/* (one page per id), damage-numbers,
+│                             #   modular-characters, assets-package
+├── 06.portraits/             # overview, studio, bake-queue, signature
+├── 07.actors/                # overview, player, npcs, enemies, companions, party-hud
+├── 08.combat/                # overview, combat-store, action-bar, armor, abilities, aoe,
+│                             #   projectiles, combat-system
+├── 09.dialog/                # overview, dialog-engine, camera-director, dialog-panel, dialog-editor
+├── 10.surfaces/              # overview, variants, surface-system, textures
+├── 11.vfx/                   # overview, target-reticle, damage-numbers, materials, particles
+├── 12.post-processing/       # overview, effect-composer, bloom, depth-of-field, outline, antialiasing
+├── 13.environment/           # overview, grading, environment-store, day-cycle, wind, foliage,
+│                             #   grass, flowers, trees, scatter, trample, terrain-heightmap,
+│                             #   terrain-quadtree, terrain-material, water
+└── 14.inventory/             # overview, store-api, ui-components, interactions,
+                              #   stackables-and-weight, loot
 ```
+
+URLs strip the numeric prefixes: `content/05.characters/3.controller.md` → `/characters/controller`; nested: `/characters/status-effects/overview`.
 
 ## Page Format
 
 ```yaml
 ---
 title: Page Title
-description: SEO description
+description: One-sentence SEO description
 ---
 
-Content starts here directly — no h1 needed.
+Content starts here. No h1.
 ```
 
-> **Rule**: Docus automatically renders `title` from frontmatter as an `h1`. Never add a `# Title` heading in the markdown body — it will appear twice.
+> **Rule**: Docus renders `title` as the `h1`. Never add a `# Title` in the body.
 
-## Nuxt UI Pro Components
+## MDC Components
 
 | Component | Usage |
 |-----------|-------|
-| `::u-page-hero` | Landing hero sections |
-| `::u-page-section` | Content sections |
-| `::u-page-feature` | Feature cards |
-| `::alert{type="info"}` | Info/warning boxes |
-| `::code-group` | Tabbed code blocks |
+| `::note` / `::tip` / `::warning` / `::caution` | Callouts (Docus 5; `::alert` does not exist) |
+| `::code-group` | Tabbed code blocks. Blank line before the first fence and between fences |
+| ```` ```mermaid ```` | Diagrams, rendered by the mermaid module |
+| `::collapsible` | Long lists (animation names) |
+| `:status-effect-badge{id="burning"}` | Custom, `app/components/content/StatusEffectBadge.vue`; ids must match `content/status-effects/*.yaml` in the playground |
+| `::u-page-hero` / `::u-page-section` / `:::u-page-feature` | Landing page only |
 
 ## Writing Guidelines
 
-- Vue SFC code examples with `<TresCanvas>` patterns
-- Progressive: simple → complex
-- Game dev focus, not abstract Three.js theory
-- Use `::alert{type="warning"}` for gotchas
+- Verify every prop, default, signature and path against the code before writing it. The source of truth is `packages/engine/src`, `packages/vfx/src`, `packages/post-processing/src`, `packages/dialog-editor/src`, `packages/assets/src` and `apps/playground`.
+- Quote real YAML from `apps/playground/content/` rather than inventing examples.
+- Vue SFC examples the way the playground does it: `index.vue` mounts `GameContextProvider`, `experience.vue` holds the scene (no `TresCanvas`).
+- Import paths must be real: `@artificer-forge/engine/{core,runtime,ui}`, `@artificer-forge/vfx`, `@artificer-forge/post-processing`.
+- Progressive: simple → complex. Game dev focus, not abstract Three.js theory.
+- Tables for API surfaces: Name | Type | Default | Purpose.
+- Say plainly when something is declared but not implemented (e.g. `over-capacity`, `cameraTarget`).
+- Full audit of doc-vs-code drift (2026-08-28): `.claude/plans/2026-08-28-grimoire-docs-audit.md` at the repo root.
