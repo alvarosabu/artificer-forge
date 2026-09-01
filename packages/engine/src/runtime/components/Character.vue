@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useGLTF, Html } from '@tresjs/cientos'
 import { useLoop, type TresPointerEvent } from '@tresjs/core'
 import { Mesh, Vector3, type Group } from 'three'
 import { useDamageNumbers, DamageNumber, ghostMaterial } from '@artificer-forge/vfx'
-import { useOutlinePass } from '@artificer-forge/post-processing'
+import { useDofFocus, useOutlinePass } from '@artificer-forge/post-processing'
 import { AnimationName, type RigSize, useCharacterAnimations } from '../useCharacterAnimations'
 import { useModularRig } from '../modular/useModularRig'
 import { useModularArmor } from '../modular/useModularArmor'
@@ -19,6 +19,7 @@ import { useStatusEffectAnimations } from '../useStatusEffectAnimations'
 import { useStatusEffectTexts } from '../useStatusEffectTexts'
 import { usePortraitRenderer } from '../portrait/usePortraitRenderer'
 import type { GradingContext } from '../grading/grading'
+import type { Node } from 'three/webgpu'
 import { applyGradingToModel } from '../grading/applyGradingToModel'
 import { useCombatStore } from '../stores/combat'
 import { useGameStore } from '../stores/game'
@@ -27,23 +28,25 @@ import StatusEffectText from './StatusEffectText.vue'
 
 const { open: openContextMenu } = useContextMenu()
 const { addToSelection, removeFromSelection } = useOutlinePass()
+const dofFocus = useDofFocus()
 const combatStore = useCombatStore()
 
 const props = withDefaults(defineProps<{
   entityId: string
-  /** opt-in stylized grading (the trample pattern): swaps GLB materials for the graded finish */
   grading?: GradingContext | null
+  /** Ground height for the contact-occlusion term (default y = 0). On terrain, pass
+   * sampleHeight(field, positionWorld.xz) or the character darkens as buried. Read once, at first grading. */
+  groundHeight?: Node<'float'> | null
 }>(), {
   entityId: '',
   grading: null,
+  groundHeight: null,
 })
 
 const gameStore = useGameStore()
 const entity = computed(() => gameStore.getEntity(props.entityId))
 
-// Rig source is a setup-time decision: an entity is either modular (assembled
-// from appearance parts, skeleton named by its body part) or single-GLB — it
-// never switches.
+// Not reactive on purpose: an entity never switches between modular and single-GLB.
 const isModular = !!entity.value?.appearance
 const rigKey = computed(() => entity.value?.rig ?? 'Rig_Medium')
 const rigSize = computed<RigSize>(() => {
@@ -54,7 +57,7 @@ const rigSize = computed<RigSize>(() => {
 
 function useSingleGltfRig() {
   const { state, nodes } = useGLTF(entity.value?.model ?? '', { draco: true })
-  // Legacy single-GLB extra: ghost arm demo material.
+  // Ghost-arm demo, hardcoded to the ranger GLB.
   watch(nodes, (nodesValue) => {
     if (nodesValue?.Hero_ArmRight) {
       nodesValue.Hero_ArmRight.traverse((child: Mesh) => {
@@ -76,9 +79,10 @@ function useSingleGltfRig() {
 
 const singleGltf = isModular ? undefined : useSingleGltfRig()
 
-const rig = isModular
-  ? useModularRig(() => entity.value?.appearance, useModularArmor(() => props.entityId)).rig
-  : singleGltf!.rig
+const modular = isModular
+  ? useModularRig(() => entity.value?.appearance, useModularArmor(() => props.entityId))
+  : undefined
+const rig = modular ? modular.rig : singleGltf!.rig
 
 const { actions, currentAnimName, play, stop } = useCharacterAnimations(rig, rigSize.value, singleGltf?.animations)
 
@@ -99,7 +103,7 @@ const isLeader = computed(() => gameStore.party.leader === props.entityId)
 const effectiveWeaponSlot = computed<'mainHand' | 'offHand' | 'none' | undefined>(() => isLeader.value ? activeWeaponSlot.value : undefined)
 useEquipment(rig, equipment, effectiveWeaponSlot, {
   onAttach: (object) => {
-    if (props.grading) applyGradingToModel(object, props.grading)
+    if (props.grading) applyGradingToModel(object, props.grading, { groundHeight: props.groundHeight ?? undefined })
   },
 })
 useStatusEffectOverlay(rig, computed(() => props.entityId))
@@ -109,10 +113,8 @@ useStatusEffectAnimations(computed(() => props.entityId), play)
 const { numbers, showDamage, removeNumber } = useDamageNumbers()
 const { texts: statusTexts, removeText: removeStatusText } = useStatusEffectTexts(computed(() => props.entityId))
 
-// Three.js Group ref - controller operates directly on this
 const characterRef = ref<Group>()
 
-// Sync position back to store only when movement ends
 function syncToStore() {
   if (!characterRef.value) return
   const pos = characterRef.value.position
@@ -127,17 +129,14 @@ const { moveTo, update, target, onArrive, cancelMovement } = useCharacterControl
   speed: 3,
 })
 
-// Sync to store when movement ends
 onArrive(syncToStore)
 
-// Sync moveTarget to store when target changes
 watch(target, (newTarget) => {
   gameStore.updateEntity(props.entityId, {
     moveTarget: newTarget ? { x: newTarget.x, y: newTarget.y, z: newTarget.z } : null,
   })
 }, { immediate: true })
 
-// Initialize position from store once when characterRef is available
 watch(characterRef, (group) => {
   if (group && entity.value) {
     const { position, rotation } = entity.value
@@ -148,23 +147,41 @@ watch(characterRef, (group) => {
   }
 }, { immediate: true })
 
-watch(rig, (rigValue) => {
+// Keyed on version too: parts attach after the rig root exists, so a rig-only watch
+// would grade an empty skeleton. Registered after useModularRig so its tint/override
+// effects run first in the same flush and the grading snapshot sees final materials.
+watch([rig, () => modular?.version.value], ([rigValue]) => {
   if (rigValue) {
     rigValue.traverse((child: Mesh) => {
       if(child.isMesh) {
         child.castShadow = true
-        // NOT receiveShadow: at grazing sun angles the hair/head self-shadow
-        // stripes the face (bias can't fix near-parallel incidence) — toon
-        // characters cast only; the finish's core shadow does their shading
+        // Not receiveShadow: at grazing sun angles hair/head self-shadow stripes the
+        // face and bias cannot fix it. Cast only; the finish's core shadow shades them.
       }
     })
-    // before the ghost-arm watch below, so its material override wins
-    if (props.grading) applyGradingToModel(rigValue, props.grading)
+    if (props.grading) applyGradingToModel(rigValue, props.grading, { groundHeight: props.groundHeight ?? undefined })
   }
 }, { immediate: true })
 
 const { onBeforeRender } = useLoop()
 onBeforeRender(({ delta }) => update(delta))
+
+// The leader owns the DOF focus (it is what the camera follows).
+let focusedGroup: Group | null = null
+watch([isLeader, characterRef], ([leader, group]) => {
+  if (!dofFocus) return
+  if (leader && group) {
+    dofFocus.setFocusTarget(group)
+    focusedGroup = group
+  }
+  else if (focusedGroup) {
+    dofFocus.clearFocusTarget(focusedGroup)
+    focusedGroup = null
+  }
+}, { immediate: true })
+onUnmounted(() => {
+  if (dofFocus && focusedGroup) dofFocus.clearFocusTarget(focusedGroup)
+})
 
 function handleContextMenu(event: TresPointerEvent) {
   event.nativeEvent.preventDefault()

@@ -16,23 +16,28 @@ const props = withDefaults(defineProps<GrassOptions>(), {
   maskLow: 0.25,
   maskHigh: 0.6,
   heightField: null,
+  focus: null,
+  bladeDetail: 'curved',
 })
 
 const { geometry, material, uniforms, setMaskBand, dispose } = createGrass(props)
 
 watch(() => props.colorA, (val) => uniforms.colorA.value.set(new Color(val as ColorRepresentation)))
 watch(() => props.colorB, (val) => uniforms.colorB.value.set(new Color(val as ColorRepresentation)))
-// texture reference is swappable; presence/absence is decided at creation (remount to switch modes)
+// swap only; adding or removing the map needs a remount
 watch(() => props.diffuseMap, (val) => {
   if (val && uniforms.diffuseMap) uniforms.diffuseMap.value = val
 })
-// the band feeds the mask bake, so this re-sorts and re-uploads the instance buffer.
-// Cheap enough for a slider drag, not for a per-frame animation.
+// re-sorts and re-uploads the instance buffer: fine for a slider, not per frame
 watch([() => props.maskLow, () => props.maskHigh], ([low, high]) => {
   setMaskBand(low ?? 0.25, high ?? 0.6)
 })
 watch(() => props.windAngle, (angle) => uniforms.wind.direction.value.set(Math.sin(angle), Math.cos(angle)))
 watch(() => props.windStrength, (val) => { uniforms.wind.strength.value = val })
+watch(() => props.bladeWidth, (val) => { if (val !== undefined) uniforms.bladeWidth.value = val })
+watch(() => props.bladeHeight, (val) => { if (val !== undefined) uniforms.bladeHeight.value = val })
+watch(() => props.bladeHeightRandomness, (val) => { if (val !== undefined) uniforms.bladeHeightRandomness.value = val })
+watch(() => props.shadowIntensity, (val) => { if (val !== undefined) uniforms.shadowIntensity.value = val })
 
 const { onBeforeRender } = useLoop()
 onBeforeRender(({ delta }) => advanceWindTime(uniforms.wind, delta))
@@ -41,5 +46,12 @@ onUnmounted(dispose)
 </script>
 
 <template>
-  <TresMesh :geometry="geometry" :material="material" name="Grass" receive-shadow />
+  <!-- a following field never leaves the screen, and the origin-centred bounds would cull it by mistake -->
+  <TresMesh
+    :geometry="geometry"
+    :material="material"
+    :frustum-culled="!props.focus"
+    name="Grass"
+    receive-shadow
+  />
 </template>

@@ -1,32 +1,62 @@
 <script setup lang="ts">
-import { Group, Mesh, Raycaster, SRGBColorSpace, Vector3 } from 'three'
-import type { BufferGeometry, Color, DirectionalLight, Object3D, Texture } from 'three'
+import { Group, Mesh, SRGBColorSpace } from 'three'
+import type { Color, DirectionalLight, Object3D, Texture } from 'three'
 import type { TresPointerEvent } from '@tresjs/core'
 import { TargetIndicator } from '@artificer-forge/vfx'
-import { applyGradingToModel, Character, createControlMap, createGradingContext, createHeightField, createTerrainUniforms, createTrampleMap, createWaterUniforms, extractCanopyReferences, Flowers, Grass, GrassTufts, sampleHeight, TerrainGround, Trees, useEnvironmentStore, useGameStore, useSceneRefs, Water, type ControlMap, type HeightField, WindLines } from '@artificer-forge/engine/runtime'
+import { applyGradingToModel, Character, createControlMap, createGradingContext, createHeightMap, createScatterFocus, createTerrainUniforms, createTrampleMap, createWaterUniforms, extractCanopyReferences, Flowers, Grass, GrassTufts, readHeightPixels, sampleHeight, sampleHeightAt, TerrainQuadtree, Trees, useEnvironmentStore, useGameStore, useSceneRefs, Water, type ControlMap, type HeightField, type HeightMapMeta, WindLines } from '@artificer-forge/engine/runtime'
 import type { DayCycleName } from '~/utils/dayCyclePresets'
-import { MeshBasicNodeMaterial, type WebGPURenderer } from 'three/webgpu'
+import { MeshBasicNodeMaterial } from 'three/webgpu'
 import { positionWorld, vec4 } from 'three/tsl'
+import { refDebounced } from '@vueuse/core'
+import type { Ref } from 'vue'
 
-// useTexture's ref holds an empty Texture (image === null) until the file lands.
-// Truthiness is not enough: handing a pixel-less texture to a WebGPU material
-// throws inside the bind-group init every frame, which kills the render loop and
-// leaves a blank page. Gate on the image, and only then let a material see it.
+// Copied from public/levels/level-512.height-2048.json (pnpm bake:heightmap); re-bake
+// and copy again. size is the 1024 m bounding square because the level is 512 x 1024 m
+// and heightUv() divides by one size. rgb, not grey: 138 m over 8 bits terraces hillsides.
+const HEIGHT_META: HeightMapMeta = {
+  resolution: 2048,
+  size: 1024,
+  origin: [-7.4813, -244.1614],
+  minHeight: -4.7006,
+  maxHeight: 133.4328,
+  texelSize: 0.5,
+  flipY: false,
+  encoding: 'rgb',
+}
+const HEIGHT_MAP_URL = '/levels/level-512.height-2048.rgb.png'
+
+// Smaller window than the height map: control-512.png only paints the 512 m around
+// the start. Outside it the paint clamps, so far terrain reads as bare ground.
+const LEVEL_SIZE = 512
+const LEVEL_ORIGIN: [number, number] = [-7.4813, 11.8386]
+
+// Radius sets draw distance AND density, because the instance count is fixed. Keep
+// the grass fade at or past where the day fog saturates (~70 m) so the ring never shows.
+const GRASS_RADIUS = 150
+const SCATTER_RADIUS = 60
+
+// Two grass rings: curved blades inside NEAR_RADIUS, flat past it. The near grid is
+// solved from these two numbers to match the far ring's density (see nearSubdivisions).
+const NEAR_RADIUS = 30
+const GRASS_SUBDIVISIONS = 1024
+
+// useTexture's ref holds a pixel-less Texture until the file lands; a WebGPU material
+// given one throws in bind-group init every frame and leaves a blank page.
 function whenLoaded<T extends Texture>(source: { value: T | null | undefined }) {
   return computed(() => (source.value?.image ? source.value : null))
 }
 
 const control = shallowRef<ControlMap | null>(null)
-const { renderer } = useTresContext()
 const heightField = shallowRef<HeightField | null>(null)
 
-const { state: controlTexture } = useTexture('/levels/testbed.control.png')
+const { state: controlTexture } = useTexture('/levels/control-512.png')
 
 watch(whenLoaded(controlTexture), (texture) => {
   if (texture) {
     control.value = createControlMap({
       texture,
-      size: 60,
+      size: LEVEL_SIZE,
+      origin: LEVEL_ORIGIN,
     })
   }
 })
@@ -36,20 +66,14 @@ const groundMap = whenLoaded(useTexture('/textures/dirt.webp').state)
 const roadMap = whenLoaded(useTexture('/textures/road.webp').state)
 const rockMap = whenLoaded(useTexture('/textures/rock.webp').state)
 const waterNormalMap = whenLoaded(useTexture('/textures/water-normal.webp').state)
-// The level GLB is authored in Blender and holds everything static: the terrain
-// plus every non-interactable prop. The split here is by node name, because that
-// is the only contract Blender can carry. Entities (anything with runtime state)
-// never live in here — they come from YAML templates via the store.
+// must match the object name in the Blender level file
 const LEVEL_GROUND_NODE = 'Terrain'
 
-const { state: gltf } = useGLTF('/levels/testbed.glb', {
+const { state: gltf } = useGLTF('/levels/level-512.glb', {
   draco: true,
 })
-const groundGeometry = shallowRef<BufferGeometry | null>(null)
 const propsRoot = shallowRef<Object3D | null>(null)
 const canopyReferences = shallowRef<Object3D[]>([])
-// Bruno's foliage SDF: one greyscale leaf silhouette the alpha test cuts out of every
-// billboarded quad, so the leaf shape costs no geometry.
 const { state: foliageTexture } = useTexture('/textures/foliage/foliageSDF.png')
 
 const { state: grassDiffuseMap } = useTexture('/textures/grass/splat.jpg')
@@ -61,22 +85,15 @@ watch(gltf, (loaded) => {
   if (!loaded) return
 
   const ground = loaded.scene.getObjectByName(LEVEL_GROUND_NODE)
-  // fail loudly: a rename in Blender used to silently promote whichever mesh
-  // happened to come first, which bakes a height field out of a rock
+  // fail loudly: a silent miss leaves the authored terrain z-fighting the generated one
   if (!(ground instanceof Mesh)) {
-    console.error(`[terrain] no mesh named "${LEVEL_GROUND_NODE}" in testbed.glb`)
+    console.error(`[terrain] no mesh named "${LEVEL_GROUND_NODE}" in the level GLB`)
     return
   }
 
-  // bake the node transform into the vertices, so local space == world space
-  ground.updateWorldMatrix(true, false)
-  const geometry = ground.geometry.clone()
-  geometry.applyMatrix4(ground.matrixWorld)
-  groundGeometry.value = geometry
-
-  // Everything else is scenery. Clone rather than reparent: useGLTF caches the
-  // scene by url, and moving nodes out of it would empty the cached copy on the
-  // next HMR pass. Object3D.clone shares geometry and material, so this is cheap.
+  // The ground mesh is skipped: TerrainQuadtree generates the surface from the height
+  // map. Clone rather than reparent: useGLTF caches the scene by url, and moving
+  // nodes out of it would empty the cached copy on the next HMR pass.
   const scenery = new Group()
   scenery.position.copy(loaded.scene.position)
   scenery.quaternion.copy(loaded.scene.quaternion)
@@ -85,60 +102,34 @@ watch(gltf, (loaded) => {
     if (child !== ground) scenery.add(child.clone())
   }
 
-  // Canopies come out of the clone BEFORE propsRoot is published: the markers are
-  // children of their trunk node, so the clone above brings them along, and the
-  // grading watcher below would otherwise build node materials for three balls that
-  // are about to be thrown away.
+  // Before propsRoot is published, or the grading watcher builds materials for
+  // marker balls that are about to be removed.
   canopyReferences.value = extractCanopyReferences(scenery)
 
   propsRoot.value = scenery
 }, { immediate: true })
 
-// --- Character, for scale and for walking the level ---
+const { state: heightTexture } = useTexture(HEIGHT_MAP_URL)
 
-// A raycast target, deliberately NOT added to the scene. The geometry already has
-// its world transform baked in above, so an identity mesh sits exactly where
-// TerrainGround draws it. This is the correct ground query; the baked height field
-// replaces it once there is a CPU-side reader for it.
-const groundPicker = shallowRef<Mesh | null>(null)
-watch(groundGeometry, (geometry) => {
-  if (!geometry) return
-  const mesh = new Mesh(geometry)
-  mesh.updateMatrixWorld()
-  groundPicker.value = mesh
+watch(whenLoaded(heightTexture), (texture) => {
+  if (!texture || heightField.value) return
+  heightField.value = createHeightMap({ texture, meta: HEIGHT_META })
 })
 
-// The ground ray runs once per frame against all 32,768 terrain triangles, which
-// brute-force intersectObject tests one by one. A BVH makes it a tree descent.
-// firstHitOnly, because the ray points straight down and groundHeight takes [0]:
-// the default traversal collects and sorts every hit along the ray instead.
-// CENTER over the default SAH, because the terrain is an even grid where the cheap
-// split builds just as good a tree, without a build hitch at load.
-// Off-scene is fine: useBVH only needs a Mesh with geometry and a material.
-useBVH(groundPicker, { firstHitOnly: true, splitStrategy: 'CENTER' })
-
-watch([groundGeometry, () => renderer.instance], async ([geometry, gpu]) => {
-  if (!geometry || !gpu || heightField.value) return
-  // the same 60 metres and the same origin as the control map, on purpose
-  const field = createHeightField({ geometry, size: 60, resolution: 512 })
-  await field.bake(gpu as WebGPURenderer)
-  heightField.value = field
-}, { immediate: true })
-
-
-
-const raycaster = new Raycaster()
-const _origin = new Vector3()
-const _down = new Vector3(0, -1, 0)
-
-// Terrain height under a world XZ, or null when the ray misses the mesh.
-// Starts well above the level so it always begins outside the geometry.
+// sampleHeightAt mirrors the shader's sampling, so the character stands on the
+// same surface the GPU draws.
 function groundHeight(x: number, z: number): number | null {
-  const mesh = groundPicker.value
-  if (!mesh) return null
-  raycaster.set(_origin.set(x, 200, z), _down)
-  return raycaster.intersectObject(mesh, false)[0]?.point.y ?? null
+  const field = heightField.value
+  if (!field) return null
+  const pixels = readHeightPixels(field)
+  if (!pixels) return null
+  return sampleHeightAt(field, pixels, x, z)
 }
+
+// Grading's contact occlusion assumes ground at y = 0 and bakes once when the rig
+// loads, so the template gates the characters on this or they read as buried.
+const characterGroundHeight = computed(() =>
+  heightField.value ? sampleHeight(heightField.value, positionWorld.xz) : null)
 
 const gameStore = useGameStore()
 const { setCharacterRef, getCharacterRef } = useSceneRefs()
@@ -148,23 +139,20 @@ const characterEntities = computed(() =>
   [...gameStore.entities.values()].filter(e => e.type === 'character'))
 
 onMounted(async () => {
-  const id = await gameStore.spawnFromTemplate('hero', { x: 0, y: 0, z: 0 })
+  // y is ignored: the grounding pass below overwrites it every frame
+  const id = await gameStore.spawnFromTemplate('cedric', { x: 0, y: 0, z: 0 })
   gameStore.addToParty(id)
   gameStore.selectEntity(id)
   playerId.value = id
 })
 
-// Click the ground to walk there. The whole hit point goes in, height included:
-// the controller only steers on XZ (the grounding pass below owns y), and keeping
-// the clicked height means the destination marker can sit on the terrain.
+// Keep the hit height: the controller steers XZ only, and the marker needs y.
 function handleGroundClick(event: TresPointerEvent) {
   const id = playerId.value
   if (!id || !event.point) return
   getCharacterRef(id)?.moveTo(event.point)
 }
 
-// Destination marker. The terrain page composes its own systems, so it places the
-// indicator itself instead of getting CombatSystem's.
 const moveTargetPosition = computed<[number, number, number] | null>(() => {
   const target = gameStore.getEntity(playerId.value ?? '')?.moveTarget
   if (!target) return null
@@ -177,24 +165,20 @@ const { scene } = useTresContext()
 const environment = useEnvironmentStore()
 const dayCycle = useDayCycle()
 
-// presets give fog near/far as RATIOS of this span, so the range is solved
-// backwards from where fog should land: the overview camera sits ~50m out, so
-// day's 0.315/1.25 over span 55 starts the haze at ~67m and saturates past the
-// far edge — only the last stretch of ground dissolves, not the whole level
-const grading = createGradingContext({ sceneNear: 50, sceneFar: 105 })
+// presets give fog near/far as ratios of this span, so tune it by where the haze should land
+const grading = createGradingContext({ sceneNear: 50, sceneFar: 1000 })
 
 watch(scene, (s) => {
   if (!s) return
-  s.background = null                    // never leave a texture fighting the node
-  s.backgroundNode = grading.fogColor    // sky IS the fog gradient
+  s.background = null // never leave a texture fighting the node
+  s.backgroundNode = grading.fogColor
 }, { immediate: true })
 
-// Props are graded like every other model, but the contact-occlusion term needs
-// the terrain height under each fragment: these rocks sit 4 to 6 metres below
-// y = 0, and the default (ground at 0) would read that as buried and darken them.
-watch([propsRoot, heightField], ([root, field]) => {
-  if (!root || !field) return
-  applyGradingToModel(root, grading, { groundHeight: sampleHeight(field, positionWorld.xz) })
+// Contact occlusion needs the terrain height per fragment: these rocks sit 4 to 6 m
+// below y = 0 and the default (ground at 0) would darken them as buried.
+watch([propsRoot, characterGroundHeight], ([root, ground]) => {
+  if (!root || !ground) return
+  applyGradingToModel(root, grading, { groundHeight: ground })
   root.traverse((child) => {
     if (!(child instanceof Mesh)) return
     child.castShadow = true
@@ -222,19 +206,27 @@ watch(dayCycleAuto!, (v) => { dayCycle.auto.running = v })
 
 const { fogSceneNear, fogSceneFar } = useControls('fog', {
   sceneNear: { value: 50, min: 0, max: 200, step: 0.5, type: 'range' },
-  sceneFar: { value: 105, min: 1, max: 300, step: 0.5, type: 'range' },
+  sceneFar: { value: 1000, min: 1, max: 3000, step: 0.5, type: 'range' },
 }, { uuid })
 
 watch(fogSceneNear!, (v) => { grading.range.sceneNear = v })
 watch(fogSceneFar!, (v) => { grading.range.sceneFar = v })
 
-// terrain look: one uniform bag, written into live. The material is built once
-// (its node graph bakes in which maps exist), so every knob here has to be a
-// uniform — anything else would need a rebuild.
+// segments rebuilds the shared grid, so it remounts via :key. depth 6 is one vertex
+// per texel (1024 / (32 * 2^6) = 0.5 m); deeper only reads each texel twice.
+const { quadtreeSegments, quadtreeDepth, quadtreeSplit, quadtreeSkirt, quadtreeWireframe } = useControls('quadtree', {
+  segments: { value: 32, min: 4, max: 64, step: 4, type: 'range' },
+  depth: { value: 6, min: 0, max: 8, step: 1, type: 'range' },
+  split: { value: 1.5, min: 0.5, max: 6, step: 0.1, type: 'range' },
+  skirt: { value: 4, min: 0, max: 40, step: 0.25, type: 'range' },
+  wireframe: { value: false, type: 'boolean' },
+}, { uuid })
+
+// The material is built once (its graph bakes in which maps exist), so every knob
+// below must be a uniform.
 const terrain = createTerrainUniforms()
 const water = createWaterUniforms()
 
-// leches gives us plain refs; these just forward them into the uniforms
 function bindColor(source: Ref<string>, target: { value: Color }) {
   watch(source, hex => target.value.set(hex))
 }
@@ -242,14 +234,12 @@ function bindNumber(source: Ref<number>, target: { value: number }) {
   watch(source, (v) => { target.value = v })
 }
 
-// control defaults are READ from the uniforms, so the panel always opens on the
-// material's own values instead of a second copy that can drift
+// defaults are read from the uniforms so the panel cannot drift from the material
 function hex(u: { value: Color }) {
   return `#${u.value.getHexString()}`
 }
 
-// dark/light are the gradient for a surface with NO map, tint multiplies the map
-// when there is one — this page loads all four, so tint is the live one here
+// dark/light only apply without a map; this page loads all four, so tint is the live knob
 const { groundDark, groundLight, groundTint, groundTile, groundWarp } = useControls('ground', {
   dark: { value: hex(terrain.groundDark), type: 'color' },
   light: { value: hex(terrain.groundLight), type: 'color' },
@@ -306,10 +296,7 @@ bindColor(rockTint!, terrain.rockTint)
 bindNumber(rockTile!, terrain.rockTile)
 bindNumber(rockWarp!, terrain.rockWarp)
 
-// Where one surface hands over to the next. low/high is the band the mask ramps
-// across: low = where the layer starts showing, high = where it fully wins, so a
-// tight pair is a hard border and a wide one a long fade. Grass and road read the
-// painted control map, rock reads normal.y, shore reads the water channel.
+// low/high is the ramp band. grass/road read the control map, rock reads normal.y
 const {
   blendGrassLow, blendGrassHigh, blendRoadLow, blendRoadHigh,
   blendRockLow, blendRockHigh, blendEdge,
@@ -331,11 +318,7 @@ bindNumber(blendRockLow!, terrain.slopeStart)
 bindNumber(blendRockHigh!, terrain.slopeEnd)
 bindNumber(blendEdge!, terrain.edgeStrength)
 
-// Damp sand on the TERRAIN, not the water plane: the ring of darker ground that
-// makes the waterline read as wet rather than as a decal edge. low/high is the
-// painted blue band it ramps across; above/below are metres from the water line,
-// so they decide how far up the beach the damp reaches and how far down it goes
-// before the water's own absorption takes over the darkening.
+// Damp ring on the terrain, not the water plane; above/below are metres from the water line
 const { shoreColor, shoreLow, shoreHigh, shoreAbove, shoreBelow } = useControls('shore', {
   color: { value: hex(terrain.wetGround), type: 'color' },
   low: { value: terrain.shoreLow.value, min: 0, max: 1, step: 0.01, type: 'range' },
@@ -350,14 +333,8 @@ bindNumber(shoreHigh!, terrain.shoreHigh)
 bindNumber(shoreAbove!, terrain.dampAbove)
 bindNumber(shoreBelow!, terrain.dampBelow)
 
-// The water plane itself. `absorption` is the colour the water EATS, so the
-// surface looks like its complement: reddish-orange absorption is what reads as
-// blue-green water. strength is how hard that bites per metre, depth caps the
-// ramp so sky pixels behind the plane don't go black, and edgeLow/edgeHigh is
-// the painted blue band the surface fades in over.
-//
-// `level` drives BOTH the plane's Y and the terrain's idea of where the water
-// line sits — they have to agree, or the damp ring detaches from the surface.
+// absorption is the colour eaten, so the surface reads as its complement. level feeds
+// both the plane's Y and terrain.waterLevel; they must agree or the damp ring detaches.
 const { waterLevel,
   waterAbsorption,
   waterStrength,
@@ -394,12 +371,7 @@ bindNumber(waterRefraction!, water.refraction)
 // the panel opens before the first watch fires, so seed the terrain's copy now
 terrain.waterLevel.value = toValue(waterLevel!)
 
-// Foam at the waterline. `depth` is the whole band in metres of water, so it
-// widens on a gentle beach and tightens on a cliff without any painting; `edge`
-// is the solid rim inside it; lines/width/drift are the stripes travelling
-// toward the shore; `wobble` is how far the ripple normals push the band up and
-// down the beach. `color` doubles as the strength: the mix goes all the way to
-// it, so pulling it toward grey is exactly what a strength slider would do.
+// depth is metres of water, not distance; color doubles as the strength knob
 const {
   foamColor,
   foamDepth,
@@ -439,11 +411,8 @@ bindNumber(noisePatch!, terrain.patchFreq)
 bindNumber(noiseRock!, terrain.rockFreq)
 bindNumber(noiseWarp!, terrain.warpFreq)
 
-// Scattered vegetation. Placement is the SAME control.g band the ground blends
-// grass with, so nothing grows on the road or in the water: mask low/high here
-// only decides how far into the painted grass a species reaches, density is the
-// cutoff against the per-species patch noise. One leches folder per species, and
-// folder names have to stay single-word or the keys stop destructuring.
+// Placement reads the same control.g band the ground blends grass with, so nothing
+// grows on road or water. leches folder names must stay single-word to destructure.
 const { tuftsDensity, tuftsHeight, tuftsSpread, tuftsColorA, tuftsColorB } = useControls('tufts', {
   density: { value: 0.35, min: 0, max: 1, step: 0.01, type: 'range' },
   height: { value: 2.2, min: 0.4, max: 4, step: 0.05, type: 'range' },
@@ -470,14 +439,44 @@ const { daisiesDensity, daisiesHeight, daisiesColor } = useControls('daisies', {
   color: { value: '#e8c22a', type: 'color' },
 }, { uuid })
 
-// World-aligned trample map: characters stamp it, grass and foliage read it and
-// bend where it is marked. Size and origin match the control map and the height
-// field, so one world XZ means the same texel in all three. 512 keeps the same
-// ~8.5 texels per metre the 30m pages get at 256 — the cost is a 512² canvas
-// re-uploaded on every fade frame, so drop the resolution first if this bites.
+// a 512² canvas is re-uploaded on every fade frame; drop the resolution first if it bites
 const trampleMap = createTrampleMap({ size: 60, resolution: 512 })
 
-// debug view: the texture's backing canvas rendered live in the bottom-right corner
+// One centre for every scatter field: a fixed blade budget over the whole level is
+// haze, wrapped around the party leader it is a lawn.
+const scatterFocus = createScatterFocus()
+
+// Radius is baked into the grid anchors, so changing it rebuilds the geometry (the
+// fields are keyed on it). Debounced so a drag does not rebuild 270k blades per tick.
+const { scatterGrassRadius, scatterNearRadius, scatterFlowerRadius, scatterFade } = useControls('scatter', {
+  grassRadius: { value: GRASS_RADIUS, min: 20, max: 200, step: 5, type: 'range' },
+  nearRadius: { value: NEAR_RADIUS, min: 5, max: 80, step: 5, type: 'range' },
+  flowerRadius: { value: SCATTER_RADIUS, min: 10, max: 100, step: 5, type: 'range' },
+  // fraction of the radius; 1 = hard cut
+  fade: { value: 0.85, min: 0.3, max: 1, step: 0.01, type: 'range' },
+}, { uuid })
+
+const grassRadius = refDebounced(scatterGrassRadius as Ref<number>, 250)
+const nearRadius = refDebounced(scatterNearRadius as Ref<number>, 250)
+const flowerRadius = refDebounced(scatterFlowerRadius as Ref<number>, 250)
+
+// Solved, not tuned: holds the far ring's blades per m² so the crossfade shows no density step.
+const nearSubdivisions = computed(() =>
+  Math.max(4, Math.round(GRASS_SUBDIVISIONS * nearRadius.value / grassRadius.value)))
+
+watch(scatterFade!, (value) => { scatterFocus.setFadeStart(value as number) })
+
+// farWidth only scales the far ring: a flat blade reads thinner than a curved one at
+// the same width. No far height knob on purpose: the crossfade would show the step.
+const { bladesWidth, bladesFarWidth, bladesHeight, bladesRandomness, bladesRootShade } = useControls('blades', {
+  width: { value: 0.1, min: 0.01, max: 0.4, step: 0.005, type: 'range' },
+  farWidth: { value: 1.3, min: 0.5, max: 3, step: 0.05, type: 'range' },
+  height: { value: 0.6, min: 0.1, max: 2.5, step: 0.05, type: 'range' },
+  randomness: { value: 0.6, min: 0, max: 1, step: 0.01, type: 'range' },
+  // not a cast shadow: root AO that rides the engine's misleadingly named shadowIntensity
+  rootShade: { value: 0.5, min: 0, max: 1, step: 0.01, type: 'range' },
+}, { uuid })
+
 const { trampleDebug } = useControls('trample', {
   debug: { value: false, type: 'boolean' },
 }, { uuid })
@@ -503,9 +502,7 @@ watch(trampleDebug!, (show) => {
   }
 })
 
-// Canopies. Placement is authored in Blender (one icosphere per blob), so there is no
-// density here — only the look. leafSize and amount are baked into the cluster geometry,
-// so moving them rebuilds the instanced mesh; colours are uniforms and stay live.
+// leafSize and amount are baked into the cluster geometry, so they rebuild; colours are live
 const { treesColorA, treesColorB, treesAmount, treesLeafSize, treesCanopyScale } = useControls('trees', {
   colorA: { value: '#6bd54d', type: 'color' },
   colorB: { value: '#86b544', type: 'color' },
@@ -526,8 +523,7 @@ function syncLight() {
   light.position.copy(environment.lightDirection).multiplyScalar(-60)
 }
 
-// ortho frustum sized to the whole level (±30m) plus its height range, otherwise
-// the hills fall outside the shadow camera and self-shadow nothing
+// the ortho frustum must cover the level and its height range or the hills self-shadow nothing
 const { shadowsAmplitude, shadowsBias, shadowsNormalBias, shadowsRadius } = useControls('shadows', {
   amplitude: { value: 45, min: 1, max: 100, step: 0.5, type: 'range' },
   bias: { value: -0.0005, min: -0.02, max: 0.02, step: 0.0001, type: 'range' },
@@ -557,7 +553,6 @@ watch([directionalLightRef, shadowsAmplitude!, shadowsBias!, shadowsNormalBias!,
 
 function createHeightFieldPreview(field: HeightField) {
   const material = new MeshBasicNodeMaterial()
-  // metres are not a display range: divide to a rough 0..1 grey so you can see it
   const grey = sampleHeight(field, positionWorld.xz).div(10).add(0.3)
   material.outputNode = vec4(grey, grey, grey, 1)
   return material
@@ -569,10 +564,8 @@ onBeforeRender(({ delta }) => {
   grading.sync(environment) // store keys match GradingProps structurally
   syncLight()
 })
-// Priority 10 so this runs AFTER Character.vue's own movement update, which sits
-// at the default priority of 0. Ordering the other way would ground the character
-// against last frame's position. getPosition() hands back the live Vector3 the
-// group renders from, so writing y here moves the character.
+// Priority 10 runs after Character.vue's movement update (default 0); the other
+// order grounds the character against last frame's position.
 onBeforeRender(() => {
   const id = playerId.value
   if (!id) return
@@ -582,11 +575,7 @@ onBeforeRender(() => {
   if (y !== null) position.y = y
 }, 10)
 
-// Also priority 10, for the same reason: stamping at the default priority would
-// mark where the character stood last frame, leaving the trail a step behind.
-// Trails first, then the live interactor — a stamp is the lasting mark that fades
-// back, the interactor is where blades part around the character right now, so
-// only the one being driven gets it.
+// Same priority 10, so the stamp lands where the character is now, not last frame.
 onBeforeRender(({ delta }) => {
   trampleMap.update(delta)
   for (const entity of characterEntities.value) {
@@ -594,7 +583,10 @@ onBeforeRender(({ delta }) => {
     if (pos) trampleMap.stamp(pos.x, pos.z)
   }
   const leaderPos = playerId.value ? getCharacterRef(playerId.value)?.getPosition() : null
-  if (leaderPos) trampleMap.setInteractor(leaderPos.x, leaderPos.z)
+  if (leaderPos) {
+    trampleMap.setInteractor(leaderPos.x, leaderPos.z)
+    scatterFocus.set(leaderPos.x, leaderPos.z)
+  }
 }, 10)
 
 onUnmounted(() => {
@@ -605,35 +597,36 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- no ambient light: graded materials discard the lighting result, the sun is
-       here only to drive the shadow map -->
+  <!-- no ambient light: graded materials discard lighting, the sun only drives the shadow map -->
   <TresDirectionalLight
     ref="directionalLightRef"
     :intensity="1.2"
     cast-shadow
   />
-  <!-- every map has to be loaded before mount: the material bakes in which maps
-       exist, so one arriving late would silently fall back to flat colour -->
-  <TerrainGround
-    v-if="control && groundGeometry && grassMap && groundMap && roadMap && rockMap"
+  <!-- Every map must be loaded before mount: the material bakes in which maps exist,
+       so a late one silently falls back to flat colour. -->
+  <TerrainQuadtree
+    v-if="control && heightField && grassMap && groundMap && roadMap && rockMap"
+    :key="quadtreeSegments"
+    :field="heightField"
     :control="control"
-    :geometry="groundGeometry"
     :grading="grading"
     :grass-map="grassMap"
     :ground-map="groundMap"
     :road-map="roadMap"
     :rock-map="rockMap"
     :uniforms="terrain"
+    :segments="quadtreeSegments"
+    :max-depth="quadtreeDepth"
+    :split-factor="quadtreeSplit"
+    :skirt-depth="quadtreeSkirt"
+    :wireframe="quadtreeWireframe"
     @click="handleGroundClick"
   />
-  <!-- Static scenery straight from the level GLB: rocks now, bridges and fences
-       later. No pointer handler, so clicks fall through to the ground behind. -->
   <primitive
     v-if="propsRoot"
     :object="propsRoot"
   />
-  <!-- The trunks render as ordinary scenery above; this only fills the canopy markers
-       that extractCanopyReferences pulled out of that same GLB. -->
   <Trees
     :references="canopyReferences"
     :foliage-texture="foliageTexture"
@@ -653,18 +646,52 @@ onUnmounted(() => {
     :height="1.2"
     :pulse-speed="3"
   />
-  <Character
-    v-for="entity in characterEntities"
-    :ref="(el: any) => setCharacterRef(entity.id, el)"
-    :key="entity.id"
-    :entity-id="entity.id"
-    :grading="grading"
-  />
-  <Grass
+  <template v-if="characterGroundHeight">
+    <Character
+      v-for="entity in characterEntities"
+      :ref="(el: any) => setCharacterRef(entity.id, el)"
+      :key="entity.id"
+      :entity-id="entity.id"
+      :grading="grading"
+      :ground-height="characterGroundHeight"
+    />
+  </template>
+ <!-- Keyed on the radii: they are baked into the anchors, and innerSize into the far
+      ring's node graph. The splat spans the level so its variation does not tile. -->
+ <Grass
     v-if="control && heightField && grassDiffuseMap"
-    :subdivisions="300"
+    :key="`near-${nearRadius}-${grassRadius}`"
+    :subdivisions="nearSubdivisions"
+    blade-detail="curved"
     :diffuse-map="grassDiffuseMap"
-    :size="60"
+    :diffuse-map-size="LEVEL_SIZE"
+    :size="nearRadius * 2"
+    :focus="scatterFocus"
+    :blade-width="bladesWidth"
+    :blade-height="bladesHeight"
+    :blade-height-randomness="bladesRandomness"
+    :shadow-intensity="bladesRootShade"
+    :grading="grading"
+    :height-field="heightField"
+    :control="control"
+    :trample="trampleMap"
+    :mask-low="0.25"
+    :mask-high="0.6"
+  />
+ <Grass
+    v-if="control && heightField && grassDiffuseMap"
+    :key="`far-${nearRadius}-${grassRadius}`"
+    :subdivisions="GRASS_SUBDIVISIONS"
+    blade-detail="flat"
+    :diffuse-map="grassDiffuseMap"
+    :diffuse-map-size="LEVEL_SIZE"
+    :size="grassRadius * 2"
+    :inner-size="nearRadius * 2"
+    :focus="scatterFocus"
+    :blade-width="bladesWidth * bladesFarWidth"
+    :blade-height="bladesHeight"
+    :blade-height-randomness="bladesRandomness"
+    :shadow-intensity="bladesRootShade"
     :grading="grading"
     :height-field="heightField"
     :control="control"
@@ -676,8 +703,10 @@ onUnmounted(() => {
        against a flower's ~60, so tufts stay coarse and lean on density instead -->
   <GrassTufts
     v-if="control && heightField"
+    :key="flowerRadius"
     :subdivisions="40"
-    :size="60"
+    :size="flowerRadius * 2"
+    :focus="scatterFocus"
     :grading="grading"
     :height-field="heightField"
     :control="control"
@@ -692,9 +721,11 @@ onUnmounted(() => {
   />
   <Flowers
     v-if="control && heightField"
+    :key="flowerRadius"
     shape="puff"
-    :subdivisions="90"
-    :size="60"
+    :subdivisions="200"
+    :size="flowerRadius * 2"
+    :focus="scatterFocus"
     :grading="grading"
     :height-field="heightField"
     :control="control"
@@ -707,9 +738,11 @@ onUnmounted(() => {
   />
   <Flowers
     v-if="control && heightField"
+    :key="flowerRadius"
     shape="poppy"
-    :subdivisions="60"
-    :size="60"
+    :subdivisions="100"
+    :size="flowerRadius * 2"
+    :focus="scatterFocus"
     :grading="grading"
     :height-field="heightField"
     :control="control"
@@ -722,9 +755,11 @@ onUnmounted(() => {
   />
   <Flowers
     v-if="control && heightField"
+    :key="flowerRadius"
     shape="daisy"
-    :subdivisions="40"
-    :size="60"
+    :subdivisions="80"
+    :size="flowerRadius * 2"
+    :focus="scatterFocus"
     :grading="grading"
     :height-field="heightField"
     :control="control"

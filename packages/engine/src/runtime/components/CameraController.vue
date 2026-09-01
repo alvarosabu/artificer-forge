@@ -1,28 +1,26 @@
 <script setup lang="ts">
 import { OrbitControls } from '@tresjs/cientos'
 import { useGameStore } from '../stores/game'
-import type { CameraControllerProps } from '../camera'
+import { CAMERA_DEFAULTS, type CameraControllerProps } from '../camera'
 import { useSceneRefs } from '../useSceneRefs';
-import { computed, shallowRef, toValue } from 'vue';
+import { computed, shallowRef, toValue, watch } from 'vue';
 import { Camera, MathUtils, Vector3 } from 'three';
 import { useLoop } from '@tresjs/core';
 
-// Shared camera + orbit controls for every Game scene. Lives inside <Game> so the
-// active PerspectiveCamera resolves via useTresContext() for any consumer (e.g.
-// DialogCameraDirector). Controls auto-disable while input is blocked (dialogs, etc).
+// Lives inside <Game> so consumers (DialogCameraDirector) get the camera via useTresContext().
 const props = withDefaults(defineProps<CameraControllerProps>(), {
-  position: () => [12.86, 12.57, 15.52],
-  near: 0.1,
-  far: 100,
-  controls: true,
-  fov: 40,
-  maxPolarAngle: Math.PI / 2,
-  minPolarAngle: Math.PI / 2,
-  maxDistance: 100,
-  minDistance: 0.1,
-  follow: false,
-  followHeight: 1.2,
-  followSmoothing: 6,
+  position: () => CAMERA_DEFAULTS.position,
+  near: CAMERA_DEFAULTS.near,
+  far: CAMERA_DEFAULTS.far,
+  controls: CAMERA_DEFAULTS.controls,
+  fov: CAMERA_DEFAULTS.fov,
+  maxPolarAngle: CAMERA_DEFAULTS.maxPolarAngle,
+  minPolarAngle: CAMERA_DEFAULTS.minPolarAngle,
+  maxDistance: CAMERA_DEFAULTS.maxDistance,
+  minDistance: CAMERA_DEFAULTS.minDistance,
+  follow: CAMERA_DEFAULTS.follow,
+  followHeight: CAMERA_DEFAULTS.followHeight,
+  followSmoothing: CAMERA_DEFAULTS.followSmoothing,
 })
 
 const gameStore = useGameStore()
@@ -40,6 +38,9 @@ const anchor = new Vector3()
 const smoothAnchor = new Vector3()
 const offset = new Vector3()
 let acquire: 'authored' | null = 'authored'
+
+// Re-seat when follow turns back on, or the loop resumes from the free camera's offset.
+watch(followId, (id) => { if (id) acquire = 'authored' })
 
 
 function readAnchor(): Vector3 | null {
@@ -67,9 +68,8 @@ onBeforeRender(({ delta, camera: active }) => {
     return
   }
 
-  // The offset OrbitControls left us this frame. The drag, the damping and the
-  // polar clamp are all already inside it, which is why we read it back rather
-  // than track angles of our own.
+  // Read the offset back from OrbitControls (drag, damping, polar clamp already
+  // applied) instead of tracking angles of our own.
   offset.copy(cam.position).sub(orbit.target)
 
   smoothAnchor.lerp(point, 1 - Math.exp(-props.followSmoothing * delta))

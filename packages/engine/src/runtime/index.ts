@@ -1,6 +1,3 @@
-// @artificer-forge/engine/runtime — Vue/Tres/Three stores, systems, controllers, scene components.
-
-// Scene components
 export { default as Floor } from './components/Floor.vue'
 export { default as Foliage } from './components/foliage/Foliage.vue'
 export * from './components/foliage/foliage'
@@ -13,6 +10,7 @@ export * from './components/flowers/flowers'
 export { default as Trees } from './components/trees/Trees.vue'
 export * from './components/trees/trees'
 export * from './components/scatter/density'
+export * from './components/scatter/focus'
 export * from './trample/trample'
 export * from './components/wind/wind'
 export { default as WindLines } from './components/wind/WindLines.vue'
@@ -22,7 +20,6 @@ export * from './grading/presetTrack'
 export * from './grading/stylizedOutput'
 export * from './grading/applyGradingToModel'
 
-// Stores
 export * from './stores/game'
 export * from './stores/environment'
 export * from './stores/damageTypes'
@@ -32,7 +29,6 @@ export * from './stores/portraits'
 export * from './stores/combat'
 export * from './stores/dialog'
 
-// Combat / ability / dialog systems
 export * from './useProjectile'
 export * from './useAoESystem'
 export * from './useActionBar'
@@ -50,7 +46,6 @@ export * from './useInventory'
 export * from './useLoot'
 export * from './useSurface'
 
-// In-scene game components
 export { default as Actor } from './components/Actor.vue'
 export { default as Character } from './components/Character.vue'
 export { default as Interactable } from './components/Interactable.vue'
@@ -64,7 +59,6 @@ export { default as Nameplate } from './components/Nameplate.vue'
 export { default as StatusEffectBadge } from './components/StatusEffectBadge.vue'
 export { default as StatusEffectBadges } from './components/StatusEffectBadges.vue'
 
-// Modular character system (parts, armor, materials) + rendering
 export * from './modular/partRegistry'
 export * from './modular/useModularRig'
 export * from './modular/useModularArmor'
@@ -72,7 +66,6 @@ export * from './modular/segmentMaterials'
 export { loadGltf } from './modular/gltfCache'
 export * from './createWebGPURenderer'
 
-// Movement / animation controllers
 export * from './useCharacterAnimations'
 export * from './useCharacterController'
 export * from './usePointerController'
@@ -82,7 +75,6 @@ export * from './useGameConfig'
 export * from './keyboard'
 export * from './camera'
 
-// Portrait generator (3D-rendered character portraits)
 export * from './portrait/portraitBackgrounds'
 export * from './portrait/portraitBakeQueue'
 export * from './portrait/portraitRigPresets'
@@ -94,10 +86,13 @@ export { default as PortraitSubject } from './components/portrait/Subject.vue'
 export { default as PortraitBackground } from './components/portrait/Background.vue'
 export { default as PortraitLights } from './components/portrait/Lights.vue'
 
-// Terrain
 export * from './terrain/controlMap'
 export * from './terrain/terrainMaterial'
 export * from './terrain/heightField'
+export * from './terrain/heightMap'
+export * from './terrain/quadtree'
+export * from './terrain/quadtreeMesh'
 export * from './terrain/waterMaterial'
 export { default as TerrainGround } from './components/terrain/TerrainGround.vue'
+export { default as TerrainQuadtree } from './components/terrain/TerrainQuadtree.vue'
 export { default as Water } from './components/terrain/Water.vue'

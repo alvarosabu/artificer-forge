@@ -1,0 +1,19 @@
+{
+  "source": "testbed.glb",
+  "node": "Terrain",
+  "resolution": 512,
+  "size": 60.0526,
+  "origin": [
+    -0.0137,
+    -0.0218
+  ],
+  "minHeight": -6.3738,
+  "maxHeight": 8.6842,
+  "texelSize": 0.1173,
+  "flipY": false,
+  "encoding": "grey",
+  "encodingNotes": {
+    "grey": "r / 255 -> 0..1; height = minHeight + t * (maxHeight - minHeight)",
+    "rgb": "(r * 65536 + g * 256 + b) / 16777215 -> 0..1; sample NEAREST, NoColorSpace, no mipmaps"
+  }
+}

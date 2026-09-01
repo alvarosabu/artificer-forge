@@ -41,3 +41,6 @@ coverage
 
 # Superpowers visual brainstorming companion (ephemeral)
 .superpowers/
+
+# Blender autosave backups
+*.blend1
