@@ -247,9 +247,10 @@ function buildFoliageMaterial(options: {
     // cleared depth just reads as "everything is lit".
     material.shadowSide = FrontSide
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    material.positionNode = Fn(({ object }: { object: any }) => {
-        instance(object.count, instanceMatrix).toStack()
+    material.positionNode = Fn(() => {
+        // three r184+ dropped the count argument and auto-stacks void Fn calls, so no
+        // toStack(). @types/three 0.185 still declares the old signature, hence the cast.
+        ;(instance as unknown as (matrices: InstancedBufferAttribute) => void)(instanceMatrix)
         // instance() assigns the transform to positionLocal at build time, AFTER any
         // statements authored here — so no toVar()/assign on it (a var would snapshot the
         // pre-instance value). A pure expression evaluates at the output, post-instance,

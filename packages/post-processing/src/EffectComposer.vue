@@ -4,14 +4,18 @@ import { useLoop, useTresContext } from '@tresjs/core'
 import type { Scene, Camera, Object3D } from 'three'
 import { Color, RenderPipeline, WebGPURenderer } from 'three/webgpu'
 import { NoToneMapping, Vector3 } from 'three'
-import { pass, float, uniform, renderOutput } from 'three/tsl'
+import { pass, float, uniform, renderOutput, convertToTexture } from 'three/tsl'
 import { outline } from 'three/addons/tsl/display/OutlineNode.js'
+import { godrays } from 'three/addons/tsl/display/GodraysNode.js'
+import { bilateralBlur } from 'three/addons/tsl/display/BilateralBlurNode.js'
+import { depthAwareBlend } from 'three/addons/tsl/display/depthAwareBlend.js'
 import { scaledBloom } from './ScaledBloomNode'
 import { scaledDof } from './ScaledDepthOfFieldNode'
 import { tiltShift } from './tiltShift'
 import { fxaa } from 'three/addons/tsl/display/FXAANode.js'
 import { useOutlinePass } from './useOutlinePass'
 import { useDofFocus } from './useDofFocus'
+import { useGodraysLight } from './useGodraysLight'
 
 export interface OutlinePreset {
   visibleEdgeColor?: string
@@ -68,6 +72,27 @@ export interface TiltShiftConfig {
   resolutionScale?: number
 }
 
+export interface GodraysConfig {
+  /** How much light the air accumulates per world unit marched. */
+  density?: number
+  /** Upper clamp on the accumulated ray brightness (0-1). */
+  maxDensity?: number
+  /** How fast rays fade with distance from the light. Higher = shorter rays. */
+  distanceAttenuation?: number
+  /** Samples per pixel through the shadow map. The main cost knob. */
+  raymarchSteps?: number
+  /** Ray tint composited over the scene. */
+  color?: string
+  /** Pixel search radius for depth edges in the composite. Applied on pipeline rebuild. */
+  edgeRadius?: number
+  /** How far the composite pushes samples away from depth edges (anti-halo). */
+  edgeStrength?: number
+  /** Bilateral blur kernel over the raymarch result. Applied on pipeline rebuild. */
+  blurSigma?: number
+  /** Scale of the raymarch target. */
+  resolutionScale?: number
+}
+
 /**
  * msaa inherits the renderer's 4x samples on a HalfFloat target, and any depth
  * consumer (DOF) then forces a full-res multisampled depth resolve on top.
@@ -81,6 +106,8 @@ const props = withDefaults(defineProps<{
   dof?: DofConfig
   /** undefined leaves the tilt-shift pass out of the graph. Wins over dof when both are set. */
   tiltShift?: TiltShiftConfig
+  /** Needs a shadow-casting light registered via useGodraysLight; skipped (with a warning) otherwise. */
+  godrays?: GodraysConfig
   antialias?: AntialiasMode
 }>(), {
   outlinePresets: () => ({
@@ -92,6 +119,7 @@ const props = withDefaults(defineProps<{
 const { renderer, scene, camera } = useTresContext()
 const { getGroup } = useOutlinePass()
 const dofFocus = useDofFocus()
+const godraysLight = useGodraysLight()
 const { onBeforeRender } = useLoop()
 
 const postProcessing = shallowRef<RenderPipeline | null>(null)
@@ -109,6 +137,9 @@ const tiltBandWidth = uniform(0.1)
 const tiltFeather = uniform(0.35)
 const tiltStrength = uniform(1)
 const tiltFocalRange = uniform(12)
+
+const godraysBlendColor = uniform(new Color('#fff3d6'))
+const godraysEdgeStrength = uniform(2)
 
 const targetWorld = new Vector3()
 const camWorld = new Vector3()
@@ -181,10 +212,58 @@ function buildPipeline(sceneObj: Scene, cameraObj: Camera) {
 //       )
 //     }
 
-  // Order: scene -> blur (dof OR tilt-shift) -> outlines -> bloom. The blur reads the
-  // raw scene only: after bloom it would smear the glow across depth edges, and the
-  // overlays must stay sharp.
+  // Order: scene -> godrays -> blur (dof OR tilt-shift) -> outlines -> bloom. Godrays
+  // composite onto the raw scene first so the blur also blurs the rays (sharp rays over
+  // a blurred background break the miniature illusion). The blur runs pre-bloom because
+  // after bloom it would smear the glow across depth edges, and the overlays must stay sharp.
   let sceneColor: any = scenePassColor
+
+  const sunLight = godraysLight?.light.value ?? null
+  if (props.godrays && !sunLight) {
+    console.warn('[EffectComposer] godrays is set but no light is registered via useGodraysLight; skipping the pass.')
+  }
+  if (props.godrays && sunLight) {
+    const config = props.godrays
+    godraysBlendColor.value.set(config.color ?? '#fff3d6')
+    godraysEdgeStrength.value = config.edgeStrength ?? 2
+    const godraysPass = godrays(scenePass.getTextureNode('depth'), cameraObj, sunLight)
+    godraysPass.density.value = config.density ?? 0.7
+    godraysPass.maxDensity.value = config.maxDensity ?? 0.5
+    godraysPass.distanceAttenuation.value = config.distanceAttenuation ?? 2
+    godraysPass.raymarchSteps.value = config.raymarchSteps ?? 60
+    godraysPass.resolutionScale = config.resolutionScale ?? 0.5
+    // The chain three recommends: bilateral blur hides the raymarch noise, the
+    // depth-aware blend keeps light from leaking across silhouettes.
+    const godraysBlurred = bilateralBlur(godraysPass, undefined, config.blurSigma ?? 4)
+    // depthAwareBlend samples both inputs, so it needs texture nodes, not the raw passes.
+    sceneColor = depthAwareBlend(scenePassColor, godraysBlurred.getTextureNode(), scenePass.getTextureNode('depth'), cameraObj, {
+      blendColor: godraysBlendColor,
+      edgeRadius: config.edgeRadius ?? 2,
+      edgeStrength: godraysEdgeStrength,
+    })
+
+    buildWatchers.push(watch(
+      () => props.godrays,
+      (next) => {
+        if (!next) return
+        godraysBlendColor.value.set(next.color ?? '#fff3d6')
+        godraysEdgeStrength.value = next.edgeStrength ?? 2
+        godraysPass.density.value = next.density ?? 0.7
+        godraysPass.maxDensity.value = next.maxDensity ?? 0.5
+        godraysPass.distanceAttenuation.value = next.distanceAttenuation ?? 2
+        godraysPass.raymarchSteps.value = next.raymarchSteps ?? 60
+        // Applied next frame: the node re-runs setSize from updateBefore every frame.
+        godraysPass.resolutionScale = next.resolutionScale ?? 0.5
+      },
+      { deep: true },
+    ))
+  }
+
+  // The blur nodes sample textures, so the godrays composite must go through an RT
+  // copy before feeding them. Only paid when godrays AND a blur mode are both on.
+  const blurSource = (props.tiltShift || props.dof) && sceneColor !== scenePassColor
+    ? convertToTexture(sceneColor)
+    : scenePassColor
 
   if (props.tiltShift && props.dof) {
     console.warn('[EffectComposer] dof and tiltShift are both set; they fight over the same blur budget, so tiltShift wins. Pass only one.')
@@ -197,7 +276,7 @@ function buildPipeline(sceneObj: Scene, cameraObj: Camera) {
     tiltFeather.value = config.feather ?? 0.35
     tiltStrength.value = config.strength ?? 1
     tiltFocalRange.value = config.focalRange ?? 12
-    const tiltPass = tiltShift(scenePassColor, scenePass.getViewZNode(), {
+    const tiltPass = tiltShift(blurSource, scenePass.getViewZNode(), {
       focusCenter: tiltFocusCenter,
       bandWidth: tiltBandWidth,
       feather: tiltFeather,
@@ -224,7 +303,7 @@ function buildPipeline(sceneObj: Scene, cameraObj: Camera) {
   } else if (props.dof) {
     dofFocalLength.value = props.dof.focalLength ?? 4
     dofBokehScale.value = props.dof.bokehScale ?? 2
-    const dofPass = scaledDof(scenePassColor, scenePass.getViewZNode(), dofFocusDistance, dofFocalLength, dofBokehScale, props.dof.resolutionScale ?? 0.25)
+    const dofPass = scaledDof(blurSource, scenePass.getViewZNode(), dofFocusDistance, dofFocalLength, dofBokehScale, props.dof.resolutionScale ?? 0.25)
     sceneColor = dofPass
 
     buildWatchers.push(watch(
@@ -280,7 +359,7 @@ function buildPipeline(sceneObj: Scene, cameraObj: Camera) {
   renderPipeline.outputNode = outputNode
   postProcessing.value = renderPipeline
   // PERF TEST instrumentation, remove when done
-  console.info('[EffectComposer] pipeline built (src)', { antialias: props.antialias, bloomScale: props.bloom?.resolutionScale ?? 0.5, dof: !!props.dof, dofScale: props.dof?.resolutionScale ?? 0.25, tiltShift: !!props.tiltShift, outline: 'disabled' })
+  console.info('[EffectComposer] pipeline built (src)', { antialias: props.antialias, bloomScale: props.bloom?.resolutionScale ?? 0.5, dof: !!props.dof, dofScale: props.dof?.resolutionScale ?? 0.25, tiltShift: !!props.tiltShift, godrays: !!(props.godrays && sunLight), outline: 'disabled' })
   renderer.replaceRenderFunction((notifySuccess) => {
     renderPipeline.render()
     notifySuccess()
@@ -296,11 +375,21 @@ watch(() => props.antialias, (mode, previous) => {
 })
 
 watch(
-  [scene, camera.activeCamera, () => !!props.dof, () => !!props.tiltShift, () => props.tiltShift?.sigma],
+  [
+    scene,
+    camera.activeCamera,
+    () => !!props.dof,
+    () => !!props.tiltShift,
+    () => props.tiltShift?.sigma,
+    () => !!props.godrays,
+    () => godraysLight?.light.value ?? null,
+    () => props.godrays?.blurSigma,
+    () => props.godrays?.edgeRadius,
+  ],
   ([currentScene, currentCamera, ...passKeys], previous) => {
     if (!currentScene || !currentCamera) return
-    // Scene/camera ref flips are ignored; only pass toggles rebuild the graph
-    // (and tilt sigma, which is baked into the blur kernel).
+    // Scene/camera ref flips are ignored; only pass toggles rebuild the graph, plus the
+    // knobs baked into shaders (tilt sigma, godrays blur/edge) and the godrays light itself.
     if (postProcessing.value && previous && passKeys.every((key, i) => key === previous[i + 2])) return
     disposePipeline()
     buildPipeline(currentScene as unknown as Scene, currentCamera as unknown as Camera)

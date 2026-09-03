@@ -48,6 +48,28 @@ export interface TiltShiftConfig {
   resolutionScale: number
 }
 
+export interface GodraysConfig {
+  enabled: boolean
+  /** How much light the air accumulates per world unit marched. */
+  density: number
+  /** Upper clamp on the accumulated ray brightness (0-1). */
+  maxDensity: number
+  /** How fast rays fade with distance from the light. Higher = shorter rays. */
+  distanceAttenuation: number
+  /** Samples per pixel through the shadow map. The main cost knob. */
+  raymarchSteps: number
+  /** Ray tint composited over the scene. */
+  color: string
+  /** Pixel search radius for depth edges in the composite. Changing it rebuilds the pipeline. */
+  edgeRadius: number
+  /** How far the composite pushes samples away from depth edges (anti-halo). */
+  edgeStrength: number
+  /** Bilateral blur kernel over the raymarch result. Changing it rebuilds the pipeline. */
+  blurSigma: number
+  /** Scale of the raymarch target. */
+  resolutionScale: number
+}
+
 export interface OutlinePreset {
   visibleEdgeColor: string
   edgeThickness: number
@@ -61,6 +83,7 @@ export interface GameConfig {
   bloom: BloomConfig
   dof: DofConfig
   tiltShift: TiltShiftConfig
+  godrays: GodraysConfig
   outlinePresets: Record<string, OutlinePreset>
 }
 
@@ -75,6 +98,8 @@ export function defaultGameConfig(): GameConfig {
     dof: { enabled: false, focalLength: 6, bokehScale: 2, focusDistance: 15, focusHeight: 1, smoothing: 8, resolutionScale: 0.25 },
     // The screen-space miniature take on the same idea. Off by default; enable one of the two, not both.
     tiltShift: { enabled: false, focusCenter: 0.5, bandWidth: 0.1, feather: 0.35, strength: 1, focalRange: 12, focusDistance: 15, focusHeight: 1, smoothing: 8, sigma: 8, resolutionScale: 0.5 },
+    // Also needs a shadow-casting light registered via useGodraysLight from the scene.
+    godrays: { enabled: false, density: 0.7, maxDensity: 0.5, distanceAttenuation: 2, raymarchSteps: 60, color: '#fff3d6', edgeRadius: 2, edgeStrength: 2, blurSigma: 4, resolutionScale: 0.5 },
     outlinePresets: {
       party: { visibleEdgeColor: '#00e5ff', edgeThickness: 3 },
       interactive: { visibleEdgeColor: '#ffcc00', edgeThickness: 3 },
@@ -93,6 +118,7 @@ export function provideGameConfig(overrides: Partial<GameConfig> = {}): GameConf
     bloom: { ...base.bloom, ...overrides.bloom },
     dof: { ...base.dof, ...overrides.dof },
     tiltShift: { ...base.tiltShift, ...overrides.tiltShift },
+    godrays: { ...base.godrays, ...overrides.godrays },
     outlinePresets: { ...base.outlinePresets, ...overrides.outlinePresets },
   })
   provide(GAME_CONFIG_KEY, config)

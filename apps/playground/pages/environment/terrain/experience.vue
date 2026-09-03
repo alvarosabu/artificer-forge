@@ -3,6 +3,7 @@ import { Group, Mesh, SRGBColorSpace } from 'three'
 import type { Color, DirectionalLight, Object3D, Texture } from 'three'
 import type { TresPointerEvent } from '@tresjs/core'
 import { TargetIndicator } from '@artificer-forge/vfx'
+import { useGodraysLight } from '@artificer-forge/post-processing'
 import { applyGradingToModel, Character, createControlMap, createGradingContext, createHeightMap, createScatterFocus, createTerrainUniforms, createTrampleMap, createWaterUniforms, extractCanopyReferences, Flowers, Grass, GrassTufts, readHeightPixels, sampleHeight, sampleHeightAt, TerrainQuadtree, Trees, useEnvironmentStore, useGameStore, useSceneRefs, Water, type ControlMap, type HeightField, type HeightMapMeta, WindLines } from '@artificer-forge/engine/runtime'
 import type { DayCycleName } from '~/utils/dayCyclePresets'
 import { MeshBasicNodeMaterial } from 'three/webgpu'
@@ -200,6 +201,8 @@ const { dayCyclePreset, dayCycleAuto } = useControls('dayCycle', {
 }, { uuid })
 
 dayCycle.auto.running = false
+// TEMP verify hook, remove
+if (import.meta.client) (window as any).__dayCycle = dayCycle
 
 watch(dayCyclePreset!, name => dayCycle.transitionTo(name as DayCycleName))
 watch(dayCycleAuto!, (v) => { dayCycle.auto.running = v })
@@ -512,6 +515,13 @@ const { treesColorA, treesColorB, treesAmount, treesLeafSize, treesCanopyScale }
 }, { uuid })
 
 const directionalLightRef = shallowRef<DirectionalLight>()
+
+// The composer's godrays pass raymarches this light's shadow map.
+const godraysLight = useGodraysLight()
+watch(directionalLightRef, (light, previous) => {
+  if (light) godraysLight?.setGodraysLight(light)
+  else if (previous) godraysLight?.clearGodraysLight(previous)
+})
 
 // the sun must aim exactly along grading.lightDirection or the drop shadows and
 // the finish's core shadow would disagree about where the light is

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { NoToneMapping } from 'three'
-import { EffectComposer, useDofFocusProvider, useOutlinePassProvider } from '@artificer-forge/post-processing'
+import { EffectComposer, useDofFocusProvider, useGodraysLightProvider, useOutlinePassProvider } from '@artificer-forge/post-processing'
 import { CameraController, CombatSystem, SurfaceSystem, createWebGPURenderer, useContextMenuProvider, useGameConfig } from '@artificer-forge/engine/runtime'
 import type { CameraProps } from '@artificer-forge/engine/runtime'
 import { Hud } from '@artificer-forge/engine/ui'
@@ -14,6 +14,7 @@ const config = useGameConfig()
 const { close } = useContextMenuProvider()
 useOutlinePassProvider()
 useDofFocusProvider()
+useGodraysLightProvider()
 
 function handlePointerMissed() {
   close()
@@ -56,6 +57,7 @@ function handlePointerMissed() {
       }"
       :dof="config.dof.enabled ? config.dof : undefined"
       :tilt-shift="config.tiltShift.enabled ? config.tiltShift : undefined"
+      :godrays="config.godrays.enabled ? config.godrays : undefined"
       :antialias="config.antialias"
     />
   </TresCanvas>

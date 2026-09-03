@@ -10,6 +10,8 @@ const props = defineProps<{ camera?: CameraProps }>()
 const { uuid } = useSharedLechesControls()
 
 const config = provideGameConfig()
+// TEMP verify hook, remove
+if (import.meta.client) (window as any).__gameConfig = config
 
 // Seeded from the page's camera so the panel opens on the scene's own values.
 // Polar limits are degrees here, radians in the props.
@@ -77,6 +79,19 @@ const { tiltshiftEnabled, tiltshiftFocusCenter, tiltshiftBandWidth, tiltshiftFea
   resolutionScale: { value: config.tiltShift.resolutionScale, min: 0.1, max: 1, step: 0.05, type: 'range' },
 }, { uuid })
 
+const { godraysEnabled, godraysDensity, godraysMaxDensity, godraysDistanceAttenuation, godraysRaymarchSteps, godraysColor, godraysEdgeRadius, godraysEdgeStrength, godraysBlurSigma, godraysResolutionScale } = useControls('godrays', {
+  enabled: { value: config.godrays.enabled, type: 'boolean' },
+  density: { value: config.godrays.density, min: 0, max: 3, step: 0.01, type: 'range' },
+  maxDensity: { value: config.godrays.maxDensity, min: 0, max: 1, step: 0.01, type: 'range' },
+  distanceAttenuation: { value: config.godrays.distanceAttenuation, min: 0, max: 8, step: 0.05, type: 'range' },
+  raymarchSteps: { value: config.godrays.raymarchSteps, min: 8, max: 120, step: 1, type: 'range' },
+  color: { value: config.godrays.color, type: 'color' },
+  edgeRadius: { value: config.godrays.edgeRadius, min: 0, max: 8, step: 1, type: 'range' },
+  edgeStrength: { value: config.godrays.edgeStrength, min: 0, max: 8, step: 0.1, type: 'range' },
+  blurSigma: { value: config.godrays.blurSigma, min: 1, max: 12, step: 1, type: 'range' },
+  resolutionScale: { value: config.godrays.resolutionScale, min: 0.1, max: 1, step: 0.05, type: 'range' },
+}, { uuid })
+
 watchEffect(() => {
   config.bloom.strength = toValue(postprocessingBloomStrength)
   config.bloom.radius = toValue(postprocessingBloomRadius)
@@ -101,6 +116,16 @@ watchEffect(() => {
   config.tiltShift.smoothing = toValue(tiltshiftSmoothing)
   config.tiltShift.sigma = toValue(tiltshiftSigma)
   config.tiltShift.resolutionScale = toValue(tiltshiftResolutionScale)
+  config.godrays.enabled = toValue(godraysEnabled)
+  config.godrays.density = toValue(godraysDensity)
+  config.godrays.maxDensity = toValue(godraysMaxDensity)
+  config.godrays.distanceAttenuation = toValue(godraysDistanceAttenuation)
+  config.godrays.raymarchSteps = toValue(godraysRaymarchSteps)
+  config.godrays.color = toValue(godraysColor)
+  config.godrays.edgeRadius = toValue(godraysEdgeRadius)
+  config.godrays.edgeStrength = toValue(godraysEdgeStrength)
+  config.godrays.blurSigma = toValue(godraysBlurSigma)
+  config.godrays.resolutionScale = toValue(godraysResolutionScale)
 })
 </script>
 

@@ -13,7 +13,7 @@
   "files": ["src"],
   "peerDependencies": {
     "@tresjs/core": ">=5.0.0",
-    "three": "^0.183.0",
+    "three": ">=0.184.0",
     "vue": ">=3.4.0"
   },
   "devDependencies": {

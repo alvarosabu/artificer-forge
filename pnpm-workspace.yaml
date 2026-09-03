@@ -39,8 +39,8 @@ catalogs:
     '@tresjs/leches': ^1.2.0
     '@tresjs/nuxt': ^5.6.0
     '@tresjs/post-processing': ^3.5.0
-    '@types/three': ^0.183.1
-    three: ^0.183.2
+    '@types/three': ^0.185.4
+    three: ^0.185.1
   typescript:
     typescript: ^5.9.3
   vue:
