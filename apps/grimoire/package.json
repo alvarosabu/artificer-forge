@@ -9,7 +9,7 @@
     "@nuxt/eslint": "catalog:nuxt",
     "@nuxt/fonts": "catalog:nuxt",
     "@nuxt/icon": "catalog:nuxt",
-    "better-sqlite3": "^12.6.2",
+    "better-sqlite3": "^13.0.3",
     "docus": "latest",
     "nuxt": "catalog:nuxt",
     "zod": "catalog:nuxt",

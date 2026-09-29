@@ -10,7 +10,7 @@
   "keywords": [],
   "author": "",
   "license": "MIT",
-  "packageManager": "pnpm@10.28.0",
+  "packageManager": "pnpm@12.6.0",
   "dependencies": {
     "@tresjs/cientos": "catalog:three",
     "@tresjs/core": "catalog:three",
@@ -20,13 +20,5 @@
     "@iconify-json/heroicons": "catalog:nuxt",
     "@types/three": "catalog:three",
     "typescript": "catalog:typescript"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "better-sqlite3"
-    ],
-    "overrides": {
-      "ipx": "3.0.2"
-    }
   }
 }

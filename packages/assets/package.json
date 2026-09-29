@@ -24,13 +24,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@nuxt/kit": "^4.3.1"
+    "@nuxt/kit": "^4.5.2"
   },
   "devDependencies": {
     "@gltf-transform/core": "catalog:",
     "@gltf-transform/extensions": "catalog:",
     "@gltf-transform/functions": "catalog:",
-    "@types/node": "^25.0.0",
+    "@types/node": "^26.6.3",
     "draco3dgltf": "catalog:",
     "typescript": "catalog:typescript",
     "vitest": "catalog:"
