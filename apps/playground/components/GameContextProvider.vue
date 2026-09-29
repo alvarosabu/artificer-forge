@@ -17,7 +17,7 @@ if (import.meta.client) (window as any).__gameConfig = config
 // Polar limits are degrees here, radians in the props.
 const seed = { ...CAMERA_DEFAULTS, ...props.camera }
 
-const { cameraFov, cameraNear, cameraFar, cameraMinDistance, cameraMaxDistance, cameraMinPolar, cameraMaxPolar, cameraFollow, cameraFollowHeight, cameraFollowSmoothing, cameraOrbit } = useControls('camera', {
+const { cameraFov, cameraNear, cameraFar, cameraMinDistance, cameraMaxDistance, cameraMinPolar, cameraMaxPolar, cameraFollow, cameraFollowHeight, cameraFollowSmoothing, cameraOrbit } = useControls('🎥 camera', {
   fov: { value: seed.fov, min: 10, max: 120, step: 1, type: 'range' },
   near: { value: seed.near, min: 0.01, max: 10, step: 0.01, type: 'range' },
   far: { value: seed.far, min: 10, max: 3000, step: 10, type: 'range' },
@@ -47,7 +47,7 @@ const cameraProps = computed<CameraProps>(() => ({
   controls: toValue(cameraOrbit),
 }))
 
-const { postprocessingBloomStrength, postprocessingBloomThreshold, postprocessingBloomRadius, postprocessingBloomSmoothWidth, postprocessingBloomResolutionScale } = useControls('postprocessing', {
+const { postprocessingBloomStrength, postprocessingBloomThreshold, postprocessingBloomRadius, postprocessingBloomSmoothWidth, postprocessingBloomResolutionScale } = useControls('✨ postprocessing', {
   bloomStrength: { value: config.bloom.strength, min: 0, max: 3, step: 0.01, type: 'range' },
   bloomRadius: { value: config.bloom.radius, min: 0, max: 1, step: 0.01, type: 'range' },
   bloomThreshold: { value: config.bloom.threshold, min: 0, max: 1, step: 0.01, type: 'range' },
@@ -55,7 +55,7 @@ const { postprocessingBloomStrength, postprocessingBloomThreshold, postprocessin
   bloomResolutionScale: { value: config.bloom.resolutionScale, min: 0.1, max: 1, step: 0.05, type: 'range' },
 }, { uuid })
 
-const { dofEnabled, dofFocalLength, dofBokehScale, dofFocusDistance, dofFocusHeight, dofSmoothing, dofResolutionScale } = useControls('dof', {
+const { dofEnabled, dofFocalLength, dofBokehScale, dofFocusDistance, dofFocusHeight, dofSmoothing, dofResolutionScale } = useControls('🔭 dof', {
   enabled: { value: config.dof.enabled, type: 'boolean' },
   focalLength: { value: config.dof.focalLength, min: 0.1, max: 120, step: 0.1, type: 'range' },
   bokehScale: { value: config.dof.bokehScale, min: 0, max: 10, step: 0.1, type: 'range' },
@@ -65,7 +65,7 @@ const { dofEnabled, dofFocalLength, dofBokehScale, dofFocusDistance, dofFocusHei
   resolutionScale: { value: config.dof.resolutionScale, min: 0.1, max: 1, step: 0.05, type: 'range' },
 }, { uuid })
 
-const { tiltshiftEnabled, tiltshiftFocusCenter, tiltshiftBandWidth, tiltshiftFeather, tiltshiftStrength, tiltshiftFocalRange, tiltshiftFocusDistance, tiltshiftFocusHeight, tiltshiftSmoothing, tiltshiftSigma, tiltshiftResolutionScale } = useControls('tiltshift', {
+const { tiltshiftEnabled, tiltshiftFocusCenter, tiltshiftBandWidth, tiltshiftFeather, tiltshiftStrength, tiltshiftFocalRange, tiltshiftFocusDistance, tiltshiftFocusHeight, tiltshiftSmoothing, tiltshiftSigma, tiltshiftResolutionScale } = useControls('📐 tiltshift', {
   enabled: { value: config.tiltShift.enabled, type: 'boolean' },
   focusCenter: { value: config.tiltShift.focusCenter, min: 0, max: 1, step: 0.01, type: 'range' },
   bandWidth: { value: config.tiltShift.bandWidth, min: 0, max: 0.5, step: 0.01, type: 'range' },
@@ -79,7 +79,7 @@ const { tiltshiftEnabled, tiltshiftFocusCenter, tiltshiftBandWidth, tiltshiftFea
   resolutionScale: { value: config.tiltShift.resolutionScale, min: 0.1, max: 1, step: 0.05, type: 'range' },
 }, { uuid })
 
-const { godraysEnabled, godraysDensity, godraysMaxDensity, godraysDistanceAttenuation, godraysRaymarchSteps, godraysColor, godraysEdgeRadius, godraysEdgeStrength, godraysBlurSigma, godraysResolutionScale } = useControls('godrays', {
+const { godraysEnabled, godraysDensity, godraysMaxDensity, godraysDistanceAttenuation, godraysRaymarchSteps, godraysColor, godraysEdgeRadius, godraysEdgeStrength, godraysBlurSigma, godraysResolutionScale } = useControls('🌅 godrays', {
   enabled: { value: config.godrays.enabled, type: 'boolean' },
   density: { value: config.godrays.density, min: 0, max: 3, step: 0.01, type: 'range' },
   maxDensity: { value: config.godrays.maxDensity, min: 0, max: 1, step: 0.01, type: 'range' },

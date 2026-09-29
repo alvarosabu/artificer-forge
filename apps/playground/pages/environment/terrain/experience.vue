@@ -187,7 +187,7 @@ watch([propsRoot, characterGroundHeight], ([root, ground]) => {
   })
 })
 
-const { dayCyclePreset, dayCycleAuto } = useControls('dayCycle', {
+const { dayCyclePreset, dayCycleAuto } = useControls('☀️ dayCycle', {
   preset: {
     value: 'day',
     options: [
@@ -207,7 +207,7 @@ if (import.meta.client) (window as any).__dayCycle = dayCycle
 watch(dayCyclePreset!, name => dayCycle.transitionTo(name as DayCycleName))
 watch(dayCycleAuto!, (v) => { dayCycle.auto.running = v })
 
-const { fogSceneNear, fogSceneFar } = useControls('fog', {
+const { fogSceneNear, fogSceneFar } = useControls('🌫️ fog', {
   sceneNear: { value: 50, min: 0, max: 200, step: 0.5, type: 'range' },
   sceneFar: { value: 1000, min: 1, max: 3000, step: 0.5, type: 'range' },
 }, { uuid })
@@ -217,7 +217,7 @@ watch(fogSceneFar!, (v) => { grading.range.sceneFar = v })
 
 // segments rebuilds the shared grid, so it remounts via :key. depth 6 is one vertex
 // per texel (1024 / (32 * 2^6) = 0.5 m); deeper only reads each texel twice.
-const { quadtreeSegments, quadtreeDepth, quadtreeSplit, quadtreeSkirt, quadtreeWireframe } = useControls('quadtree', {
+const { quadtreeSegments, quadtreeDepth, quadtreeSplit, quadtreeSkirt, quadtreeWireframe } = useControls('🧩 quadtree', {
   segments: { value: 32, min: 4, max: 64, step: 4, type: 'range' },
   depth: { value: 6, min: 0, max: 8, step: 1, type: 'range' },
   split: { value: 1.5, min: 0.5, max: 6, step: 0.1, type: 'range' },
@@ -243,7 +243,7 @@ function hex(u: { value: Color }) {
 }
 
 // dark/light only apply without a map; this page loads all four, so tint is the live knob
-const { groundDark, groundLight, groundTint, groundTile, groundWarp } = useControls('ground', {
+const { groundDark, groundLight, groundTint, groundTile, groundWarp } = useControls('⛰️ ground', {
   dark: { value: hex(terrain.groundDark), type: 'color' },
   light: { value: hex(terrain.groundLight), type: 'color' },
   tint: { value: hex(terrain.groundTint), type: 'color' },
@@ -257,7 +257,7 @@ bindColor(groundTint!, terrain.groundTint)
 bindNumber(groundTile!, terrain.groundTile)
 bindNumber(groundWarp!, terrain.groundWarp)
 
-const { grassDark, grassLight, grassTint, grassTile, grassWarp } = useControls('grass', {
+const { grassDark, grassLight, grassTint, grassTile, grassWarp } = useControls('🌱 grass', {
   dark: { value: hex(terrain.grassDark), type: 'color' },
   light: { value: hex(terrain.grassLight), type: 'color' },
   tint: { value: hex(terrain.grassTint), type: 'color' },
@@ -271,7 +271,7 @@ bindColor(grassTint!, terrain.grassTint)
 bindNumber(grassTile!, terrain.grassTile)
 bindNumber(grassWarp!, terrain.grassWarp)
 
-const { roadDark, roadLight, roadTint, roadTile, roadWarp } = useControls('road', {
+const { roadDark, roadLight, roadTint, roadTile, roadWarp } = useControls('🛤️ road', {
   dark: { value: hex(terrain.roadDark), type: 'color' },
   light: { value: hex(terrain.roadLight), type: 'color' },
   tint: { value: hex(terrain.roadTint), type: 'color' },
@@ -285,7 +285,7 @@ bindColor(roadTint!, terrain.roadTint)
 bindNumber(roadTile!, terrain.roadTile)
 bindNumber(roadWarp!, terrain.roadWarp)
 
-const { rockDark, rockLight, rockTint, rockTile, rockWarp } = useControls('rock', {
+const { rockDark, rockLight, rockTint, rockTile, rockWarp } = useControls('🪨 rock', {
   dark: { value: hex(terrain.rockDark), type: 'color' },
   light: { value: hex(terrain.rockLight), type: 'color' },
   tint: { value: hex(terrain.rockTint), type: 'color' },
@@ -303,7 +303,7 @@ bindNumber(rockWarp!, terrain.rockWarp)
 const {
   blendGrassLow, blendGrassHigh, blendRoadLow, blendRoadHigh,
   blendRockLow, blendRockHigh, blendEdge,
-} = useControls('blend', {
+} = useControls('🎨 blend', {
   grassLow: { value: terrain.grassBlendLow.value, min: 0, max: 1, step: 0.01, type: 'range' },
   grassHigh: { value: terrain.grassBlendHigh.value, min: 0, max: 1, step: 0.01, type: 'range' },
   roadLow: { value: terrain.roadBlendLow.value, min: 0, max: 1, step: 0.01, type: 'range' },
@@ -322,7 +322,7 @@ bindNumber(blendRockHigh!, terrain.slopeEnd)
 bindNumber(blendEdge!, terrain.edgeStrength)
 
 // Damp ring on the terrain, not the water plane; above/below are metres from the water line
-const { shoreColor, shoreLow, shoreHigh, shoreAbove, shoreBelow } = useControls('shore', {
+const { shoreColor, shoreLow, shoreHigh, shoreAbove, shoreBelow } = useControls('🏖️ shore', {
   color: { value: hex(terrain.wetGround), type: 'color' },
   low: { value: terrain.shoreLow.value, min: 0, max: 1, step: 0.01, type: 'range' },
   high: { value: terrain.shoreHigh.value, min: 0, max: 1, step: 0.01, type: 'range' },
@@ -348,7 +348,7 @@ const { waterLevel,
   waterRipplesStrength,
   waterRipplesSpeed,
   waterRefraction,
-} = useControls('water', {
+} = useControls('🌊 water', {
   level: { value: -1, min: -6, max: 2, step: 0.01, type: 'range' },
   absorption: { value: hex(water.absorption), type: 'color' },
   strength: { value: water.absorbStrength.value, min: 0, max: 3, step: 0.01, type: 'range' },
@@ -383,7 +383,7 @@ const {
   foamWidth,
   foamDrift,
   foamWobble,
-} = useControls('foam', {
+} = useControls('🫧 foam', {
   color: { value: hex(water.foamColor), type: 'color' },
   depth: { value: water.foamDepth.value, min: 0.05, max: 4, step: 0.01, type: 'range' },
   edge: { value: water.foamEdge.value, min: 0.01, max: 1, step: 0.01, type: 'range' },
@@ -402,7 +402,7 @@ bindNumber(foamDrift!, water.foamDrift)
 bindNumber(foamWobble!, water.foamWobble)
 
 // frequencies are cycles per metre: 1 / value is the feature size in metres
-const { noiseGrain, noisePatch, noiseRock, noiseWarp } = useControls('noise', {
+const { noiseGrain, noisePatch, noiseRock, noiseWarp } = useControls('🎲 noise', {
   grain: { value: terrain.grainFreq.value, min: 0.01, max: 1.5, step: 0.01, type: 'range' },
   patch: { value: terrain.patchFreq.value, min: 0.005, max: 0.5, step: 0.005, type: 'range' },
   rock: { value: terrain.rockFreq.value, min: 0.01, max: 1.5, step: 0.01, type: 'range' },
@@ -416,7 +416,7 @@ bindNumber(noiseWarp!, terrain.warpFreq)
 
 // Placement reads the same control.g band the ground blends grass with, so nothing
 // grows on road or water. leches folder names must stay single-word to destructure.
-const { tuftsDensity, tuftsHeight, tuftsSpread, tuftsColorA, tuftsColorB } = useControls('tufts', {
+const { tuftsDensity, tuftsHeight, tuftsSpread, tuftsColorA, tuftsColorB } = useControls('🌾 tufts', {
   density: { value: 0.35, min: 0, max: 1, step: 0.01, type: 'range' },
   height: { value: 2.2, min: 0.4, max: 4, step: 0.05, type: 'range' },
   spread: { value: 0.45, min: 0.1, max: 1.2, step: 0.01, type: 'range' },
@@ -424,19 +424,19 @@ const { tuftsDensity, tuftsHeight, tuftsSpread, tuftsColorA, tuftsColorB } = use
   colorB: { value: '#7fae3c', type: 'color' },
 }, { uuid })
 
-const { puffsDensity, puffsHeight, puffsColor } = useControls('puffs', {
+const { puffsDensity, puffsHeight, puffsColor } = useControls('☁️ puffs', {
   density: { value: 0.5, min: 0, max: 1, step: 0.01, type: 'range' },
   height: { value: 0.85, min: 0.1, max: 1.5, step: 0.01, type: 'range' },
   color: { value: '#ffffff', type: 'color' },
 }, { uuid })
 
-const { poppiesDensity, poppiesHeight, poppiesColor } = useControls('poppies', {
+const { poppiesDensity, poppiesHeight, poppiesColor } = useControls('🌺 poppies', {
   density: { value: 0.34, min: 0, max: 1, step: 0.01, type: 'range' },
   height: { value: 0.44, min: 0.1, max: 1.5, step: 0.01, type: 'range' },
   color: { value: '#c4202a', type: 'color' },
 }, { uuid })
 
-const { daisiesDensity, daisiesHeight, daisiesColor } = useControls('daisies', {
+const { daisiesDensity, daisiesHeight, daisiesColor } = useControls('🌼 daisies', {
   density: { value: 0.38, min: 0, max: 1, step: 0.01, type: 'range' },
   height: { value: 0.32, min: 0.1, max: 1.5, step: 0.01, type: 'range' },
   color: { value: '#e8c22a', type: 'color' },
@@ -451,7 +451,7 @@ const scatterFocus = createScatterFocus()
 
 // Radius is baked into the grid anchors, so changing it rebuilds the geometry (the
 // fields are keyed on it). Debounced so a drag does not rebuild 270k blades per tick.
-const { scatterGrassRadius, scatterNearRadius, scatterFlowerRadius, scatterFade } = useControls('scatter', {
+const { scatterGrassRadius, scatterNearRadius, scatterFlowerRadius, scatterFade } = useControls('🎯 scatter', {
   grassRadius: { value: GRASS_RADIUS, min: 20, max: 200, step: 5, type: 'range' },
   nearRadius: { value: NEAR_RADIUS, min: 5, max: 80, step: 5, type: 'range' },
   flowerRadius: { value: SCATTER_RADIUS, min: 10, max: 100, step: 5, type: 'range' },
@@ -471,7 +471,7 @@ watch(scatterFade!, (value) => { scatterFocus.setFadeStart(value as number) })
 
 // farWidth only scales the far ring: a flat blade reads thinner than a curved one at
 // the same width. No far height knob on purpose: the crossfade would show the step.
-const { bladesWidth, bladesFarWidth, bladesHeight, bladesRandomness, bladesRootShade } = useControls('blades', {
+const { bladesWidth, bladesFarWidth, bladesHeight, bladesRandomness, bladesRootShade } = useControls('🌿 blades', {
   width: { value: 0.1, min: 0.01, max: 0.4, step: 0.005, type: 'range' },
   farWidth: { value: 1.3, min: 0.5, max: 3, step: 0.05, type: 'range' },
   height: { value: 0.6, min: 0.1, max: 2.5, step: 0.05, type: 'range' },
@@ -480,7 +480,7 @@ const { bladesWidth, bladesFarWidth, bladesHeight, bladesRandomness, bladesRootS
   rootShade: { value: 0.5, min: 0, max: 1, step: 0.01, type: 'range' },
 }, { uuid })
 
-const { trampleDebug } = useControls('trample', {
+const { trampleDebug } = useControls('👣 trample', {
   debug: { value: false, type: 'boolean' },
 }, { uuid })
 
@@ -506,7 +506,7 @@ watch(trampleDebug!, (show) => {
 })
 
 // leafSize and amount are baked into the cluster geometry, so they rebuild; colours are live
-const { treesColorA, treesColorB, treesAmount, treesLeafSize, treesCanopyScale } = useControls('trees', {
+const { treesColorA, treesColorB, treesAmount, treesLeafSize, treesCanopyScale } = useControls('🌳 trees', {
   colorA: { value: '#6bd54d', type: 'color' },
   colorB: { value: '#86b544', type: 'color' },
   amount: { value: 150, min: 20, max: 400, step: 10, type: 'range' },
@@ -534,7 +534,7 @@ function syncLight() {
 }
 
 // the ortho frustum must cover the level and its height range or the hills self-shadow nothing
-const { shadowsAmplitude, shadowsBias, shadowsNormalBias, shadowsRadius } = useControls('shadows', {
+const { shadowsAmplitude, shadowsBias, shadowsNormalBias, shadowsRadius } = useControls('🌑 shadows', {
   amplitude: { value: 45, min: 1, max: 100, step: 0.5, type: 'range' },
   bias: { value: -0.0005, min: -0.02, max: 0.02, step: 0.0001, type: 'range' },
   normalBias: { value: 0.15, min: -0.3, max: 0.3, step: 0.01, type: 'range' },
