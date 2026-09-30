@@ -33,7 +33,7 @@ export const CAMERA_DEFAULTS: CameraDefaults = {
   controls: true,
   fov: 40,
   maxPolarAngle: Math.PI / 2,
-  minPolarAngle: Math.PI / 2,
+  minPolarAngle: 0,
   maxDistance: 100,
   minDistance: 0.1,
   follow: false,

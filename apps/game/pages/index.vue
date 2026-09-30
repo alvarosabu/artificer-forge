@@ -1,18 +1,39 @@
 <script setup lang="ts">
+import { createWebGPURenderer, Floor } from '@artificer-forge/engine/runtime'
+import { TresLeches, useControls } from '@tresjs/leches'
+import { PCFShadowMap } from 'three'
+
 // Page metadata
 useHead({
-  title: 'TresJS Nuxt - {{projectName}}',
+  title: 'Game Concept',
   meta: [
     { name: 'description', content: 'A TresJS Nuxt application' }
   ]
 })
+
+const uuid = 'game-canvas'
+provide('uuid', uuid)
+
+// Chamo writes this as it moves and the camera follows it.
+const playerPosition = ref<[number, number, number]>([0, 0, 0])
+
+useControls('fpsgraph', {
+  uuid
+})
 </script>
 
 <template>
+  <TresLeches :uuid="uuid"/>
   <TresCanvas
-    clear-color="#020420"
     window-size
+    shadows
+    :shadow-map-type="PCFShadowMap"
+    :renderer="createWebGPURenderer"
   >
-    <TheExperience />
+    <CameraController :target="playerPosition" />
+    <EnvironmentController v-slot="{ grading }">
+      <Chamo v-model:position="playerPosition" />
+      <Floor :grading="grading" />
+    </EnvironmentController>
   </TresCanvas>
 </template>

@@ -1,3 +1,4 @@
+
 <script setup lang="ts">
 import { OrbitControls } from '@tresjs/cientos'
 import { useGameStore } from '../stores/game'
