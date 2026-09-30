@@ -39,6 +39,7 @@ const LAND_RECOVERY_TIME = 0.3 // the knees have absorbed the impact, so movemen
 const MIN_CLIP_TIME_SCALE = 0.25
 const MAX_CLIP_TIME_SCALE = 2.5
 const GROUND_Y = 0
+const DEFAULT_STEP_LENGTH = 0.6
 
 interface StateDefinition {
   clip: string
@@ -69,6 +70,12 @@ export function usePlayerController(
   options: {
     tuning?: MaybeRefOrGetter<PlayerTuning>
     onMove?: (position: Vector3) => void
+    /** Ground distance between two onStep calls while walking or running. */
+    stepLength?: MaybeRefOrGetter<number>
+    /** Called every stepLength of ground travel. Footstep dust and sounds hang off this. */
+    onStep?: (position: Vector3, velocity: Vector3, state: PlayerState) => void
+    /** Called on touchdown with the downward speed at impact. */
+    onLand?: (position: Vector3, impactSpeed: number) => void
   } = {},
 ) {
   const { read } = usePlayerInput()
@@ -85,6 +92,7 @@ export function usePlayerController(
   let yaw = 0
   let grounded = true
   let launched = false
+  let stepDistance = 0
 
   // Per-frame input, read by the state updates below.
   let input = read()
@@ -242,15 +250,29 @@ export function usePlayerController(
     object.position.addScaledVector(velocity, delta)
 
     if (!grounded && object.position.y <= GROUND_Y && velocity.y <= 0) {
+      // Read before velocity.y resets, or every landing reports zero impact.
+      const impactSpeed = -velocity.y
       object.position.y = GROUND_Y
       velocity.y = 0
       grounded = true
+      stepDistance = 0
+      options.onLand?.(object.position, impactSpeed)
     }
 
     // Snap tiny drift to zero so the camera target stops changing once the character stops.
     if (grounded && !moving && speed() < 1e-3) velocity.set(0, 0, 0)
 
     object.rotation.y = yaw
+
+    if (grounded && (state.value === 'walk' || state.value === 'run')) {
+      stepDistance += Math.hypot(object.position.x - previousX, object.position.z - previousZ)
+      const stepLength = toValue(options.stepLength) ?? DEFAULT_STEP_LENGTH
+      // Subtract instead of reset, so the step rhythm does not drift with the frame rate.
+      if (stepDistance >= stepLength) {
+        stepDistance -= stepLength
+        options.onStep?.(object.position, velocity, state.value)
+      }
+    }
 
     const timeScale = states[state.value].timeScale
     if (timeScale && action) action.setEffectiveTimeScale(timeScale())

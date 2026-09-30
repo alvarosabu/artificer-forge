@@ -64,6 +64,14 @@ _Avoid_: sparks, spark system, fire particles
 Instanced upright quads that face the camera around a vertical axis and show a flame, either procedural or from a flipbook.
 _Avoid_: flame sprites, fire quads, flame cards
 
+**Dust trail**:
+The pooled ground-dust system behind a moving character. The caller emits; the shader ages each puff and recycles the oldest slot when the pool is full.
+_Avoid_: smoke, footstep particles, dust emitter
+
+**Dust puff**:
+One particle of a dust trail: an opaque cluster of low-poly spheres that pops to full size, drifts, rises a little and shrinks to nothing.
+_Avoid_: dust particle, smoke puff, cloud
+
 **Flipbook**:
 A sprite-sheet animation (16 by 4 frames) that a fire billboard can play instead of the procedural flame.
 _Avoid_: sprite sheet, texture atlas animation

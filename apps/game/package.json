@@ -15,6 +15,7 @@
   "dependencies": {
     "@artificer-forge/engine": "workspace:*",
     "@artificer-forge/assets": "workspace:*",
+    "@artificer-forge/vfx": "workspace:*",
     "@nuxt/eslint": "catalog:nuxt",
     "@tresjs/cientos": "catalog:three",
     "@tresjs/nuxt": "catalog:three",
