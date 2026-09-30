@@ -10,9 +10,14 @@ export interface PlayerTuning {
   /** Ground speed the walk clip was authored for. Playback scales by speed / this so the feet do not slide. */
   walkClipSpeed: number
   runClipSpeed: number
-  /** How fast the facing angle catches up with the input angle, per second. */
+  /** How fast the facing angle catches up with the direction of travel, per second. */
   turnSpeed: number
+  /** Units per second squared while the input pushes the way the character already moves. */
   acceleration: number
+  /** Units per second squared while braking with no input. Lower values slide further. */
+  deceleration: number
+  /** Units per second squared while the input pushes straight against the motion. Sharper turns blend toward this. */
+  turnAcceleration: number
   /** Fraction of the ground acceleration left for steering in the air. */
   airControl: number
   jumpVelocity: number
@@ -22,12 +27,14 @@ export interface PlayerTuning {
 // Clip speeds come from the Chamo-v4.glb foot bones: how fast the planted foot slides back
 // under forward kinematics (Walking_A about 0.7, Running_A about 3.3 units per second).
 export const PLAYER_TUNING: PlayerTuning = {
-  walkSpeed: 1.6,
-  runSpeed: 3.6,
+  walkSpeed: 1.7,
+  runSpeed: 5,
   walkClipSpeed: 1.30,
-  runClipSpeed: 3.3,
+  runClipSpeed: 4,
   turnSpeed: 12,
-  acceleration: 10,
+  acceleration: 20,
+  deceleration: 12,
+  turnAcceleration: 8,
   airControl: 0.3,
   jumpVelocity: 6,
   gravity: 20,
@@ -227,19 +234,40 @@ export function usePlayerController(
       .addScaledVector(right, input.x)
       .addScaledVector(forward, input.y)
 
-    if (moving) {
-      yaw = lerpAngle(yaw, Math.atan2(desired.x, desired.z), 1 - Math.exp(-tuning.turnSpeed * delta))
-    }
-
     // Without input in the air, keep the momentum instead of braking.
     if (grounded || moving) {
       const targetSpeed = (input.run ? tuning.runSpeed : tuning.walkSpeed) * (moving ? 1 : 0)
       // desired already has the input strength in its length, so a half-pushed stick moves at half speed.
       desired.multiplyScalar(targetSpeed)
-      const acceleration = grounded ? tuning.acceleration : tuning.acceleration * tuning.airControl
-      const blend = 1 - Math.exp(-acceleration * delta)
-      velocity.x += (desired.x - velocity.x) * blend
-      velocity.z += (desired.z - velocity.z) * blend
+
+      let rate = tuning.deceleration
+      if (moving) {
+        const currentSpeed = speed()
+        const desiredSpeed = Math.hypot(desired.x, desired.z)
+        // 0 when the input pushes along the motion, 1 when it pushes straight back.
+        const opposition = currentSpeed > 1e-3 && desiredSpeed > 1e-3
+          ? (1 - (velocity.x * desired.x + velocity.z * desired.z) / (currentSpeed * desiredSpeed)) / 2
+          : 0
+        rate = MathUtils.lerp(tuning.acceleration, tuning.turnAcceleration, opposition)
+      }
+      if (!grounded) rate *= tuning.airControl
+
+      // A constant rate instead of an exponential blend: a reversal brakes through zero at a steady pace,
+      // so the character skids before it turns instead of snapping round.
+      const gapX = desired.x - velocity.x
+      const gapZ = desired.z - velocity.z
+      const gap = Math.hypot(gapX, gapZ)
+      if (gap > 1e-6) {
+        const step = Math.min(gap, rate * delta) / gap
+        velocity.x += gapX * step
+        velocity.z += gapZ * step
+      }
+    }
+
+    // Face the direction of travel, not the input, so a reversal skids facing forward and turns once it stops.
+    // From rest, velocity starts along the input, so the first step still faces the input.
+    if (speed() > 1e-3) {
+      yaw = lerpAngle(yaw, Math.atan2(velocity.x, velocity.z), 1 - Math.exp(-tuning.turnSpeed * delta))
     }
 
     if (!grounded) velocity.y -= tuning.gravity * delta
