@@ -3,7 +3,6 @@ import { createWebGPURenderer, Floor } from '@artificer-forge/engine/runtime'
 import { TresLeches, useControls } from '@tresjs/leches'
 import { PCFShadowMap } from 'three'
 
-// Page metadata
 useHead({
   title: 'Game Concept',
   meta: [

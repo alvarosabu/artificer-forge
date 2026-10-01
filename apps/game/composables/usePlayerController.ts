@@ -2,7 +2,7 @@ import { LoopOnce, LoopRepeat, MathUtils, Vector3 } from 'three'
 import type { AnimationAction, Camera, Object3D } from 'three'
 import type { MaybeRefOrGetter, ShallowRef } from 'vue'
 
-export type PlayerState = 'idle' | 'walk' | 'run' | 'jumpStart' | 'fall' | 'land'
+export type PlayerState = 'spawn' | 'idle' | 'walk' | 'run' | 'jumpStart' | 'fall' | 'land'
 
 export interface PlayerTuning {
   walkSpeed: number
@@ -53,6 +53,7 @@ interface StateDefinition {
   /** Crossfade time into this state, in seconds. */
   fade: number
   once?: boolean
+  locksInput?: boolean
   /** Read every frame, so locomotion playback follows the current speed. */
   timeScale?: () => number
   enter?: (from: PlayerState) => void
@@ -69,7 +70,7 @@ function lerpAngle(from: number, to: number, alpha: number) {
 
 /**
  * Moves `root` from player input, relative to the camera, and drives its clips with a state machine.
- * Idle_A is the start state and the state every one-shot clip returns to.
+ * Spawn_Ground plays once on mount, then Idle_A takes over. Idle_A is the state every one-shot clip returns to.
  */
 export function usePlayerController(
   root: ShallowRef<Object3D | undefined | null>,
@@ -112,6 +113,14 @@ export function usePlayerController(
     MathUtils.clamp(speed() / clipSpeed, MIN_CLIP_TIME_SCALE, MAX_CLIP_TIME_SCALE)
 
   const states: Record<PlayerState, StateDefinition> = {
+    spawn: {
+      clip: 'Spawn_Ground',
+      // Nothing plays before it, so a fade would blend from the bind pose.
+      fade: 0,
+      once: true,
+      locksInput: true,
+      update: () => (finished() ? 'idle' : undefined),
+    },
     idle: {
       clip: 'Idle_A',
       fade: 0.25,
@@ -216,13 +225,19 @@ export function usePlayerController(
     if (!object) return
     tuning = toValue(options.tuning) ?? PLAYER_TUNING
 
-    // Clips exist only after the GLB loads, so the first enter waits for Idle_A.
+    // Clips exist only after the GLB loads, so the first enter waits for them.
     if (!action) {
-      enter('idle')
+      enter('spawn')
+      if (!action) enter('idle')
       if (!action) return
     }
 
     input = read()
+    if (states[state.value].locksInput) {
+      input.x = 0
+      input.y = 0
+      input.jump = false
+    }
     const strength = Math.hypot(input.x, input.y)
     moving = strength > 0
 
