@@ -24,7 +24,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@nuxt/kit": "^4.5.2"
+    "@nuxt/kit": "^4.6.0"
   },
   "devDependencies": {
     "@gltf-transform/core": "catalog:",

@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { until } from '@vueuse/core'
 import { EquirectangularReflectionMapping, Object3D, SRGBColorSpace, Vector3 } from 'three'
 import type { AnimationAction } from 'three'
-import { AnimationName, Character, createTrampleMap, Floor, Foliage, Grass, useEnvironmentStore, useGameStore, useSceneRefs, WindLines } from '@artificer-forge/engine/runtime'
+import { AnimationName, Character, createTrampleMap, Floor, Foliage, Grass, PalmFronds, useEnvironmentStore, useGameStore, useSceneRefs, WindLines } from '@artificer-forge/engine/runtime'
 const references = [
   { position: [2, 0, -3] as [number, number, number], scale: 1.0 },
   { position: [-4, 0, 1] as [number, number, number], scale: 0.8 },
@@ -35,6 +35,31 @@ const { foliageColorA, foliageColorB } = useControls('foliage', {
   colorA: { value: '#b4b536', type: 'color' },
   colorB: { value: '#d8cf3b', type: 'color' },
 }, { uuid })
+
+const { palmsColorA, palmsColorB, palmsLeaflets, palmsLeafletAngle, palmsLeafletHang, palmsCrownHeight } = useControls('🌴 palms', {
+  colorA: { value: '#5f7d2c', type: 'color' },
+  colorB: { value: '#a9c45a', type: 'color' },
+  leaflets: { value: 14, min: 4, max: 40, step: 1, type: 'range' },
+  leafletAngle: { value: 0.55, min: 0.1, max: 1.57, step: 0.01, type: 'range' },
+  leafletHang: { value: 0.35, min: -0.5, max: 1.2, step: 0.01, type: 'range' },
+  // stand-in for the trunk tip until the trunk model carries a crown marker
+  crownHeight: { value: 0, min: 0, max: 8, step: 0.1, type: 'range' },
+}, { uuid })
+
+// scale = frond length in metres, Y rotation = crown yaw. References and leaflet shape are
+// baked at creation, so these controls remount PalmFronds through its key
+const palmReferences = computed(() => [
+  { position: [-7, 0, -3] as [number, number, number], scale: 2.6, yaw: 0 },
+  { position: [8, 0, -1] as [number, number, number], scale: 2.2, yaw: 1.3 },
+  { position: [-5, 0, 7] as [number, number, number], scale: 3, yaw: 2.4 },
+].map(({ position, scale, yaw }) => {
+  const obj = new Object3D()
+  obj.position.set(position[0], position[1] + palmsCrownHeight.value, position[2])
+  obj.rotation.y = yaw
+  obj.scale.setScalar(scale)
+  obj.updateMatrixWorld()
+  return obj
+}))
 
 const { grassColorA, grassColorB } = useControls('grass', {
   colorA: { value: '#b4b536', type: 'color' },
@@ -178,6 +203,17 @@ onMounted(async () => {
     :wind-angle="environment.windAngle"
     :wind-strength="environment.windStrength"
     :trample="trampleMap"
+  />
+  <PalmFronds
+    :key="`${palmsCrownHeight}-${palmsLeaflets}-${palmsLeafletAngle}-${palmsLeafletHang}`"
+    :references="palmReferences"
+    :color-a="palmsColorA"
+    :color-b="palmsColorB"
+    :leaflets="palmsLeaflets"
+    :leaflet-angle="palmsLeafletAngle"
+    :leaflet-hang="palmsLeafletHang"
+    :wind-angle="environment.windAngle"
+    :wind-strength="environment.windStrength"
   />
   <!-- diffuseMap presence is decided at material creation, so wait for the texture -->
   <Grass

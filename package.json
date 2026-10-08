@@ -17,8 +17,13 @@
     "three": "catalog:three"
   },
   "devDependencies": {
+    "@gltf-transform/core": "catalog:",
+    "@gltf-transform/extensions": "catalog:",
     "@iconify-json/heroicons": "catalog:nuxt",
+    "@tresjs/leches": "catalog:three",
     "@types/three": "catalog:three",
+    "draco3dgltf": "catalog:",
+    "sharp": "catalog:",
     "typescript": "catalog:typescript"
   }
 }

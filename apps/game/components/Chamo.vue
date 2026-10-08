@@ -1,14 +1,31 @@
 <script setup lang="ts">
 import { useAnimations, useGLTF } from '@tresjs/cientos'
-import { applyGradingToModel, stylizedOutput } from '@artificer-forge/engine/runtime'
+import { applyGradingToModel, sampleHeight, stylizedOutput } from '@artificer-forge/engine/runtime'
+import type { HeightField } from '@artificer-forge/engine/runtime'
 import { useControls } from '@tresjs/leches'
+import { CapsuleCollider, RigidBody } from '@tresjs/rapier'
+import type { ExposedRigidBody } from '@tresjs/rapier'
 import { createDustTrail } from '@artificer-forge/vfx'
 import { MathUtils, Vector2, Vector3 } from 'three'
+import { positionWorld } from 'three/tsl'
 import type { Group, Mesh } from 'three'
+import { RIDE_HEIGHT } from '~/composables/useCharacterBody'
 import { PLAYER_TUNING } from '~/composables/usePlayerController'
 import type { PlayerState, PlayerTuning } from '~/composables/usePlayerController'
 
+const props = withDefaults(defineProps<{
+  /** Read once on mount, where the body is created. */
+  spawn?: [number, number, number]
+  /** Ground for the grading's contact occlusion. Without it the ground is y = 0. */
+  heightField?: HeightField | null
+}>(), {
+  spawn: () => [0, 0, 0],
+  heightField: null,
+})
+
 const position = defineModel<[number, number, number]>('position', { default: () => [0, 0, 0] })
+// the camera follows this, and it only changes once the player moves
+position.value = [...props.spawn]
 
 const uuid = inject<string>('uuid')
 const grading = useGrading()
@@ -30,8 +47,12 @@ const {
   playerDeceleration,
   playerTurnAcceleration,
   playerAirControl,
-  playerJumpVelocity,
+  playerJumpHeight,
   playerGravity,
+  playerFallMultiplier,
+  playerLowJumpMultiplier,
+  playerCoyoteTime,
+  playerJumpBuffer,
 } = useControls('🏃 player', {
   walkSpeed: { value: PLAYER_TUNING.walkSpeed, min: 0.1, max: 5, step: 0.05, type: 'range' },
   runSpeed: { value: PLAYER_TUNING.runSpeed, min: 0.5, max: 10, step: 0.1, type: 'range' },
@@ -42,8 +63,12 @@ const {
   deceleration: { value: PLAYER_TUNING.deceleration, min: 1, max: 60, step: 0.5, type: 'range' },
   turnAcceleration: { value: PLAYER_TUNING.turnAcceleration, min: 1, max: 60, step: 0.5, type: 'range' },
   airControl: { value: PLAYER_TUNING.airControl, min: 0, max: 1, step: 0.05, type: 'range' },
-  jumpVelocity: { value: PLAYER_TUNING.jumpVelocity, min: 1, max: 15, step: 0.1, type: 'range' },
+  jumpHeight: { value: PLAYER_TUNING.jumpHeight, min: 0.1, max: 4, step: 0.05, type: 'range' },
   gravity: { value: PLAYER_TUNING.gravity, min: 1, max: 60, step: 0.5, type: 'range' },
+  fallMultiplier: { value: PLAYER_TUNING.fallMultiplier, min: 1, max: 4, step: 0.05, type: 'range' },
+  lowJumpMultiplier: { value: PLAYER_TUNING.lowJumpMultiplier, min: 1, max: 8, step: 0.1, type: 'range' },
+  coyoteTime: { value: PLAYER_TUNING.coyoteTime, min: 0, max: 0.4, step: 0.01, type: 'range' },
+  jumpBuffer: { value: PLAYER_TUNING.jumpBuffer, min: 0, max: 0.4, step: 0.01, type: 'range' },
 }, { uuid })
 
 const tuning = computed<PlayerTuning>(() => ({
@@ -56,8 +81,12 @@ const tuning = computed<PlayerTuning>(() => ({
   deceleration: playerDeceleration?.value ?? PLAYER_TUNING.deceleration,
   turnAcceleration: playerTurnAcceleration?.value ?? PLAYER_TUNING.turnAcceleration,
   airControl: playerAirControl?.value ?? PLAYER_TUNING.airControl,
-  jumpVelocity: playerJumpVelocity?.value ?? PLAYER_TUNING.jumpVelocity,
+  jumpHeight: playerJumpHeight?.value ?? PLAYER_TUNING.jumpHeight,
   gravity: playerGravity?.value ?? PLAYER_TUNING.gravity,
+  fallMultiplier: playerFallMultiplier?.value ?? PLAYER_TUNING.fallMultiplier,
+  lowJumpMultiplier: playerLowJumpMultiplier?.value ?? PLAYER_TUNING.lowJumpMultiplier,
+  coyoteTime: playerCoyoteTime?.value ?? PLAYER_TUNING.coyoteTime,
+  jumpBuffer: playerJumpBuffer?.value ?? PLAYER_TUNING.jumpBuffer,
 }))
 
 // Shaded by the same grading as the world, so the dust follows the day cycle and the cel ramp.
@@ -91,20 +120,16 @@ watch(dustRise!, (v) => { dust.uniforms.rise.value = v })
 watch(dustDrag!, (v) => { dust.uniforms.drag.value = v })
 watch(dustOpacity!, v => dust.setOpacity(v))
 
-// Registered before usePlayerController, so the dust clock is current when this frame's steps emit.
 const { onBeforeRender } = useLoop()
 onBeforeRender(({ elapsed }) => dust.update(elapsed))
 onUnmounted(() => dust.dispose())
 
-// Scratch vectors: steps fire several times a second, so do not allocate per emit.
 const back = new Vector3()
 const side = new Vector3()
 const spawnPoint = new Vector3()
 const puffVelocity = new Vector2()
-// Puff center height as a fraction of its size: the bottom sinks a little into the
-// floor, so the puff sits on the ground instead of floating above it.
+
 const SPAWN_LIFT = 0.25
-// Impact speed of a standing jump with the default tuning, so that landing is a full-size burst.
 const FULL_BURST_IMPACT = 6
 
 function emitStepDust(at: Vector3, velocity: Vector3, playerState: PlayerState) {
@@ -145,9 +170,21 @@ function emitLandDust(at: Vector3, impactSpeed: number) {
   }
 }
 
-const root = shallowRef<Group>()
+// Sized to Chamo-v4.glb: about 2.3 units tall with the hair, the body about 0.7 wide.
+// The head and arms stick out past the radius on purpose, so the player can brush past walls.
+const CAPSULE_RADIUS = 0.4
+const CAPSULE_HEIGHT = 2.2
 
-usePlayerController(root, actions, {
+// The capsule floats RIDE_HEIGHT above the feet and reaches up to CAPSULE_HEIGHT.
+// Rapier's capsule takes the half height of the straight part, without the round caps.
+const capsuleHalfHeight = Math.max(0, (CAPSULE_HEIGHT - RIDE_HEIGHT) / 2 - CAPSULE_RADIUS)
+const capsuleArgs: [number, number] = [capsuleHalfHeight, CAPSULE_RADIUS]
+const capsuleOffset: [number, number, number] = [0, RIDE_HEIGHT + capsuleHalfHeight + CAPSULE_RADIUS, 0]
+
+const root = shallowRef<Group>()
+const body = shallowRef<ExposedRigidBody>()
+
+usePlayerController(root, body, actions, {
   tuning,
   onMove: (p) => { position.value = [p.x, p.y, p.z] },
   stepLength: () => dustStepLength?.value ?? 0.3,
@@ -160,17 +197,29 @@ watch(scene, (model) => {
   model.traverse((child) => {
     if ((child as Mesh).isMesh) child.castShadow = true
   })
-  applyGradingToModel(model, grading)
+  const groundHeight = props.heightField ? sampleHeight(props.heightField, positionWorld.xz) : undefined
+  applyGradingToModel(model, grading, { groundHeight })
 }, { immediate: true })
 </script>
 
 <template>
-  <TresGroup ref="root">
-    <primitive
-      v-if="scene"
-      :object="scene"
+  <!-- The body owns the position and stays upright. root inside it only turns to face the travel direction. -->
+  <RigidBody
+    ref="body"
+    type="kinematic"
+    :position="props.spawn"
+    :collider="false"
+  >
+    <CapsuleCollider
+      :args="capsuleArgs"
+      :position="capsuleOffset"
     />
-  </TresGroup>
-  <!-- Beside the player group, not inside it: the dust is world space and must stay where it spawned. -->
+    <TresGroup ref="root">
+      <primitive
+        v-if="scene"
+        :object="scene"
+      />
+    </TresGroup>
+  </RigidBody>
   <primitive :object="dust.mesh" />
 </template>

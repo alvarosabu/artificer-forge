@@ -13,13 +13,14 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "@artificer-forge/engine": "workspace:*",
     "@artificer-forge/assets": "workspace:*",
+    "@artificer-forge/engine": "workspace:*",
     "@artificer-forge/vfx": "workspace:*",
     "@nuxt/eslint": "catalog:nuxt",
     "@tresjs/cientos": "catalog:three",
-    "@tresjs/nuxt": "catalog:three",
     "@tresjs/leches": "catalog:three",
+    "@tresjs/nuxt": "catalog:three",
+    "@tresjs/rapier": "catalog:three",
     "eslint": "catalog:eslint",
     "nuxt": "catalog:nuxt",
     "three": "catalog:three",
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@tresjs/eslint-config": "catalog:three",
     "@types/three": "catalog:three",
-    "typescript": "catalog:typescript"
+    "typescript": "catalog:typescript",
+    "vite": "catalog:"
   }
 }

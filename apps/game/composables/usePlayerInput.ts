@@ -7,6 +7,8 @@ export interface PlayerInput {
   run: boolean
   /** True on the one read that follows a press. Holding the button does not jump again. */
   jump: boolean
+  /** True while the button is down. Releasing it during the rise cuts the jump short. */
+  jumpHeld: boolean
 }
 
 // event.code is the physical key, so WASD stays in place on AZERTY and other layouts.
@@ -37,7 +39,7 @@ function firstGamepad() {
  */
 export function usePlayerInput() {
   const held = new Set<string>()
-  const input: PlayerInput = { x: 0, y: 0, run: false, jump: false }
+  const input: PlayerInput = { x: 0, y: 0, run: false, jump: false, jumpHeld: false }
   let jumpQueued = false
   let padJumpHeld = false
   let padStickHeld = false
@@ -83,6 +85,7 @@ export function usePlayerInput() {
     let run = held.has('ShiftLeft') || held.has('ShiftRight')
     let jump = jumpQueued
     jumpQueued = false
+    let jumpHeld = held.has('Space')
 
     const pad = firstGamepad()
     if (pad) {
@@ -107,6 +110,7 @@ export function usePlayerInput() {
       const bottomPressed = !!pad.buttons[PAD_BOTTOM]?.pressed
       if (bottomPressed && !padJumpHeld) jump = true
       padJumpHeld = bottomPressed
+      jumpHeld ||= bottomPressed
 
       run ||= padSprint
     }
@@ -122,6 +126,7 @@ export function usePlayerInput() {
     input.y = y
     input.run = run
     input.jump = jump
+    input.jumpHeld = jumpHeld
     return input
   }
 

@@ -1,6 +1,8 @@
 import { LoopOnce, LoopRepeat, MathUtils, Vector3 } from 'three'
 import type { AnimationAction, Camera, Object3D } from 'three'
 import type { MaybeRefOrGetter, ShallowRef } from 'vue'
+import { useRapier } from '@tresjs/rapier'
+import type { ExposedRigidBody } from '@tresjs/rapier'
 
 export type PlayerState = 'spawn' | 'idle' | 'walk' | 'run' | 'jumpStart' | 'fall' | 'land'
 
@@ -20,33 +22,44 @@ export interface PlayerTuning {
   turnAcceleration: number
   /** Fraction of the ground acceleration left for steering in the air. */
   airControl: number
-  jumpVelocity: number
+  /** Peak of a full jump, in units. The take-off speed is derived from it and gravity. */
+  jumpHeight: number
+  /** Units per second squared on the way up. */
   gravity: number
+  /** Gravity scale on the way down. Falling faster than rising is most of what makes a jump feel snappy. */
+  fallMultiplier: number
+  /** Gravity scale for the rest of the rise once the button is released, so a tap is a short hop. */
+  lowJumpMultiplier: number
+  /** Seconds after walking off an edge in which a jump still takes off. */
+  coyoteTime: number
+  /** Seconds a press is kept before landing, so a slightly early press still jumps. */
+  jumpBuffer: number
 }
 
-// Clip speeds come from the Chamo-v4.glb foot bones: how fast the planted foot slides back
-// under forward kinematics (Walking_A about 0.7, Running_A about 3.3 units per second).
 export const PLAYER_TUNING: PlayerTuning = {
-  walkSpeed: 1.7,
+  walkSpeed: 3.5,
   runSpeed: 5,
-  walkClipSpeed: 1.30,
+  walkClipSpeed: 2.35,
   runClipSpeed: 4,
   turnSpeed: 12,
-  acceleration: 20,
+  acceleration: 46,
   deceleration: 12,
   turnAcceleration: 8,
   airControl: 0.3,
-  jumpVelocity: 6,
+  jumpHeight: 0.9,
   gravity: 20,
+  fallMultiplier: 1.8,
+  lowJumpMultiplier: 4,
+  coyoteTime: 0.12,
+  jumpBuffer: 0.15,
 }
 
-// Clip times in seconds, read from the Jump_Start and Jump_Land keyframes.
 const TAKEOFF_TIME = 0.29 // the crouch ends and the feet leave the ground
 const LAND_RECOVERY_TIME = 0.3 // the knees have absorbed the impact, so movement may cut in
 const MIN_CLIP_TIME_SCALE = 0.25
 const MAX_CLIP_TIME_SCALE = 2.5
-const GROUND_Y = 0
 const DEFAULT_STEP_LENGTH = 0.6
+const TERMINAL_FALL_SPEED = 40
 
 interface StateDefinition {
   clip: string
@@ -69,11 +82,14 @@ function lerpAngle(from: number, to: number, alpha: number) {
 }
 
 /**
- * Moves `root` from player input, relative to the camera, and drives its clips with a state machine.
+ * Moves `body` from player input, relative to the camera, and drives the clips with a state machine.
+ * `root` sits inside the body and only turns to face the direction of travel.
  * Spawn_Ground plays once on mount, then Idle_A takes over. Idle_A is the state every one-shot clip returns to.
+ * Call it inside `<Physics>`.
  */
 export function usePlayerController(
   root: ShallowRef<Object3D | undefined | null>,
+  body: ShallowRef<ExposedRigidBody | undefined | null>,
   actions: Record<string, AnimationAction | undefined>,
   options: {
     tuning?: MaybeRefOrGetter<PlayerTuning>
@@ -87,6 +103,7 @@ export function usePlayerController(
   } = {},
 ) {
   const { read } = usePlayerInput()
+  const characterBody = useCharacterBody(body)
 
   const state = ref<PlayerState>('idle')
   let action: AnimationAction | undefined
@@ -94,6 +111,7 @@ export function usePlayerController(
 
   const velocity = new Vector3()
   const desired = new Vector3()
+  const translation = new Vector3()
   const forward = new Vector3()
   const right = new Vector3()
   const up = new Vector3(0, 1, 0)
@@ -101,6 +119,13 @@ export function usePlayerController(
   let grounded = true
   let launched = false
   let stepDistance = 0
+  // Seconds left in which a jump may still take off (coyote) or a press still counts (buffer).
+  let coyote = 0
+  let buffer = 0
+  // Only a release after take-off cuts the jump. A standing jump crouches for TAKEOFF_TIME, longer
+  // than a tap, so a release before take-off would turn every tapped standing jump into the lowest hop.
+  let cutArmed = false
+  let jumpCut = false
 
   // Per-frame input, read by the state updates below.
   let input = read()
@@ -108,6 +133,7 @@ export function usePlayerController(
 
   const finished = () => !!action && action.time >= action.getClip().duration - 1e-3
   const locomotion = (): PlayerState => (input.run ? 'run' : 'walk')
+  const wantsJump = () => buffer > 0
   const speed = () => Math.hypot(velocity.x, velocity.z)
   const clipTimeScale = (clipSpeed: number) =>
     MathUtils.clamp(speed() / clipSpeed, MIN_CLIP_TIME_SCALE, MAX_CLIP_TIME_SCALE)
@@ -125,7 +151,8 @@ export function usePlayerController(
       clip: 'Idle_A',
       fade: 0.25,
       update: () => {
-        if (input.jump) return 'jumpStart'
+        if (!grounded) return 'fall'
+        if (wantsJump()) return 'jumpStart'
         if (moving) return locomotion()
       },
     },
@@ -134,7 +161,8 @@ export function usePlayerController(
       fade: 0.2,
       timeScale: () => clipTimeScale(tuning.walkClipSpeed),
       update: () => {
-        if (input.jump) return 'jumpStart'
+        if (!grounded) return 'fall'
+        if (wantsJump()) return 'jumpStart'
         if (!moving) return 'idle'
         if (input.run) return 'run'
       },
@@ -144,7 +172,8 @@ export function usePlayerController(
       fade: 0.2,
       timeScale: () => clipTimeScale(tuning.runClipSpeed),
       update: () => {
-        if (input.jump) return 'jumpStart'
+        if (!grounded) return 'fall'
+        if (wantsJump()) return 'jumpStart'
         if (!moving) return 'idle'
         if (!input.run) return 'walk'
       },
@@ -155,14 +184,22 @@ export function usePlayerController(
       once: true,
       enter: (from) => {
         launched = false
-        // A standing jump crouches first. A moving one skips the crouch so the character does not stall mid-stride.
-        if (action && (from === 'walk' || from === 'run')) action.time = TAKEOFF_TIME
+        // Spent here, or the press would jump again on landing.
+        buffer = 0
+        // A standing jump crouches first. A moving one skips the crouch so the character does not stall mid-stride,
+        // and a coyote jump skips it because the feet are already off the ground.
+        if (action && (from === 'walk' || from === 'run' || from === 'fall')) action.time = TAKEOFF_TIME
       },
       update: () => {
         if (!launched && action && action.time >= TAKEOFF_TIME) {
-          velocity.y = tuning.jumpVelocity
+          // The speed at which gravity stops the rise exactly jumpHeight up.
+          velocity.y = Math.sqrt(2 * tuning.gravity * tuning.jumpHeight)
           grounded = false
           launched = true
+          // Spent, or a coyote jump could fire again in the air.
+          coyote = 0
+          cutArmed = input.jumpHeld
+          jumpCut = false
         }
         if (!launched) return
         if (grounded) return 'land'
@@ -173,14 +210,17 @@ export function usePlayerController(
     fall: {
       clip: 'Jump_Idle',
       fade: 0.15,
-      update: () => (grounded ? 'land' : undefined),
+      update: () => {
+        if (wantsJump() && coyote > 0) return 'jumpStart'
+        if (grounded) return 'land'
+      },
     },
     land: {
       clip: 'Jump_Land',
       fade: 0.05,
       once: true,
       update: () => {
-        if (input.jump) return 'jumpStart'
+        if (wantsJump()) return 'jumpStart'
         if (moving && action && action.time >= LAND_RECOVERY_TIME) return locomotion()
         if (finished()) return 'idle'
       },
@@ -218,11 +258,15 @@ export function usePlayerController(
     right.crossVectors(forward, up)
   }
 
-  const { onBeforeRender } = useLoop()
+  const { camera } = useTresContext()
+  const { onBeforeStep } = useRapier()
 
-  onBeforeRender(({ delta, camera }) => {
+  // Runs once per physics step, not per frame. The body can only move once per step,
+  // so a second move before the step would replace the first one instead of adding to it.
+  onBeforeStep((delta) => {
     const object = root.value
-    if (!object) return
+    // Checked before anything integrates, or gravity builds up speed while the body is not there yet.
+    if (!object || !characterBody.isReady()) return
     tuning = toValue(options.tuning) ?? PLAYER_TUNING
 
     // Clips exist only after the GLB loads, so the first enter waits for them.
@@ -237,14 +281,23 @@ export function usePlayerController(
       input.x = 0
       input.y = 0
       input.jump = false
+      input.jumpHeld = false
     }
     const strength = Math.hypot(input.x, input.y)
     moving = strength > 0
 
+    // grounded is still from the last step, so the window opens on the step the feet leave the floor.
+    coyote = grounded ? tuning.coyoteTime : Math.max(coyote - delta, 0)
+    buffer = input.jump ? tuning.jumpBuffer : Math.max(buffer - delta, 0)
+    if (cutArmed && !input.jumpHeld) {
+      jumpCut = true
+      cutArmed = false
+    }
+
     const next = states[state.value].update()
     if (next && next !== state.value) enter(next)
 
-    updateCameraBasis(toValue(camera) as Camera | undefined)
+    updateCameraBasis(camera.activeCamera.value as Camera | undefined)
     desired.set(0, 0, 0)
       .addScaledVector(right, input.x)
       .addScaledVector(forward, input.y)
@@ -285,21 +338,43 @@ export function usePlayerController(
       yaw = lerpAngle(yaw, Math.atan2(velocity.x, velocity.z), 1 - Math.exp(-tuning.turnSpeed * delta))
     }
 
-    if (!grounded) velocity.y -= tuning.gravity * delta
+    // Gravity also pulls while grounded, so a walk off an edge starts falling on the same step.
+    let gravity = tuning.gravity
+    if (velocity.y <= 0) gravity *= tuning.fallMultiplier
+    else if (jumpCut) gravity *= tuning.lowJumpMultiplier
+    velocity.y = Math.max(velocity.y - gravity * delta, -TERMINAL_FALL_SPEED)
 
-    const previousX = object.position.x
-    const previousY = object.position.y
-    const previousZ = object.position.z
-    object.position.addScaledVector(velocity, delta)
+    translation.copy(velocity).multiplyScalar(delta)
+    if (!characterBody.move(translation)) return
+    const { movement, position } = characterBody
+    const touchingGround = characterBody.isGrounded()
 
-    if (!grounded && object.position.y <= GROUND_Y && velocity.y <= 0) {
+    if (!grounded && touchingGround && velocity.y <= 0) {
       // Read before velocity.y resets, or every landing reports zero impact.
       const impactSpeed = -velocity.y
-      object.position.y = GROUND_Y
       velocity.y = 0
       grounded = true
       stepDistance = 0
-      options.onLand?.(object.position, impactSpeed)
+      options.onLand?.(position, impactSpeed)
+    }
+    else if (grounded && touchingGround) {
+      // The floor stopped the pull, so do not let the downward speed build up.
+      velocity.y = 0
+    }
+    else if (grounded && !touchingGround) {
+      grounded = false
+    }
+    // A wall cancels the blocked part of the move. Without this, the speed keeps building
+    // against the wall and the player shoots off sideways once past it.
+    // Not against a dynamic body: the push impulse comes from the blocked part of the move, so
+    // cancelling it drops the next request to a few millimetres and the push to almost nothing.
+    if (delta > 0) {
+      if (!characterBody.isPushing()) {
+        velocity.x = movement.x / delta
+        velocity.z = movement.z / delta
+      }
+      // Same for a ceiling, or the jump sticks to it until gravity uses up the take-off speed.
+      if (velocity.y > 0) velocity.y = Math.min(velocity.y, movement.y / delta)
     }
 
     // Snap tiny drift to zero so the camera target stops changing once the character stops.
@@ -308,25 +383,20 @@ export function usePlayerController(
     object.rotation.y = yaw
 
     if (grounded && (state.value === 'walk' || state.value === 'run')) {
-      stepDistance += Math.hypot(object.position.x - previousX, object.position.z - previousZ)
+      stepDistance += Math.hypot(movement.x, movement.z)
       const stepLength = toValue(options.stepLength) ?? DEFAULT_STEP_LENGTH
       // Subtract instead of reset, so the step rhythm does not drift with the frame rate.
       if (stepDistance >= stepLength) {
         stepDistance -= stepLength
-        options.onStep?.(object.position, velocity, state.value)
+        options.onStep?.(position, velocity, state.value)
       }
     }
 
     const timeScale = states[state.value].timeScale
     if (timeScale && action) action.setEffectiveTimeScale(timeScale())
 
-    if (
-      object.position.x !== previousX
-      || object.position.y !== previousY
-      || object.position.z !== previousZ
-    ) {
-      options.onMove?.(object.position)
-    }
+    // Below 1 mm per step counts as no move, so the camera target stays still at the end of a stop.
+    if (movement.lengthSq() > 1e-6) options.onMove?.(position)
   })
 
   return { state: readonly(state) }
