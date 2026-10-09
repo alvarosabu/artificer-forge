@@ -2,6 +2,7 @@ import { cameraFar, cameraNear, cameraPosition, exp, Fn, linearDepth, mix, posit
 import { Color, NoColorSpace, RepeatWrapping } from 'three'
 import { MeshBasicNodeMaterial, Texture } from 'three/webgpu'
 import { controlUv, type ControlMap } from './controlMap'
+import { createFoamUniforms, shoreFoam } from './shoreFoam'
 import type { GradingContext } from '../grading/grading'
 
 /**
@@ -38,25 +39,7 @@ export function createWaterUniforms() {
     sunStrength: uniform(1.4),
     /** the specular exponent. High on purpose: a soft sheen reads as plastic */
     sunSharpness: uniform(180),
-    /**
-     * The foam colour. Deliberately not pure white: the mix goes all the way to
-     * this, so at #ffffff the sun glitter has nowhere left to go and vanishes
-     * exactly where the surface is brightest. Its brightness IS the foam
-     * strength, which is why there is no separate strength uniform.
-     */
-    foamColor: uniform(new Color('#e8f4f2')),
-    /** metres of water the foam band reaches out to. Beyond this, no foam */
-    foamDepth: uniform(0.3),
-    /** metres the ripple normals push the band up and down the beach */
-    foamWobble: uniform(0.27),
-    /** roughly how many stripes fit inside the band */
-    foamLines: uniform(1),
-    /** width of one stripe, as a fraction of the gap between them. 1 is no gap */
-    foamWidth: uniform(0.02),
-    /** stripes per second, travelling toward the shore */
-    foamDrift: uniform(0.07),
-    /** metres of solid rim hugging the contact line */
-    foamEdge: uniform(0.09),
+    ...createFoamUniforms(),
   }
 }
 
@@ -166,27 +149,7 @@ export function buildWaterMaterial(options: {
     const wobble = normal.x.add(normal.z).mul(u.foamWobble)
     const shoreDepth = shallow.add(wobble).max(0).toVar()
 
-    // 0 at the waterline, 1 at foamDepth metres: the band, normalised
-    const shoreT = shoreDepth.div(u.foamDepth).saturate().toVar()
-
-    // fract turns one climbing value into many identical cycles. The +0.5/-0.5
-    // pair puts stripe centres on whole numbers, so the first stripe lands ON the
-    // waterline rather than half a gap inside it. `add(time)` rather than `sub`
-    // is what sends the stripes toward the beach instead of out to sea.
-    const phase = shoreT.mul(u.foamLines).add(time.mul(u.foamDrift)).add(0.5).fract()
-    // sawtooth folded into a triangle: symmetric, so the stripe gets two soft
-    // sides instead of one soft side and one razor edge
-    const saw = phase.sub(0.5).abs().mul(2)
-    const lines = smoothstep(0, u.foamWidth, saw).oneMinus()
-
-    // the solid rim: no stripes, just white where the water has almost run out
-    const rim = smoothstep(0, u.foamEdge, shoreDepth).oneMinus()
-
-    // oneMinus(shoreT) is the envelope: without it the outermost stripe is as
-    // bright as the rest and the band ends on a hard line out in open water.
-    // max() rather than add() where the rim and the first stripe overlap, or that
-    // one ring clips past 1 and goes flat white.
-    const foam = lines.mul(shoreT.oneMinus()).max(rim).saturate().toVar()
+    const foam = shoreFoam(shoreDepth, u).toVar()
     out.assign(mix(out, u.foamColor, foam))
 
     if (grading) {

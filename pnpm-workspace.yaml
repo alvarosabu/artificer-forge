@@ -16,6 +16,9 @@ catalog:
 
 catalogMode: prefer
 
+# pkg.pr.new builds depend on each other by URL. Restore when TresJS PR #1527 is released.
+blockExoticSubdeps: false
+
 allowBuilds:
   '@parcel/watcher': false
   # v13 ships prebuilds and needs no build, but pnpm still runs node-gyp for its binding.gyp
@@ -28,6 +31,8 @@ allowBuilds:
 
 overrides:
   ipx: 3.0.2
+  '@tresjs/core': https://pkg.pr.new/@tresjs/core@a3c5d3f
+  '@tresjs/cientos': https://pkg.pr.new/@tresjs/cientos@a3c5d3f
 
 catalogs:
   build:
@@ -48,13 +53,14 @@ catalogs:
     zod: ^4.6.5
     zod-to-json-schema: ^3.25.2
   three:
-    '@tresjs/cientos': 5.9.2
-    '@tresjs/core': 5.9.2
-    '@tresjs/eslint-config': ^1.6.0
-    '@tresjs/leches': ^1.3.2
-    '@tresjs/nuxt': ^5.7.2
-    '@tresjs/post-processing': ^3.10.0
-    '@tresjs/rapier': ^1.1.3
+    # TresJS PR #1527 preview build (nuxt `renderer: 'webgpu'`), pinned to commit a3c5d3f
+    '@tresjs/cientos': https://pkg.pr.new/@tresjs/cientos@a3c5d3f
+    '@tresjs/core': https://pkg.pr.new/@tresjs/core@a3c5d3f
+    '@tresjs/eslint-config': https://pkg.pr.new/@tresjs/eslint-config@a3c5d3f
+    '@tresjs/leches': https://pkg.pr.new/@tresjs/leches@a3c5d3f
+    '@tresjs/nuxt': https://pkg.pr.new/@tresjs/nuxt@a3c5d3f
+    '@tresjs/post-processing': https://pkg.pr.new/@tresjs/post-processing@a3c5d3f
+    '@tresjs/rapier': https://pkg.pr.new/@tresjs/rapier@a3c5d3f
     '@types/three': ^0.186.0
     three: ^0.186.1
   typescript:

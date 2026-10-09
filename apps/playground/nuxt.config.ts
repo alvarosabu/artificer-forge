@@ -13,6 +13,9 @@ export default defineNuxtConfig({
     '@artificer-forge/dialog-editor',
     '@artificer-forge/assets/nuxt',
   ],
+  tres: {
+    renderer: 'webgpu',
+  },
   dialogEditor: {
     autocomplete: {
       items: { collection: 'entities', field: 'templateId', where: { type: 'item' } },

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useGLTF } from '@tresjs/cientos'
+import { useControls } from '@tresjs/leches'
 import { RigidBody } from '@tresjs/rapier'
-import { applyGradingToModel, sampleHeight } from '@artificer-forge/engine/runtime'
+import { applyGradingToModel, extractPalmCrownReferences, PalmFronds, sampleHeight } from '@artificer-forge/engine/runtime'
 import { Euler, Quaternion, Vector3 } from 'three'
 import { float, positionWorld } from 'three/tsl'
 import type { Mesh, Object3D } from 'three'
@@ -9,6 +10,7 @@ import type { Mesh, Object3D } from 'three'
 const TERRAIN = '/models/levels/portfolio-island-terrain'
 
 const grading = useGrading()
+const wind = useWind()
 
 const { state: terrainState } = useGLTF(`${TERRAIN}.glb`, { draco: true })
 const { state: sceneryState } = useGLTF('/models/levels/portfolio-island.glb', { draco: true })
@@ -37,6 +39,13 @@ interface RigidProp {
   collider: 'cuboid' | 'convexHull'
 }
 const rigidProps = shallowRef<RigidProp[]>([])
+const palmCrowns = shallowRef<Object3D[]>([])
+
+const uuid = inject<string>('uuid')
+// Frond length in marker radii. The marker sphere shows where a crown sits, not how far it reaches
+const { palmsSize } = useControls('🌴 palms', {
+  size: { value: 5, min: 0.5, max: 10, step: 0.1, type: 'range' },
+}, { uuid })
 
 watch([terrain, scenery, heightField], ([terrainModel, sceneryModel, field]) => {
   if (!terrainModel || !sceneryModel || !field || collidersBuilt.value) return
@@ -44,6 +53,8 @@ watch([terrain, scenery, heightField], ([terrainModel, sceneryModel, field]) => 
   terrainModel.traverse((child) => {
     if ((child as Mesh).isMesh) child.receiveShadow = true
   })
+  palmCrowns.value = extractPalmCrownReferences(sceneryModel, { frondScale: palmsSize!.value })
+
   sceneryModel.traverse((child) => {
     const mesh = child as Mesh
     if (!mesh.isMesh) return
@@ -88,6 +99,11 @@ watch([terrain, scenery, heightField], ([terrainModel, sceneryModel, field]) => 
   colliders.build(sceneryModel, mesh => (isHull(mesh) ? 'convexHull' : null))
   collidersBuilt.value = true
 }, { immediate: true })
+
+// The markers stay in the scene (hidden), so the crowns can be read again at the new size
+watch(palmsSize!, (frondScale) => {
+  if (scenery.value && collidersBuilt.value) palmCrowns.value = extractPalmCrownReferences(scenery.value, { frondScale })
+})
 </script>
 
 <template>
@@ -109,6 +125,15 @@ watch([terrain, scenery, heightField], ([terrainModel, sceneryModel, field]) => 
   >
     <primitive :object="prop.mesh" />
   </RigidBody>
+  <!-- PalmFronds bakes its references at creation, so a resize needs a remount -->
+  <PalmFronds
+    v-if="palmCrowns.length"
+    :key="palmsSize"
+    :references="palmCrowns"
+    :grading="grading"
+    :wind-angle="wind.angle"
+    :wind-strength="wind.strength"
+  />
   <Ocean
     v-if="heightField"
     :size="heightField.size"

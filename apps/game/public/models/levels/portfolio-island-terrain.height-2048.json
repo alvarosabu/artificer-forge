@@ -2,13 +2,13 @@
   "source": "portfolio-island-terrain.glb",
   "node": "Terrain",
   "resolution": 2048,
-  "size": 256,
+  "size": 256.0725,
   "origin": [
-    0,
-    0
+    -0.0663,
+    0.0457
   ],
-  "minHeight": -10,
-  "maxHeight": 1.5788,
+  "minHeight": -10.4699,
+  "maxHeight": 9.4588,
   "texelSize": 0.125,
   "flipY": false,
   "encoding": "grey",

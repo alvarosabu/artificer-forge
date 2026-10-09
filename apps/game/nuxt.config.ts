@@ -7,6 +7,9 @@ export default defineNuxtConfig({
     '@nuxt/devtools',
     '@artificer-forge/assets/nuxt',
   ],
+  tres: {
+    renderer: 'webgpu',
+  },
   hooks: {
     // client only: Nuxt runs a second Vite server for SSR, which would bake and reload twice
     'vite:extendConfig'(config, { isClient }) {

@@ -4,7 +4,7 @@ import type { MaybeRefOrGetter, ShallowRef } from 'vue'
 import { useRapier } from '@tresjs/rapier'
 import type { ExposedRigidBody } from '@tresjs/rapier'
 
-export type PlayerState = 'spawn' | 'idle' | 'walk' | 'run' | 'jumpStart' | 'fall' | 'land'
+export type PlayerState = 'spawn' | 'idle' | 'walk' | 'run' | 'jumpStart' | 'fall' | 'land' | 'swim'
 
 export interface PlayerTuning {
   walkSpeed: number
@@ -34,6 +34,9 @@ export interface PlayerTuning {
   coyoteTime: number
   /** Seconds a press is kept before landing, so a slightly early press still jumps. */
   jumpBuffer: number
+  swimSpeed: number
+  /** Water depth at the feet where the character starts to float. */
+  swimDepth: number
 }
 
 export const PLAYER_TUNING: PlayerTuning = {
@@ -52,6 +55,8 @@ export const PLAYER_TUNING: PlayerTuning = {
   lowJumpMultiplier: 4,
   coyoteTime: 0.12,
   jumpBuffer: 0.15,
+  swimSpeed: 2,
+  swimDepth: 1.3,
 }
 
 const TAKEOFF_TIME = 0.29 // the crouch ends and the feet leave the ground
@@ -60,6 +65,10 @@ const MIN_CLIP_TIME_SCALE = 0.25
 const MAX_CLIP_TIME_SCALE = 2.5
 const DEFAULT_STEP_LENGTH = 0.6
 const TERMINAL_FALL_SPEED = 40
+// Eased instead of snapped, so a plunge sinks a little and bobs back up.
+const BUOYANCY = 6
+// Without this gap, a sea floor right at the float line flips between wading and swimming every step.
+const SWIM_ENTER_MARGIN = 0.05
 
 interface StateDefinition {
   clip: string
@@ -100,6 +109,8 @@ export function usePlayerController(
     onStep?: (position: Vector3, velocity: Vector3, state: PlayerState) => void
     /** Called on touchdown with the downward speed at impact. */
     onLand?: (position: Vector3, impactSpeed: number) => void
+    /** Defaults to 0, where Island places the Ocean. */
+    waterLevel?: MaybeRefOrGetter<number>
   } = {},
 ) {
   const { read } = usePlayerInput()
@@ -225,6 +236,23 @@ export function usePlayerController(
         if (finished()) return 'idle'
       },
     },
+    swim: {
+      // The pack has no swim clip. The loose airborne pose reads as treading water.
+      clip: 'Jump_Idle',
+      fade: 0.3,
+      enter: () => {
+        velocity.y = 0
+        grounded = false
+        coyote = 0
+        buffer = 0
+        cutArmed = false
+        jumpCut = false
+      },
+      // The ground ray only reaches the feet, so it hits only when the sea floor rises above the float line.
+      update: () => {
+        if (grounded) return moving ? locomotion() : 'idle'
+      },
+    },
   }
 
   function enter(next: PlayerState) {
@@ -294,8 +322,13 @@ export function usePlayerController(
       cutArmed = false
     }
 
+    const floatY = (toValue(options.waterLevel) ?? 0) - tuning.swimDepth
+    const feetY = body.value!.instance.translation().y
+    if (state.value !== 'swim' && velocity.y <= 0 && feetY < floatY - SWIM_ENTER_MARGIN) enter('swim')
+
     const next = states[state.value].update()
     if (next && next !== state.value) enter(next)
+    const swimming = state.value === 'swim'
 
     updateCameraBasis(camera.activeCamera.value as Camera | undefined)
     desired.set(0, 0, 0)
@@ -303,8 +336,9 @@ export function usePlayerController(
       .addScaledVector(forward, input.y)
 
     // Without input in the air, keep the momentum instead of braking.
-    if (grounded || moving) {
-      const targetSpeed = (input.run ? tuning.runSpeed : tuning.walkSpeed) * (moving ? 1 : 0)
+    if (grounded || moving || swimming) {
+      const maxSpeed = swimming ? tuning.swimSpeed : input.run ? tuning.runSpeed : tuning.walkSpeed
+      const targetSpeed = maxSpeed * (moving ? 1 : 0)
       // desired already has the input strength in its length, so a half-pushed stick moves at half speed.
       desired.multiplyScalar(targetSpeed)
 
@@ -318,7 +352,7 @@ export function usePlayerController(
           : 0
         rate = MathUtils.lerp(tuning.acceleration, tuning.turnAcceleration, opposition)
       }
-      if (!grounded) rate *= tuning.airControl
+      if (!grounded && !swimming) rate *= tuning.airControl
 
       // A constant rate instead of an exponential blend: a reversal brakes through zero at a steady pace,
       // so the character skids before it turns instead of snapping round.
@@ -338,13 +372,19 @@ export function usePlayerController(
       yaw = lerpAngle(yaw, Math.atan2(velocity.x, velocity.z), 1 - Math.exp(-tuning.turnSpeed * delta))
     }
 
-    // Gravity also pulls while grounded, so a walk off an edge starts falling on the same step.
-    let gravity = tuning.gravity
-    if (velocity.y <= 0) gravity *= tuning.fallMultiplier
-    else if (jumpCut) gravity *= tuning.lowJumpMultiplier
-    velocity.y = Math.max(velocity.y - gravity * delta, -TERMINAL_FALL_SPEED)
+    if (swimming) {
+      velocity.y = 0
+    }
+    else {
+      // Gravity also pulls while grounded, so a walk off an edge starts falling on the same step.
+      let gravity = tuning.gravity
+      if (velocity.y <= 0) gravity *= tuning.fallMultiplier
+      else if (jumpCut) gravity *= tuning.lowJumpMultiplier
+      velocity.y = Math.max(velocity.y - gravity * delta, -TERMINAL_FALL_SPEED)
+    }
 
     translation.copy(velocity).multiplyScalar(delta)
+    if (swimming) translation.y = (floatY - feetY) * (1 - Math.exp(-BUOYANCY * delta))
     if (!characterBody.move(translation)) return
     const { movement, position } = characterBody
     const touchingGround = characterBody.isGrounded()
@@ -355,7 +395,7 @@ export function usePlayerController(
       velocity.y = 0
       grounded = true
       stepDistance = 0
-      options.onLand?.(position, impactSpeed)
+      if (!swimming) options.onLand?.(position, impactSpeed)
     }
     else if (grounded && touchingGround) {
       // The floor stopped the pull, so do not let the downward speed build up.

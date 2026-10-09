@@ -1,19 +1,28 @@
 <script setup lang="ts">
 import { useControls } from '@tresjs/leches'
 import { createGradingContext } from '@artificer-forge/engine/runtime'
+import { MathUtils, Matrix4, Quaternion, Vector3 } from 'three'
 import type { DirectionalLight } from 'three'
 import type { DayCycleName } from '~/utils/dayCyclePresets'
 
 // Owns the look of the world: grading uniforms, sky, sun + drop shadows and the
 // day cycle. Children get the grading context through useGrading().
+const props = defineProps<{
+  /** World point the shadow box is centered on, usually the player */
+  focus: [number, number, number]
+}>()
+
 const uuid = inject<string>('uuid')
 
 // Camera radius is 15–30 (CameraController), so fog ratio 0 starts near the
 // focus and ratio 1 sits past the far framing edge.
-const grading = createGradingContext({ sceneNear: 20, sceneFar: 60 })
+const grading = createGradingContext({ sceneNear: 20, sceneFar: 132 })
 provideGrading(grading)
 
 const dayCycle = useDayCycle()
+
+const wind = createWind()
+provideWind(wind)
 
 const { scene } = useTresContext()
 watch(scene, (s) => {
@@ -68,7 +77,7 @@ const { fogCenterX, fogCenterY, fogStart, fogEnd, fogSceneNear, fogSceneFar } = 
   start: { value: 0, min: 0, max: 1, step: 0.01, type: 'range' },
   end: { value: 1, min: 0, max: 2, step: 0.01, type: 'range' },
   sceneNear: { value: grading.range.sceneNear, min: 0, max: 100, step: 0.5, type: 'range' },
-  sceneFar: { value: grading.range.sceneFar, min: 1, max: 200, step: 0.5, type: 'range' },
+  sceneFar: { value: grading.range.sceneFar, min: 1, max: 1000, step: 0.5, type: 'range' },
 }, { uuid })
 
 watch(fogCenterX!, (v) => { grading.uniforms.radialCenter.value.x = v })
@@ -113,9 +122,20 @@ watch(toonSpecStrength!, (v) => { u.specStrength.value = v })
 watch(toonSpecShininess!, (v) => { u.specShininess.value = v })
 watch(toonAoStrength!, (v) => { u.aoStrength.value = v })
 
+// Degrees in the panel, like the camera. 0 points the wind along +Z
+const { windAngle, windStrength, windVariability } = useControls('🌬️ wind', {
+  angle: { value: Math.round(MathUtils.radToDeg(wind.state.baseAngle)), min: -180, max: 180, step: 1, type: 'range' },
+  strength: { value: wind.state.baseStrength, min: 0, max: 1, step: 0.01, type: 'range' },
+  variability: { value: wind.state.variability, min: 0, max: 2, step: 0.01, type: 'range' },
+}, { uuid })
+
+watch(windAngle!, (v) => { wind.state.baseAngle = MathUtils.degToRad(v) })
+watch(windStrength!, (v) => { wind.state.baseStrength = v })
+watch(windVariability!, (v) => { wind.state.variability = v })
+
 // Bruno's defaults. Direction is not tunable: it is locked to grading.lightDirection.
 const { shadowsAmplitude, shadowsBias, shadowsNormalBias, shadowsRadius } = useControls('🌑 shadows', {
-  amplitude: { value: 15, min: 1, max: 50, step: 0.5, type: 'range' },
+  amplitude: { value: 50, min: 1, max: 100, step: 0.5, type: 'range' },
   bias: { value: -0.001, min: -0.02, max: 0.02, step: 0.0001, type: 'range' },
   normalBias: { value: 0.1, min: -0.3, max: 0.3, step: 0.01, type: 'range' },
   radius: { value: 3, min: 0, max: 10, step: 0.1, type: 'range' },
@@ -145,14 +165,41 @@ function applyShadowConfig() {
 
 watch([sunRef, shadowsAmplitude!, shadowsBias!, shadowsNormalBias!, shadowsRadius!], applyShadowConfig)
 
+const ORIGIN = new Vector3()
+const UP = new Vector3(0, 1, 0)
+const lightRotation = new Matrix4()
+const toLightSpace = new Quaternion()
+const shadowCenter = new Vector3()
+
+// The shadow box only covers ±amplitude, so it must move with the player.
+// Moving it by less than one shadow-map texel makes the shadow edges crawl, so
+// the center snaps to whole texels in light space (the shadow camera's own x/y).
+function updateShadowCenter(light: DirectionalLight, lightDirection: Vector3) {
+  lightRotation.lookAt(ORIGIN, lightDirection, UP) // same axes as the shadow camera
+  toLightSpace.setFromRotationMatrix(lightRotation).invert()
+  const texel = (2 * toValue(shadowsAmplitude!)) / light.shadow.mapSize.x
+  shadowCenter.fromArray(props.focus).applyQuaternion(toLightSpace)
+  shadowCenter.x = Math.round(shadowCenter.x / texel) * texel
+  shadowCenter.y = Math.round(shadowCenter.y / texel) * texel
+  shadowCenter.applyQuaternion(toLightSpace.invert())
+}
+
 const { onBeforeRender } = useLoop()
 onBeforeRender(({ delta }) => {
   dayCycle.tick(delta)
+  wind.tick(delta)
   grading.sync(dayCycle.current)
+
+  const light = sunRef.value
+  if (!light) return
+  const { lightDirection } = dayCycle.current
+  updateShadowCenter(light, lightDirection)
   // The sun must aim exactly along lightDirection, or the drop shadows and the
   // finish's core shadow disagree. Distance 20 keeps the frustum (near 1, far 60)
-  // around the origin; it does not follow the player yet.
-  sunRef.value?.position.copy(dayCycle.current.lightDirection).multiplyScalar(-20)
+  // around the shadow center.
+  light.target.position.copy(shadowCenter)
+  light.target.updateMatrixWorld() // the target is not in the scene, so nothing else updates it
+  light.position.copy(lightDirection).multiplyScalar(-20).add(shadowCenter)
 })
 </script>
 
@@ -161,6 +208,9 @@ onBeforeRender(({ delta }) => {
     ref="sunRef"
     cast-shadow
   />
-  <!-- slot prop is for engine components, which take grading as a prop -->
-  <slot :grading="grading" />
+  <!-- slot props are for engine components, which take grading and wind as props -->
+  <slot
+    :grading="grading"
+    :wind="wind.state"
+  />
 </template>

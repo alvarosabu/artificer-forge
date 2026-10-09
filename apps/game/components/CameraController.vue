@@ -29,8 +29,9 @@ const {
   cameraEasing,
   cameraPan,
   cameraMagnet,
+  cameraFraming,
 } = useControls('🎥 camera', {
-  free: { value: false, type: 'boolean' },
+  free: { value: true, type: 'boolean' },
   fov: { value: 25, min: 10, max: 120, step: 1, type: 'range' },
   near: { value: 0.1, min: 0.01, max: 10, step: 0.01, type: 'range' },
   far: { value: 200, min: 10, max: 3000, step: 10, type: 'range' },
@@ -43,6 +44,8 @@ const {
   easing: { value: 10, min: 0.5, max: 30, step: 0.5, type: 'range' },
   pan: { value: true, type: 'boolean' },
   magnet: { value: 0.25, min: 0, max: 1, step: 0.01, type: 'range' },
+  // Player height on screen, from the bottom: 0.5 is the center, 0.33 the lower third
+  framing: { value: 0.33, min: 0.1, max: 0.9, step: 0.01, type: 'range' },
 }, { uuid })
 
 // Bruno adds radius when the viewport is narrower than 16:9 so the framing keeps its width.
@@ -57,6 +60,14 @@ const pan = new Vector2()
 const origin = new Vector2()
 let isTracking = true
 
+// Free mode orbits the player. OrbitControls owns the angle and distance, and the
+// camera moves by the player's step so they stay in the middle.
+const orbitTarget = ref<[number, number, number]>([...props.target])
+const step = new Vector3()
+// False until the follow pose has placed the camera once. Without it, free mode
+// starts at the camera's default spot, looking at the origin.
+let freePlaced = false
+
 // The wheel writes here; moving the panel slider overrides it.
 const zoomRatio = ref(cameraZoom?.value ?? 0.6)
 watch(() => cameraZoom?.value, (value) => { if (value !== undefined) zoomRatio.value = value })
@@ -69,9 +80,26 @@ const { onBeforeRender } = useLoop()
 
 onBeforeRender(({ delta, camera }) => {
   const cam = toValue(camera) as PerspectiveCamera | undefined
-  if (!cam || cameraFree?.value) return
+  if (!cam) return
+
+  // Shifts the projection window, not the camera, so the angle, the zoom and the
+  // free-mode orbit stay the same. Sizes are in screen heights, so they do not depend
+  // on the canvas pixels. setViewOffset overwrites aspect with fullWidth / fullHeight,
+  // so fullWidth must be the current aspect or the image stretches.
+  const framingOffset = (cameraFraming?.value ?? 0.33) - 0.5
+  if (cam.view?.offsetY !== framingOffset || cam.view.fullWidth !== cam.aspect) {
+    cam.setViewOffset(cam.aspect, 1, 0, framingOffset, cam.aspect, 1)
+  }
 
   tracked.set(...props.target)
+  if (cameraFree?.value && freePlaced) {
+    step.subVectors(tracked, smoothFocus)
+    if (step.lengthSq() === 0) return
+    cam.position.add(step)
+    smoothFocus.copy(tracked)
+    orbitTarget.value = [tracked.x, tracked.y, tracked.z]
+    return
+  }
   if (isTracking) {
     focus.x = tracked.x
     focus.z = tracked.z
@@ -89,6 +117,11 @@ onBeforeRender(({ delta, camera }) => {
   const easing = 1 - Math.exp(-(cameraEasing?.value ?? 10) * delta)
   smoothFocus.lerp(focus, easing)
   smoothZoom = MathUtils.lerp(smoothZoom, zoomRatio.value, easing)
+  // Free mode takes this pose once, so skip the easing and land on it now.
+  if (cameraFree?.value) {
+    smoothFocus.copy(focus)
+    smoothZoom = zoomRatio.value
+  }
 
   const ratioOverflow = Math.max(1, IDEAL_RATIO / cam.aspect) - 1
   const radiusMax = (cameraRadiusMax?.value ?? 30) + ratioOverflow * NON_IDEAL_RATIO_OFFSET
@@ -102,6 +135,9 @@ onBeforeRender(({ delta, camera }) => {
 
   cam.position.copy(smoothFocus).add(offset)
   cam.lookAt(smoothFocus)
+
+  freePlaced = !!cameraFree?.value
+  if (freePlaced) orbitTarget.value = [smoothFocus.x, smoothFocus.y, smoothFocus.z]
 })
 
 const { renderer } = useTresContext()
@@ -162,10 +198,10 @@ onBeforeUnmount(() => {
     :far="cameraFar"
     :fov="cameraFov"
   />
-  <!-- Debug only, like Bruno's MODE_FREE: the loop above stops driving the camera. -->
+  <!-- Debug only, like Bruno's MODE_FREE: the mouse owns the angle and distance, the loop only carries the camera along with the player. -->
   <OrbitControls
     v-if="cameraFree"
-    :target="[smoothFocus.x, smoothFocus.y, smoothFocus.z]"
+    :target="orbitTarget"
     enable-damping
   />
 </template>

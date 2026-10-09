@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { DEFAULT_WIND_ANGLE, DEFAULT_WIND_STRENGTH } from '../components/wind/wind'
+import { DEFAULT_WIND_ANGLE, DEFAULT_WIND_STRENGTH, sampleWindGust } from '../components/wind/wind'
 import { Color, Vector3 } from 'three'
 import type { GradingProps } from '../grading/grading'
 
@@ -63,13 +63,9 @@ export const useEnvironmentStore = defineStore('environment', () => {
         const v = windVariability.value
         if (v <= 0) return
 
-        // incommensurate sine pairs so the pattern doesn't read as a loop:
-        // direction veers ±~0.45 rad over tens of seconds, strength gusts ±~0.25
-        const veer = Math.sin(windTime * 0.11) * 0.25 + Math.sin(windTime * 0.047) * 0.2
-        const gust = Math.sin(windTime * 0.31) * 0.15 + Math.sin(windTime * 0.13) * 0.1
-
-        windAngle.value = baseWindAngle.value + veer * v
-        windStrength.value = Math.min(1, Math.max(0, baseWindStrength.value + gust * v))
+        const wind = sampleWindGust(windTime, { angle: baseWindAngle.value, strength: baseWindStrength.value }, v)
+        windAngle.value = wind.angle
+        windStrength.value = wind.strength
     }
 
     return {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { createWebGPURenderer } from '@artificer-forge/engine/runtime'
 import { TresLeches, useControls } from '@tresjs/leches'
 import { Physics } from '@tresjs/rapier'
+import { WindLines } from '@artificer-forge/engine/runtime'
 import { PCFShadowMap } from 'three'
 
 useHead({
@@ -39,11 +39,14 @@ const { physicsDebug } = useControls('⚛️ physics', {
   <TresCanvas
     window-size
     shadows
+    :alpha="false"
     :shadow-map-type="PCFShadowMap"
-    :renderer="createWebGPURenderer"
   >
     <CameraController :target="playerPosition" />
-    <EnvironmentController>
+    <EnvironmentController
+      v-slot="{ wind }"
+      :focus="playerPosition"
+    >
       <!-- Physics loads Rapier's WASM in an async setup, so it needs Suspense. -->
       <Suspense>
         <!-- One step per frame instead of the default fixed 1/60: tres-rapier copies body positions
@@ -61,6 +64,15 @@ const { physicsDebug } = useControls('⚛️ physics', {
           </Island>
         </Physics>
       </Suspense>
+      <!-- WindLines spawns at an absolute height, so the lines follow the player over the terrain -->
+      <WindLines
+        :wind-angle="wind.angle"
+        :intensity="wind.strength"
+        :origin-x="playerPosition[0]"
+        :origin-z="playerPosition[2]"
+        :height="playerPosition[1] + 2"
+        :radius="15"
+      />
     </EnvironmentController>
   </TresCanvas>
 </template>

@@ -53,6 +53,8 @@ const {
   playerLowJumpMultiplier,
   playerCoyoteTime,
   playerJumpBuffer,
+  playerSwimSpeed,
+  playerSwimDepth,
 } = useControls('🏃 player', {
   walkSpeed: { value: PLAYER_TUNING.walkSpeed, min: 0.1, max: 5, step: 0.05, type: 'range' },
   runSpeed: { value: PLAYER_TUNING.runSpeed, min: 0.5, max: 10, step: 0.1, type: 'range' },
@@ -69,6 +71,8 @@ const {
   lowJumpMultiplier: { value: PLAYER_TUNING.lowJumpMultiplier, min: 1, max: 8, step: 0.1, type: 'range' },
   coyoteTime: { value: PLAYER_TUNING.coyoteTime, min: 0, max: 0.4, step: 0.01, type: 'range' },
   jumpBuffer: { value: PLAYER_TUNING.jumpBuffer, min: 0, max: 0.4, step: 0.01, type: 'range' },
+  swimSpeed: { value: PLAYER_TUNING.swimSpeed, min: 0.1, max: 6, step: 0.05, type: 'range' },
+  swimDepth: { value: PLAYER_TUNING.swimDepth, min: 0.2, max: 2.5, step: 0.05, type: 'range' },
 }, { uuid })
 
 const tuning = computed<PlayerTuning>(() => ({
@@ -87,6 +91,8 @@ const tuning = computed<PlayerTuning>(() => ({
   lowJumpMultiplier: playerLowJumpMultiplier?.value ?? PLAYER_TUNING.lowJumpMultiplier,
   coyoteTime: playerCoyoteTime?.value ?? PLAYER_TUNING.coyoteTime,
   jumpBuffer: playerJumpBuffer?.value ?? PLAYER_TUNING.jumpBuffer,
+  swimSpeed: playerSwimSpeed?.value ?? PLAYER_TUNING.swimSpeed,
+  swimDepth: playerSwimDepth?.value ?? PLAYER_TUNING.swimDepth,
 }))
 
 // Shaded by the same grading as the world, so the dust follows the day cycle and the cel ramp.
