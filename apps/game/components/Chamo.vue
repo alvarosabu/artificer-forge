@@ -58,6 +58,10 @@ const {
   playerJumpBuffer,
   playerSwimSpeed,
   playerSwimDepth,
+  playerPlungeSlide,
+  playerFloatFrequency,
+  playerFloatDamping,
+  playerPlungeKeep,
 } = useControls('🏃 player', {
   walkSpeed: { value: PLAYER_TUNING.walkSpeed, min: 0.1, max: 5, step: 0.05, type: 'range' },
   runSpeed: { value: PLAYER_TUNING.runSpeed, min: 0.5, max: 10, step: 0.1, type: 'range' },
@@ -76,6 +80,10 @@ const {
   jumpBuffer: { value: PLAYER_TUNING.jumpBuffer, min: 0, max: 0.4, step: 0.01, type: 'range' },
   swimSpeed: { value: PLAYER_TUNING.swimSpeed, min: 0.1, max: 6, step: 0.05, type: 'range' },
   swimDepth: { value: PLAYER_TUNING.swimDepth, min: 0.2, max: 2.5, step: 0.05, type: 'range' },
+  plungeSlide: { value: PLAYER_TUNING.plungeSlide, min: 0, max: 1, step: 0.05, type: 'range' },
+  floatFrequency: { value: PLAYER_TUNING.floatFrequency, min: 0.2, max: 3, step: 0.05, type: 'range' },
+  floatDamping: { value: PLAYER_TUNING.floatDamping, min: 0.05, max: 1.5, step: 0.01, type: 'range' },
+  plungeKeep: { value: PLAYER_TUNING.plungeKeep, min: 0, max: 1, step: 0.05, type: 'range' },
 }, { uuid })
 
 const tuning = computed<PlayerTuning>(() => ({
@@ -96,6 +104,10 @@ const tuning = computed<PlayerTuning>(() => ({
   jumpBuffer: playerJumpBuffer?.value ?? PLAYER_TUNING.jumpBuffer,
   swimSpeed: playerSwimSpeed?.value ?? PLAYER_TUNING.swimSpeed,
   swimDepth: playerSwimDepth?.value ?? PLAYER_TUNING.swimDepth,
+  plungeSlide: playerPlungeSlide?.value ?? PLAYER_TUNING.plungeSlide,
+  floatFrequency: playerFloatFrequency?.value ?? PLAYER_TUNING.floatFrequency,
+  floatDamping: playerFloatDamping?.value ?? PLAYER_TUNING.floatDamping,
+  plungeKeep: playerPlungeKeep?.value ?? PLAYER_TUNING.plungeKeep,
 }))
 
 // Shaded by the same grading as the world, so the dust follows the day cycle and the cel ramp.

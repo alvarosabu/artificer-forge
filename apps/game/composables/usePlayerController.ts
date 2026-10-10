@@ -37,13 +37,21 @@ export interface PlayerTuning {
   swimSpeed: number
   /** Water depth at the feet where the character starts to float. */
   swimDepth: number
+  /** Fraction of the horizontal speed kept when the feet break the water surface. */
+  plungeSlide: number
+  /** Bobs per second of the float spring. */
+  floatFrequency: number
+  /** 1 settles with no bounce. Lower values bounce more times before they settle. */
+  floatDamping: number
+  /** Fraction of the fall speed the water keeps when the swim state starts. */
+  plungeKeep: number
 }
 
 export const PLAYER_TUNING: PlayerTuning = {
   walkSpeed: 3.5,
-  runSpeed: 5,
+  runSpeed: 7,
   walkClipSpeed: 2.35,
-  runClipSpeed: 4,
+  runClipSpeed: 5,
   turnSpeed: 12,
   acceleration: 46,
   deceleration: 12,
@@ -57,6 +65,10 @@ export const PLAYER_TUNING: PlayerTuning = {
   jumpBuffer: 0.15,
   swimSpeed: 2,
   swimDepth: 1.3,
+  plungeSlide: 0.3,
+  floatFrequency: 0.9,
+  floatDamping: 0.3,
+  plungeKeep: 0.35,
 }
 
 const TAKEOFF_TIME = 0.29 // the crouch ends and the feet leave the ground
@@ -70,6 +82,8 @@ const BUOYANCY = 6
 // Without this gap, a sea floor right at the float line flips between wading and swimming every step.
 const SWIM_ENTER_MARGIN = 0.05
 const MIN_SPLASH_SPEED = 2
+const MAX_PLUNGE_SPEED = 5
+
 
 interface StateDefinition {
   clip: string
@@ -110,10 +124,10 @@ export function usePlayerController(
     onStep?: (position: Vector3, velocity: Vector3, state: PlayerState) => void
     /** Called on touchdown with the downward speed at impact. */
     onLand?: (position: Vector3, impactSpeed: number) => void
-    /** Called when the feet drop through the water surface fast enough to splash. `position` is on the surface. */
-    onSplash?: (position: Vector3, impactSpeed: number) => void
-     /** Height of the water surface at a point, or null where there is no water. Defaults to the Ocean at y = 0. */
-     waterAt?: (x: number, z: number) => number | null
+    /** Called when the feet drop through the water surface fast enough to splash. `position` is on the surface, `motion` is the horizontal velocity. */
+    onSplash?: (position: Vector3, impactSpeed: number, motion: Vector3) => void
+    /** Height of the water surface at a point, or null where there is no water. Defaults to the Ocean at y = 0. */
+    waterAt?: (x: number, z: number) => number | null
   } = {},
 ) {
   const { read } = usePlayerInput()
@@ -130,6 +144,7 @@ export function usePlayerController(
   const right = new Vector3()
   const up = new Vector3(0, 1, 0)
   const splashPoint = new Vector3()
+  const splashMotion = new Vector3()
   const waterAt = options.waterAt ?? (() => 0)
 
 
@@ -250,7 +265,7 @@ export function usePlayerController(
       clip: 'Jump_Idle',
       fade: 0.3,
       enter: () => {
-        velocity.y = 0
+        velocity.y = Math.max(velocity.y * tuning.plungeKeep, -MAX_PLUNGE_SPEED)
         grounded = false
         coyote = 0
         buffer = 0
@@ -386,7 +401,9 @@ export function usePlayerController(
     }
 
     if (swimming) {
-      velocity.y = 0
+      const omega = 2 * Math.PI * tuning.floatFrequency
+      const pull = omega * omega * (floatY - feetY) - 2 * tuning.floatDamping * omega * velocity.y
+      velocity.y += pull * delta
     }
     else {
       // Gravity also pulls while grounded, so a walk off an edge starts falling on the same step.
@@ -397,14 +414,17 @@ export function usePlayerController(
     }
 
     translation.copy(velocity).multiplyScalar(delta)
-    if (swimming) translation.y = (floatY - feetY) * (1 - Math.exp(-BUOYANCY * delta))
+  
     if (!characterBody.move(translation)) return
     const { movement, position } = characterBody
     const touchingGround = characterBody.isGrounded()
 
+    let splashed = false
     if (waterLevel !== null && feetY >= waterLevel && position.y < waterLevel && velocity.y < -MIN_SPLASH_SPEED) {
+      splashed = true
       splashPoint.set(position.x, waterLevel, position.z)
-      options.onSplash?.(splashPoint, -velocity.y)
+      splashMotion.set(velocity.x, 0, velocity.z)
+      options.onSplash?.(splashPoint, -velocity.y, splashMotion)
     }
 
     if (!grounded && touchingGround && velocity.y <= 0) {
@@ -433,6 +453,12 @@ export function usePlayerController(
       }
       // Same for a ceiling, or the jump sticks to it until gravity uses up the take-off speed.
       if (velocity.y > 0) velocity.y = Math.min(velocity.y, movement.y / delta)
+    }
+
+    // After the wall block, which rebuilds the horizontal speed from this step's move.
+    if (splashed) {
+      velocity.x *= tuning.plungeSlide
+      velocity.z *= tuning.plungeSlide
     }
 
     // Snap tiny drift to zero so the camera target stops changing once the character stops.
