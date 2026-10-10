@@ -29,7 +29,7 @@ export {
 export { createInstancedEmberSystem } from './particles/instancedEmberSystem'
 export { createFireBillboards } from './particles/fireBillboards'
 export { createDustTrail, type DustTrail, type DustTrailOptions, type DustEmitOptions } from './particles/dustTrail'
-
+export { createSplashDroplets, type SplashDroplets, type SplashDropletsOptions } from './particles/splashDroplets'
 // Surface materials
 export { buildFireSurfaceMaterial } from './materials/fireSurface'
 export { createHornMaterials, HORN_PATTERN_INDEX, type HornMaterialSet, type HornPattern, type HornUniforms } from './materials/hornMaterial'

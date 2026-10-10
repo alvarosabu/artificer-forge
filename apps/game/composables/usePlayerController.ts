@@ -69,6 +69,7 @@ const TERMINAL_FALL_SPEED = 40
 const BUOYANCY = 6
 // Without this gap, a sea floor right at the float line flips between wading and swimming every step.
 const SWIM_ENTER_MARGIN = 0.05
+const MIN_SPLASH_SPEED = 2
 
 interface StateDefinition {
   clip: string
@@ -109,8 +110,10 @@ export function usePlayerController(
     onStep?: (position: Vector3, velocity: Vector3, state: PlayerState) => void
     /** Called on touchdown with the downward speed at impact. */
     onLand?: (position: Vector3, impactSpeed: number) => void
-    /** Defaults to 0, where Island places the Ocean. */
-    waterLevel?: MaybeRefOrGetter<number>
+    /** Called when the feet drop through the water surface fast enough to splash. `position` is on the surface. */
+    onSplash?: (position: Vector3, impactSpeed: number) => void
+     /** Height of the water surface at a point, or null where there is no water. Defaults to the Ocean at y = 0. */
+     waterAt?: (x: number, z: number) => number | null
   } = {},
 ) {
   const { read } = usePlayerInput()
@@ -126,6 +129,10 @@ export function usePlayerController(
   const forward = new Vector3()
   const right = new Vector3()
   const up = new Vector3(0, 1, 0)
+  const splashPoint = new Vector3()
+  const waterAt = options.waterAt ?? (() => 0)
+
+
   let yaw = 0
   let grounded = true
   let launched = false
@@ -141,6 +148,8 @@ export function usePlayerController(
   // Per-frame input, read by the state updates below.
   let input = read()
   let moving = false
+  let waterLevel: number | null = null
+  let feetY = 0
 
   const finished = () => !!action && action.time >= action.getClip().duration - 1e-3
   const locomotion = (): PlayerState => (input.run ? 'run' : 'walk')
@@ -251,6 +260,7 @@ export function usePlayerController(
       // The ground ray only reaches the feet, so it hits only when the sea floor rises above the float line.
       update: () => {
         if (grounded) return moving ? locomotion() : 'idle'
+        if (waterLevel === null || feetY > waterLevel) return 'fall'
       },
     },
   }
@@ -322,8 +332,11 @@ export function usePlayerController(
       cutArmed = false
     }
 
-    const floatY = (toValue(options.waterLevel) ?? 0) - tuning.swimDepth
-    const feetY = body.value!.instance.translation().y
+    const feet = body.value!.instance.translation()
+    feetY = feet.y
+    waterLevel = waterAt(feet.x, feet.z)
+    // With no water there is nothing to float on, so the swim check below can never pass.
+    const floatY = waterLevel === null ? -Infinity : waterLevel - tuning.swimDepth
     if (state.value !== 'swim' && velocity.y <= 0 && feetY < floatY - SWIM_ENTER_MARGIN) enter('swim')
 
     const next = states[state.value].update()
@@ -388,6 +401,11 @@ export function usePlayerController(
     if (!characterBody.move(translation)) return
     const { movement, position } = characterBody
     const touchingGround = characterBody.isGrounded()
+
+    if (waterLevel !== null && feetY >= waterLevel && position.y < waterLevel && velocity.y < -MIN_SPLASH_SPEED) {
+      splashPoint.set(position.x, waterLevel, position.z)
+      options.onSplash?.(splashPoint, -velocity.y)
+    }
 
     if (!grounded && touchingGround && velocity.y <= 0) {
       // Read before velocity.y resets, or every landing reports zero impact.

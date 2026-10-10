@@ -2,12 +2,17 @@
 import { useGLTF } from '@tresjs/cientos'
 import { useControls } from '@tresjs/leches'
 import { RigidBody } from '@tresjs/rapier'
-import { applyGradingToModel, extractPalmCrownReferences, PalmFronds, sampleHeight } from '@artificer-forge/engine/runtime'
+import { applyGradingToModel, combineWaterQueries, extractPalmCrownReferences, PalmFronds, sampleHeight } from '@artificer-forge/engine/runtime'
 import { Euler, Quaternion, Vector3 } from 'three'
 import { float, positionWorld } from 'three/tsl'
 import type { Mesh, Object3D } from 'three'
 
 const TERRAIN = '/models/levels/portfolio-island-terrain'
+const OCEAN_LEVEL = 0
+const waterAt = combineWaterQueries(
+  () => OCEAN_LEVEL,
+  //  createWaterQuery(control, () => terrain.waterLevel.value, water),
+)
 
 const grading = useGrading()
 const wind = useWind()
@@ -142,6 +147,6 @@ watch(palmsSize!, (frondScale) => {
   <!-- Only once the colliders exist: a body that moves before them falls through the island. -->
   <slot
     v-if="collidersBuilt && heightField"
-    v-bind="{ heightField, heightAt, spawn }"
+    v-bind="{ heightField, heightAt, spawn, waterAt }"
   />
 </template>

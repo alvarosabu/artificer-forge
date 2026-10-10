@@ -35,7 +35,10 @@ const { physicsDebug } = useControls('⚛️ physics', {
 </script>
 
 <template>
-  <TresLeches :uuid="uuid"/>
+  <TresLeches
+    :uuid="uuid"
+    collapsed
+  />
   <TresCanvas
     window-size
     shadows
@@ -55,11 +58,12 @@ const { physicsDebug } = useControls('⚛️ physics', {
           time-step="vary"
           :debug="physicsDebug"
         >
-          <Island v-slot="{ heightField, heightAt, spawn }">
+          <Island v-slot="{ heightField, heightAt, spawn, waterAt }">
             <Chamo
               v-model:position="playerPosition"
               :spawn="spawnOn(spawn, heightAt)"
               :height-field="heightField"
+              :water-at="waterAt"
             />
           </Island>
         </Physics>

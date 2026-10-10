@@ -18,9 +18,12 @@ const props = withDefaults(defineProps<{
   spawn?: [number, number, number]
   /** Ground for the grading's contact occlusion. Without it the ground is y = 0. */
   heightField?: HeightField | null
+  /** Height of the water surface at a point, or null where there is no water. Defaults to the Ocean at y = 0. */
+  waterAt?: (x: number, z: number) => number | null
 }>(), {
   spawn: () => [0, 0, 0],
   heightField: null,
+  waterAt: () => null,
 })
 
 const position = defineModel<[number, number, number]>('position', { default: () => [0, 0, 0] })
@@ -134,11 +137,22 @@ const back = new Vector3()
 const side = new Vector3()
 const spawnPoint = new Vector3()
 const puffVelocity = new Vector2()
+const surfacePoint = new Vector3()
 
 const SPAWN_LIFT = 0.25
 const FULL_BURST_IMPACT = 6
 
+
+/** The point on the water surface above `at`, or null when `at` is not under water. */
+function waterAbove(at: Vector3) {
+  const level = props.waterAt(at.x, at.z)
+  if (level === null || at.y >= level) return null
+  return surfacePoint.set(at.x, level, at.z)
+}
+
 function emitStepDust(at: Vector3, velocity: Vector3, playerState: PlayerState) {
+  if (waterAbove(at)) return
+
   if (playerState === 'walk' && !dustWalk?.value) return
   const speed = Math.hypot(velocity.x, velocity.z)
   if (speed < 1e-3) return
@@ -162,6 +176,8 @@ function emitStepDust(at: Vector3, velocity: Vector3, playerState: PlayerState) 
 }
 
 function emitLandDust(at: Vector3, impactSpeed: number) {
+  if (waterAbove(at)) return
+
   const strength = MathUtils.clamp(impactSpeed / FULL_BURST_IMPACT, 0.3, 1.5)
   const count = Math.round(5 + 5 * strength)
   const size = (dustSize?.value ?? 0.4) * (0.7 + 0.4 * strength)
@@ -190,12 +206,16 @@ const capsuleOffset: [number, number, number] = [0, RIDE_HEIGHT + capsuleHalfHei
 const root = shallowRef<Group>()
 const body = shallowRef<ExposedRigidBody>()
 
+const splash = useSplash()
+
 usePlayerController(root, body, actions, {
   tuning,
   onMove: (p) => { position.value = [p.x, p.y, p.z] },
   stepLength: () => dustStepLength?.value ?? 0.3,
   onStep: emitStepDust,
   onLand: emitLandDust,
+  waterAt: props.waterAt,
+  onSplash: splash.burst,
 })
 
 watch(scene, (model) => {
@@ -228,4 +248,5 @@ watch(scene, (model) => {
     </TresGroup>
   </RigidBody>
   <primitive :object="dust.mesh" />
+  <primitive :object="splash.object" />
 </template>
