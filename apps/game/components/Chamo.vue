@@ -10,7 +10,7 @@ import { MathUtils, Vector2, Vector3 } from 'three'
 import { positionWorld } from 'three/tsl'
 import type { Group, Mesh } from 'three'
 import { RIDE_HEIGHT } from '~/composables/useCharacterBody'
-import { PLAYER_TUNING } from '~/composables/usePlayerController'
+import { isSwimming, PLAYER_TUNING } from '~/composables/usePlayerController'
 import type { PlayerState, PlayerTuning } from '~/composables/usePlayerController'
 
 const props = withDefaults(defineProps<{
@@ -187,6 +187,12 @@ function emitStepDust(at: Vector3, velocity: Vector3, playerState: PlayerState) 
   dust.emit(spawnPoint, { velocity: puffVelocity, size })
 }
 
+function emitStep(at: Vector3, velocity: Vector3, playerState: PlayerState) {
+  const surface = waterAbove(at)
+  if (surface) splash.stroke(surface, velocity)
+  else emitStepDust(at, velocity, playerState)
+}
+
 function emitLandDust(at: Vector3, impactSpeed: number) {
   if (waterAbove(at)) return
 
@@ -220,14 +226,50 @@ const body = shallowRef<ExposedRigidBody>()
 
 const splash = useSplash()
 
-usePlayerController(root, body, actions, {
+const controller = usePlayerController(root, body, actions, {
   tuning,
   onMove: (p) => { position.value = [p.x, p.y, p.z] },
   stepLength: () => dustStepLength?.value ?? 0.3,
-  onStep: emitStepDust,
+  onStep: emitStep,
   onLand: emitLandDust,
   waterAt: props.waterAt,
   onSplash: splash.burst,
+})
+
+// One bob every 2π / 2.4 ≈ 2.6 seconds.
+const BOB_SPEED = 2.4
+const BOB_HEIGHT = 0.06
+const SWAY = 0.05
+let floatWeight = 0
+let treadCycle = 0
+const treadPoint = new Vector3()
+
+watch(root, (group) => {
+  // Yaw outermost, so the sway tilts around the character's own axes.
+  if (group) group.rotation.order = 'YXZ'
+}, { immediate: true })
+
+onBeforeRender(({ elapsed, delta }) => {
+  const group = root.value
+  if (!group) return
+  const swimming = isSwimming(controller.state.value)
+  floatWeight += ((swimming ? 1 : 0) - floatWeight) * (1 - Math.exp(-4 * delta))
+  const phase = elapsed * BOB_SPEED
+  group.position.y = Math.sin(phase) * BOB_HEIGHT * floatWeight
+  group.rotation.x = Math.sin(phase * 0.5 + 1.3) * SWAY * floatWeight
+  group.rotation.z = Math.sin(phase * 0.7) * SWAY * floatWeight
+
+  // Runs on land too, so the first frame in the water does not see an old count and fire a ring on top of the splash.
+  const cycle = Math.floor((phase - 1.5 * Math.PI) / (2 * Math.PI))
+  if (swimming && cycle !== treadCycle) {
+    const surface = waterAbove(treadPoint.fromArray(position.value))
+    if (surface) splash.tread(surface)
+  }
+  treadCycle = cycle
+
+  const wakeSurface = controller.state.value === 'stroke' ? waterAbove(treadPoint.fromArray(position.value)) : null
+  if (wakeSurface) splash.swim(wakeSurface, group.rotation.y)
+  else splash.endSwim()
 })
 
 watch(scene, (model) => {

@@ -1,5 +1,5 @@
 import { useControls } from '@tresjs/leches'
-import { createSplashCrowns, createSplashDroplets, createSplashRipples } from '@artificer-forge/vfx'
+import { createSplashCrowns, createSplashDroplets, createSplashRipples, createSwimWake } from '@artificer-forge/vfx'
 import { Group, MathUtils, Vector3 } from 'three'
 import type { Color, Node } from 'three/webgpu'
 import { stylizedOutput } from '@artificer-forge/engine/runtime'
@@ -8,6 +8,8 @@ import { stylizedOutput } from '@artificer-forge/engine/runtime'
 const FULL_SPLASH_IMPACT = 8
 const DROPLETS_PER_BURST = 18
 const SURFACE_LIFT = 0.02
+// How far ahead of the body the V starts, so its point sits in front of the head.
+const WAKE_LEAD = 0.7
 
 
 export function useSplash() {
@@ -19,9 +21,10 @@ export function useSplash() {
   // One burst fills 21 slots: a landing ring per droplet plus three entry rings.
   const ripples = createSplashRipples({ count: 64, shade: color =>stylizedOutput(color, grading, { hasCoreShadows: false }) })
   const crowns = createSplashCrowns({ shade })
+  const wake = createSwimWake({ shade: color => stylizedOutput(color, grading, { hasCoreShadows: false }) })
 
   const object = new Group()
-  object.add(droplets.mesh, ripples.mesh, crowns.mesh)
+  object.add(droplets.mesh, ripples.mesh, crowns.mesh, wake.mesh)
 
   const { splashLift, splashSpread, splashCarry, splashCarryMax, splashCarryBias, splashGravity } = useControls('💦 splash', {
     lift: { value: 4.2, min: 0.5, max: 10, step: 0.1, type: 'range' },
@@ -33,16 +36,37 @@ export function useSplash() {
   }, { uuid })
   watch(splashGravity!, (v) => { droplets.uniforms.gravity.value = v })
 
+  const { wakeLifetime, wakeHalfWidth, wakeSpread, wakeThickness, wakeGrow, wakeBreakup, wakeNoiseScale, wakeSpacing, wakeLead } = useControls('🚤 wake', {
+    lifetime: { value: wake.uniforms.lifetime.value, min: 0.3, max: 6, step: 0.1, type: 'range' },
+    halfWidth: { value: wake.uniforms.halfWidth.value, min: 0, max: 1.5, step: 0.01, type: 'range' },
+    spread: { value: wake.uniforms.spread.value, min: 0, max: 3, step: 0.01, type: 'range' },
+    thickness: { value: wake.uniforms.thickness.value, min: 0.01, max: 0.5, step: 0.005, type: 'range' },
+    grow: { value: wake.uniforms.grow.value, min: 0, max: 5, step: 0.05, type: 'range' },
+    breakup: { value: wake.uniforms.breakup.value, min: 0, max: 2, step: 0.01, type: 'range' },
+    noiseScale: { value: wake.uniforms.noiseScale.value, min: 0.1, max: 10, step: 0.05, type: 'range' },
+    spacing: { value: 0.3, min: 0.05, max: 1, step: 0.01, type: 'range' },
+    lead: { value: WAKE_LEAD, min: 0, max: 2, step: 0.01, type: 'range' },
+  }, { uuid })
+  watch(wakeLifetime!, (v) => { wake.uniforms.lifetime.value = v })
+  watch(wakeHalfWidth!, (v) => { wake.uniforms.halfWidth.value = v })
+  watch(wakeSpread!, (v) => { wake.uniforms.spread.value = v })
+  watch(wakeThickness!, (v) => { wake.uniforms.thickness.value = v })
+  watch(wakeGrow!, (v) => { wake.uniforms.grow.value = v })
+  watch(wakeBreakup!, (v) => { wake.uniforms.breakup.value = v })
+  watch(wakeNoiseScale!, (v) => { wake.uniforms.noiseScale.value = v })
+
   const { onBeforeRender } = useLoop()
   onBeforeRender(({ elapsed }) => {
     droplets.update(elapsed)
     ripples.update(elapsed)
     crowns.update(elapsed)
+    wake.update(elapsed)
   })
   onUnmounted(() => {
     droplets.dispose()
     ripples.dispose()
     crowns.dispose()
+    wake.dispose()
   })
 
   const spawnPoint = new Vector3()
@@ -89,5 +113,32 @@ export function useSplash() {
 
   }
 
-  return { object, burst }
+  function stroke(at: Vector3, motion: Vector3) {
+    const speed = Math.hypot(motion.x, motion.z)
+    if (speed < 1e-3) return
+    const backX = -motion.x / speed
+    const backZ = -motion.z / speed
+    surface.set(at.x, at.y + SURFACE_LIFT, at.z)
+    ripples.emit(surface, 0.45)
+    for (let i = 0; i < 4; i++) {
+      const side = (Math.random() - 0.5) * 1.2
+      spawnPoint.set(at.x, at.y + 0.05, at.z)
+      velocity.set((backX - backZ * side) * 1.2, 1.8 + Math.random() * 1.2, (backZ + backX * side) * 1.2)
+      droplets.emit(spawnPoint, velocity, 0.06 + Math.random() * 0.04)
+    }
+  }
+
+  function tread(at: Vector3) {
+    surface.set(at.x, at.y + SURFACE_LIFT, at.z)
+    // Wider than Chamo's arms, or the body hides most of the ring.
+    ripples.emit(surface, 1.6)
+  }
+
+  function swim(at: Vector3, yaw: number) {
+    const lead = wakeLead?.value ?? WAKE_LEAD
+    surface.set(at.x + Math.sin(yaw) * lead, at.y + SURFACE_LIFT, at.z + Math.cos(yaw) * lead)
+    wake.follow(surface, yaw, wakeSpacing?.value ?? 0.3)
+  }
+
+  return { object, burst, stroke, tread, swim, endSwim: wake.stop }
 }

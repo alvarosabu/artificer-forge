@@ -4,7 +4,10 @@ import type { MaybeRefOrGetter, ShallowRef } from 'vue'
 import { useRapier } from '@tresjs/rapier'
 import type { ExposedRigidBody } from '@tresjs/rapier'
 
-export type PlayerState = 'spawn' | 'idle' | 'walk' | 'run' | 'jumpStart' | 'fall' | 'land' | 'swim'
+export type PlayerState = 'spawn' | 'idle' | 'walk' | 'run' | 'jumpStart' | 'fall' | 'land' | 'swim' | 'stroke'
+
+/** `swim` floats in place, `stroke` swims with input. Both float on the water. */
+export const isSwimming = (state: PlayerState) => state === 'swim' || state === 'stroke'
 
 export interface PlayerTuning {
   walkSpeed: number
@@ -83,6 +86,8 @@ const BUOYANCY = 6
 const SWIM_ENTER_MARGIN = 0.05
 const MIN_SPLASH_SPEED = 2
 const MAX_PLUNGE_SPEED = 5
+// Distance between two swim strokes. One arm pull covers more water than one foot covers ground.
+const STROKE_LENGTH = 0.9
 
 
 interface StateDefinition {
@@ -261,10 +266,12 @@ export function usePlayerController(
       },
     },
     swim: {
-      // The pack has no swim clip. The loose airborne pose reads as treading water.
+      // The loose airborne pose reads as treading water.
       clip: 'Jump_Idle',
       fade: 0.3,
-      enter: () => {
+      enter: (from) => {
+        // Only the drop into the water brakes the fall, not a stop after a stroke.
+        if (from === 'stroke') return
         velocity.y = Math.max(velocity.y * tuning.plungeKeep, -MAX_PLUNGE_SPEED)
         grounded = false
         coyote = 0
@@ -276,6 +283,16 @@ export function usePlayerController(
       update: () => {
         if (grounded) return moving ? locomotion() : 'idle'
         if (waterLevel === null || feetY > waterLevel) return 'fall'
+        if (moving) return 'stroke'
+      },
+    },
+    stroke: {
+      clip: 'Swim_A',
+      fade: 0.3,
+      update: () => {
+        if (grounded) return locomotion()
+        if (waterLevel === null || feetY > waterLevel) return 'fall'
+        if (!moving) return 'swim'
       },
     },
   }
@@ -352,11 +369,11 @@ export function usePlayerController(
     waterLevel = waterAt(feet.x, feet.z)
     // With no water there is nothing to float on, so the swim check below can never pass.
     const floatY = waterLevel === null ? -Infinity : waterLevel - tuning.swimDepth
-    if (state.value !== 'swim' && velocity.y <= 0 && feetY < floatY - SWIM_ENTER_MARGIN) enter('swim')
+    if (!isSwimming(state.value) && velocity.y <= 0 && feetY < floatY - SWIM_ENTER_MARGIN) enter('swim')
 
     const next = states[state.value].update()
     if (next && next !== state.value) enter(next)
-    const swimming = state.value === 'swim'
+    const swimming = isSwimming(state.value)
 
     updateCameraBasis(camera.activeCamera.value as Camera | undefined)
     desired.set(0, 0, 0)
@@ -466,9 +483,10 @@ export function usePlayerController(
 
     object.rotation.y = yaw
 
-    if (grounded && (state.value === 'walk' || state.value === 'run')) {
+    const stroking = swimming && moving
+    if (stroking || (grounded && (state.value === 'walk' || state.value === 'run'))) {
       stepDistance += Math.hypot(movement.x, movement.z)
-      const stepLength = toValue(options.stepLength) ?? DEFAULT_STEP_LENGTH
+      const stepLength = stroking ? STROKE_LENGTH : toValue(options.stepLength) ?? DEFAULT_STEP_LENGTH
       // Subtract instead of reset, so the step rhythm does not drift with the frame rate.
       if (stepDistance >= stepLength) {
         stepDistance -= stepLength

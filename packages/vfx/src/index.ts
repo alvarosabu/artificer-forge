@@ -32,6 +32,7 @@ export { createDustTrail, type DustTrail, type DustTrailOptions, type DustEmitOp
 export { createSplashDroplets, type SplashDroplets, type SplashDropletsOptions } from './particles/splashDroplets'
 export { createSplashRipples, type SplashRipples, type SplashRipplesOptions } from './particles/splashRipples'
 export { createSplashCrowns, type SplashCrowns, type SplashCrownsOptions } from './particles/splashCrowns'
+export { createSwimWake, type SwimWake, type SwimWakeOptions } from './particles/swimWake'
 // Surface materials
 export { buildFireSurfaceMaterial } from './materials/fireSurface'
 export { createHornMaterials, HORN_PATTERN_INDEX, type HornMaterialSet, type HornPattern, type HornUniforms } from './materials/hornMaterial'

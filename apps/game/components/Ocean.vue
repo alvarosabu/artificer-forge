@@ -23,10 +23,14 @@ const tiledUv = uv().mul(props.size / TILE)
 
 // @types/three types parallaxUV as an untyped Node.
 const depthUv = (parallaxUV(tiledUv, float(0.5)) as ReturnType<typeof uv>).xy
-const causticsUv = vec3(depthUv.mul(6), time.mul(0.3))
+// Cells per TILE, not per metre.
+const causticsScale = uniform(2)
+const seaFoamScale = uniform(2)
+
+const causticsUv = vec3(depthUv.mul(causticsScale), time.mul(0.3))
 const causticsNoise = mx_worley_noise_float(causticsUv).pow3()
 
-const foamUv = vec3(tiledUv.mul(5), time.mul(0.1))
+const foamUv = vec3(tiledUv.mul(seaFoamScale), time.mul(0.1))
 const foamMask = mx_noise_float(foamUv).abs().step(0.05).oneMinus()
 const foamColor = color(0xE5F7FF)
 
@@ -115,11 +119,13 @@ const { foamColor: foamColorControl, foamDepth, foamEdge, foamLines, foamWidth, 
   noise: { value: shore.foamNoiseScale.value, min: 0.05, max: 3, step: 0.01, type: 'range' },
 }, { uuid })
 
-const { waterAbsorption, waterStrength, waterMaxDepth, waterCaustics } = useControls('🌊 water', {
+const { waterAbsorption, waterStrength, waterMaxDepth, waterCaustics, waterCausticsScale, waterFoamScale } = useControls('🌊 water', {
   absorption: { value: `#${water.absorption.value.getHexString()}`, type: 'color' },
   strength: { value: water.absorbStrength.value, min: 0, max: 3, step: 0.01, type: 'range' },
   maxDepth: { value: water.maxDepth.value, min: 0.5, max: 20, step: 0.1, type: 'range' },
   caustics: { value: water.caustics.value, min: 0, max: 1, step: 0.01, type: 'range' },
+  causticsScale: { value: causticsScale.value, min: 0.5, max: 20, step: 0.1, type: 'range' },
+  foamScale: { value: seaFoamScale.value, min: 0.5, max: 20, step: 0.1, type: 'range' },
 }, { uuid })
 
 function bindColor(source: Ref<string>, target: { value: Color }) {
@@ -140,6 +146,8 @@ bindColor(waterAbsorption as Ref<string>, water.absorption)
 bindNumber(waterStrength!, water.absorbStrength)
 bindNumber(waterMaxDepth!, water.maxDepth)
 bindNumber(waterCaustics!, water.caustics)
+bindNumber(waterCausticsScale!, causticsScale)
+bindNumber(waterFoamScale!, seaFoamScale)
 </script>
 
 <template>
