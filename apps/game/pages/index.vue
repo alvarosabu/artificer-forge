@@ -2,6 +2,7 @@
 import { TresLeches, useControls } from '@tresjs/leches'
 import { Physics } from '@tresjs/rapier'
 import { WindLines } from '@artificer-forge/engine/runtime'
+import { useDofFocusProvider, useOutlinePassProvider } from '@artificer-forge/post-processing'
 import { PCFShadowMap } from 'three'
 
 useHead({
@@ -13,6 +14,10 @@ useHead({
 
 const uuid = 'game-canvas'
 provide('uuid', uuid)
+
+// EffectComposer throws without the outline provider, even with no outlines in use.
+useOutlinePassProvider()
+useDofFocusProvider()
 
 // Chamo writes this as it moves and the camera follows it.
 const playerPosition = ref<[number, number, number]>([0, 0, 0])
@@ -78,5 +83,6 @@ const { physicsDebug } = useControls('⚛️ physics', {
         :radius="15"
       />
     </EnvironmentController>
+    <PostProcessing />
   </TresCanvas>
 </template>

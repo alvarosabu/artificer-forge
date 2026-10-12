@@ -4,10 +4,10 @@ import type { MaybeRefOrGetter, ShallowRef } from 'vue'
 import { useRapier } from '@tresjs/rapier'
 import type { ExposedRigidBody } from '@tresjs/rapier'
 
-export type PlayerState = 'spawn' | 'idle' | 'walk' | 'run' | 'jumpStart' | 'fall' | 'land' | 'swim' | 'stroke'
+export type PlayerState = 'spawn' | 'idle' | 'walk' | 'run' | 'jumpStart' | 'fall' | 'land' | 'swim' | 'stroke' | 'fastStroke'
 
-/** `swim` floats in place, `stroke` swims with input. Both float on the water. */
-export const isSwimming = (state: PlayerState) => state === 'swim' || state === 'stroke'
+/** `swim` floats in place, `stroke` swims with input, `fastStroke` swims with run held. All float on the water. */
+export const isSwimming = (state: PlayerState) => state === 'swim' || state === 'stroke' || state === 'fastStroke'
 
 export interface PlayerTuning {
   walkSpeed: number
@@ -38,6 +38,7 @@ export interface PlayerTuning {
   /** Seconds a press is kept before landing, so a slightly early press still jumps. */
   jumpBuffer: number
   swimSpeed: number
+  fastSwimSpeed: number
   /** Water depth at the feet where the character starts to float. */
   swimDepth: number
   /** Fraction of the horizontal speed kept when the feet break the water surface. */
@@ -67,6 +68,7 @@ export const PLAYER_TUNING: PlayerTuning = {
   coyoteTime: 0.12,
   jumpBuffer: 0.15,
   swimSpeed: 2,
+  fastSwimSpeed: 3.5,
   swimDepth: 1.3,
   plungeSlide: 0.3,
   floatFrequency: 0.9,
@@ -173,6 +175,7 @@ export function usePlayerController(
 
   const finished = () => !!action && action.time >= action.getClip().duration - 1e-3
   const locomotion = (): PlayerState => (input.run ? 'run' : 'walk')
+  const swimStroke = (): PlayerState => (input.run ? 'fastStroke' : 'stroke')
   const wantsJump = () => buffer > 0
   const speed = () => Math.hypot(velocity.x, velocity.z)
   const clipTimeScale = (clipSpeed: number) =>
@@ -271,7 +274,7 @@ export function usePlayerController(
       fade: 0.3,
       enter: (from) => {
         // Only the drop into the water brakes the fall, not a stop after a stroke.
-        if (from === 'stroke') return
+        if (from === 'stroke' || from === 'fastStroke') return
         velocity.y = Math.max(velocity.y * tuning.plungeKeep, -MAX_PLUNGE_SPEED)
         grounded = false
         coyote = 0
@@ -283,7 +286,7 @@ export function usePlayerController(
       update: () => {
         if (grounded) return moving ? locomotion() : 'idle'
         if (waterLevel === null || feetY > waterLevel) return 'fall'
-        if (moving) return 'stroke'
+        if (moving) return swimStroke()
       },
     },
     stroke: {
@@ -293,6 +296,17 @@ export function usePlayerController(
         if (grounded) return locomotion()
         if (waterLevel === null || feetY > waterLevel) return 'fall'
         if (!moving) return 'swim'
+        if (input.run) return 'fastStroke'
+      },
+    },
+    fastStroke: {
+      clip: 'Swim_B',
+      fade: 0.3,
+      update: () => {
+        if (grounded) return locomotion()
+        if (waterLevel === null || feetY > waterLevel) return 'fall'
+        if (!moving) return 'swim'
+        if (!input.run) return 'stroke'
       },
     },
   }
@@ -382,7 +396,9 @@ export function usePlayerController(
 
     // Without input in the air, keep the momentum instead of braking.
     if (grounded || moving || swimming) {
-      const maxSpeed = swimming ? tuning.swimSpeed : input.run ? tuning.runSpeed : tuning.walkSpeed
+      const maxSpeed = swimming
+        ? input.run ? tuning.fastSwimSpeed : tuning.swimSpeed
+        : input.run ? tuning.runSpeed : tuning.walkSpeed
       const targetSpeed = maxSpeed * (moving ? 1 : 0)
       // desired already has the input strength in its length, so a half-pushed stick moves at half speed.
       desired.multiplyScalar(targetSpeed)

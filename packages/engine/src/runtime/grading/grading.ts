@@ -1,5 +1,18 @@
-import { Color, Vector2, Vector3 } from 'three'
-import { mix, rangeFogFactor, uniform, viewportUV } from 'three/tsl'
+import { Color, Vector2, Vector3, Vector4 } from 'three'
+import { mix, rangeFogFactor, uniform, uniformArray, viewportUV } from 'three/tsl'
+
+export const MAX_POINT_LIGHTS = 16
+
+/** A warm pool the grading adds around a source such as a torch. Graded materials ignore Three lights. */
+export interface PointLight {
+  position: Vector3
+  /** distance where the pool fades to zero */
+  radius: number
+  color: Color
+  intensity: number
+  /** 0 = steady, 1 = the pool pulses between dark and twice its intensity */
+  flicker: number
+}
 
 export interface GradingProps {
   /** normalized, pointing FROM the light into the scene (same convention as foliage's old lightingDirection) */
@@ -14,6 +27,8 @@ export interface GradingProps {
   /** -2..2, ratio of the scene view distance; negative = fog starts behind the camera */
   fogNearRatio: number
   fogFarRatio: number
+  /** time-of-day scale on every point light, e.g. 0 at noon and 1 at night. Defaults to 1 */
+  pointLightIntensity?: number
 }
 
 export interface GradingContextOptions {
@@ -65,6 +80,43 @@ export function createGradingContext(options: GradingContextOptions) {
       // without gloss masks the highlight hits skin/cloth too and reads plastic
       specStrength: uniform(0),
       specShininess: uniform(32),
+      // xyz = position, w = radius
+      pointLights: uniformArray(Array.from({ length: MAX_POINT_LIGHTS }, () => new Vector4()), 'vec4'),
+      // rgb = color × intensity, w = flicker
+      pointLightColors: uniformArray(Array.from({ length: MAX_POINT_LIGHTS }, () => new Vector4()), 'vec4'),
+      pointLightCount: uniform(0, 'int'),
+      pointLightIntensity: uniform(1),
+  }
+
+  const pointLightGroups = new Set<PointLight[]>()
+
+  /** Rewrites the point light buffers. Call after mutating a registered light. */
+  function updatePointLights() {
+      const positions = uniforms.pointLights.array as Vector4[]
+      const colors = uniforms.pointLightColors.array as Vector4[]
+      let count = 0
+      for (const group of pointLightGroups) {
+          for (const light of group) {
+              if (count === MAX_POINT_LIGHTS) break
+              const { position, color, intensity } = light
+              positions[count]!.set(position.x, position.y, position.z, light.radius)
+              colors[count]!.set(color.r * intensity, color.g * intensity, color.b * intensity, light.flicker)
+              count++
+          }
+      }
+      uniforms.pointLightCount.value = count
+  }
+
+  /** Registers lights for every graded material. Returns the function that removes them. */
+  function addPointLights(lights: PointLight[]) {
+      pointLightGroups.add(lights)
+      const total = [...pointLightGroups].reduce((sum, group) => sum + group.length, 0)
+      if (total > MAX_POINT_LIGHTS) console.warn(`[grading] ${total} point lights, only the first ${MAX_POINT_LIGHTS} are drawn`)
+      updatePointLights()
+      return () => {
+          pointLightGroups.delete(lights)
+          updatePointLights()
+      }
   }
 
   const dist = viewportUV.sub(uniforms.radialCenter).length()
@@ -85,9 +137,10 @@ export function createGradingContext(options: GradingContextOptions) {
       const span = range.sceneFar - range.sceneNear
       uniforms.fogNear.value = range.sceneNear + props.fogNearRatio * span
       uniforms.fogFar.value = range.sceneNear + props.fogFarRatio * span
+      uniforms.pointLightIntensity.value = props.pointLightIntensity ?? 1
   }
 
-  return { uniforms, fogColor, fogStrength, sync, range }
+  return { uniforms, fogColor, fogStrength, sync, range, addPointLights, updatePointLights }
 }
 
 export type GradingContext = ReturnType<typeof createGradingContext>

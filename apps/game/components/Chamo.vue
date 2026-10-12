@@ -6,6 +6,7 @@ import { useControls } from '@tresjs/leches'
 import { CapsuleCollider, RigidBody } from '@tresjs/rapier'
 import type { ExposedRigidBody } from '@tresjs/rapier'
 import { createDustTrail } from '@artificer-forge/vfx'
+import { useDofFocus } from '@artificer-forge/post-processing'
 import { MathUtils, Vector2, Vector3 } from 'three'
 import { positionWorld } from 'three/tsl'
 import type { Group, Mesh } from 'three'
@@ -57,6 +58,7 @@ const {
   playerCoyoteTime,
   playerJumpBuffer,
   playerSwimSpeed,
+  playerFastSwimSpeed,
   playerSwimDepth,
   playerPlungeSlide,
   playerFloatFrequency,
@@ -79,6 +81,7 @@ const {
   coyoteTime: { value: PLAYER_TUNING.coyoteTime, min: 0, max: 0.4, step: 0.01, type: 'range' },
   jumpBuffer: { value: PLAYER_TUNING.jumpBuffer, min: 0, max: 0.4, step: 0.01, type: 'range' },
   swimSpeed: { value: PLAYER_TUNING.swimSpeed, min: 0.1, max: 6, step: 0.05, type: 'range' },
+  fastSwimSpeed: { value: PLAYER_TUNING.fastSwimSpeed, min: 0.1, max: 8, step: 0.05, type: 'range' },
   swimDepth: { value: PLAYER_TUNING.swimDepth, min: 0.2, max: 2.5, step: 0.05, type: 'range' },
   plungeSlide: { value: PLAYER_TUNING.plungeSlide, min: 0, max: 1, step: 0.05, type: 'range' },
   floatFrequency: { value: PLAYER_TUNING.floatFrequency, min: 0.2, max: 3, step: 0.05, type: 'range' },
@@ -103,6 +106,7 @@ const tuning = computed<PlayerTuning>(() => ({
   coyoteTime: playerCoyoteTime?.value ?? PLAYER_TUNING.coyoteTime,
   jumpBuffer: playerJumpBuffer?.value ?? PLAYER_TUNING.jumpBuffer,
   swimSpeed: playerSwimSpeed?.value ?? PLAYER_TUNING.swimSpeed,
+  fastSwimSpeed: playerFastSwimSpeed?.value ?? PLAYER_TUNING.fastSwimSpeed,
   swimDepth: playerSwimDepth?.value ?? PLAYER_TUNING.swimDepth,
   plungeSlide: playerPlungeSlide?.value ?? PLAYER_TUNING.plungeSlide,
   floatFrequency: playerFloatFrequency?.value ?? PLAYER_TUNING.floatFrequency,
@@ -249,6 +253,15 @@ watch(root, (group) => {
   if (group) group.rotation.order = 'YXZ'
 }, { immediate: true })
 
+const dofFocus = useDofFocus()
+watch(root, (group, previous) => {
+  if (previous) dofFocus?.clearFocusTarget(previous)
+  if (group) dofFocus?.setFocusTarget(group)
+}, { immediate: true })
+onUnmounted(() => {
+  if (root.value) dofFocus?.clearFocusTarget(root.value)
+})
+
 onBeforeRender(({ elapsed, delta }) => {
   const group = root.value
   if (!group) return
@@ -267,7 +280,8 @@ onBeforeRender(({ elapsed, delta }) => {
   }
   treadCycle = cycle
 
-  const wakeSurface = controller.state.value === 'stroke' ? waterAbove(treadPoint.fromArray(position.value)) : null
+  const stroking = controller.state.value === 'stroke' || controller.state.value === 'fastStroke'
+  const wakeSurface = stroking ? waterAbove(treadPoint.fromArray(position.value)) : null
   if (wakeSurface) splash.swim(wakeSurface, group.rotation.y)
   else splash.endSwim()
 })

@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { useGLTF } from '@tresjs/cientos'
+import { useGLTF, useTexture } from '@tresjs/cientos'
 import { useControls } from '@tresjs/leches'
 import { RigidBody } from '@tresjs/rapier'
-import { applyGradingToModel, combineWaterQueries, extractPalmCrownReferences, PalmFronds, sampleHeight } from '@artificer-forge/engine/runtime'
+import { applyGradingToModel, buildTerrainMaterial, combineWaterQueries, createControlMap, createTerrainUniforms, extractPalmCrownReferences, extractTorchFlameReferences, PalmFronds, sampleHeight, TorchFlames } from '@artificer-forge/engine/runtime'
 import { Euler, Quaternion, Vector3 } from 'three'
-import { float, positionWorld } from 'three/tsl'
-import type { Mesh, Object3D } from 'three'
+import { positionWorld } from 'three/tsl'
+import type { Color, Mesh, Object3D, Texture } from 'three'
 
 const TERRAIN = '/models/levels/portfolio-island-terrain'
+const CONTROL_MAP = '/models/levels/level-control-1024.png'
 const OCEAN_LEVEL = 0
 const waterAt = combineWaterQueries(
   () => OCEAN_LEVEL,
@@ -25,6 +26,22 @@ const scenery = computed(() => sceneryState.value?.scene)
 const { field: heightField, heightAt } = useHeightField(`${TERRAIN}.height-2048`)
 const colliders = useStaticColliders()
 const collidersBuilt = ref(false)
+
+// useTexture holds a pixel-less Texture until the file lands; a WebGPU material bound to one leaves a blank page
+function whenLoaded<T extends Texture>(source: { value: T | null | undefined }) {
+  return computed(() => (source.value?.image ? source.value : null))
+}
+const controlTexture = whenLoaded(useTexture(CONTROL_MAP).state)
+const grassMap = whenLoaded(useTexture('/textures/grass.webp').state)
+const roadMap = whenLoaded(useTexture('/textures/road.webp').state)
+const rockMap = whenLoaded(useTexture('/textures/rock.webp').state)
+
+const terrainUniforms = createTerrainUniforms()
+terrainUniforms.waterLevel.value = OCEAN_LEVEL
+// No ground map on purpose: bare ground is sand, a noise gradient around the GLB's old flat colour
+terrainUniforms.groundDark.value.set('#d9bd72')
+terrainUniforms.groundLight.value.set('#efd890')
+const terrainMaterialReady = ref(false)
 
 // An empty placed in Blender. The origin is the fallback if the model has no such node.
 const SPAWN_NODE = 'Spawn_Point_Beach'
@@ -45,12 +62,82 @@ interface RigidProp {
 }
 const rigidProps = shallowRef<RigidProp[]>([])
 const palmCrowns = shallowRef<Object3D[]>([])
+const torchFlames = shallowRef<Object3D[]>([])
 
 const uuid = inject<string>('uuid')
 // Frond length in marker radii. The marker sphere shows where a crown sits, not how far it reaches
 const { palmsSize } = useControls('🌴 palms', {
   size: { value: 5, min: 0.5, max: 10, step: 0.1, type: 'range' },
 }, { uuid })
+
+const {
+  torchesRise,
+  torchesDisplace,
+  torchesFlicker,
+  torchesLean,
+  torchesEmission,
+  torchesGlow,
+  torchesLightColor,
+  torchesLightIntensity,
+  torchesLightRadius,
+  torchesLightFlicker,
+  torchesEmberCount,
+  torchesEmberSize,
+  torchesEmberRise,
+  torchesEmberDrift,
+} = useControls('🔥 torches', {
+  rise: { value: 0.7, min: 0, max: 3, step: 0.05, type: 'range' },
+  displace: { value: 0.12, min: 0, max: 0.5, step: 0.01, type: 'range' },
+  flicker: { value: 0.06, min: 0, max: 0.3, step: 0.01, type: 'range' },
+  lean: { value: 0.6, min: 0, max: 2, step: 0.05, type: 'range' },
+  emission: { value: 0.6, min: 0, max: 1, step: 0.05, type: 'range' },
+  glow: { value: 2.5, min: 0, max: 8, step: 0.1, type: 'range' },
+  lightColor: '#ff8a3d',
+  lightIntensity: { value: 1.5, min: 0, max: 5, step: 0.05, type: 'range' },
+  lightRadius: { value: 6, min: 0.5, max: 20, step: 0.25, type: 'range' },
+  lightFlicker: { value: 0.15, min: 0, max: 1, step: 0.01, type: 'range' },
+  emberCount: { value: 12, min: 0, max: 64, step: 1, type: 'range' },
+  emberSize: { value: 0.07, min: 0.005, max: 0.15, step: 0.005, type: 'range' },
+  emberRise: { value: 1.5, min: 0, max: 8, step: 0.1, type: 'range' },
+  emberDrift: { value: 1, min: 0, max: 8, step: 0.1, type: 'range' },
+}, { uuid })
+
+const hex = (u: { value: Color }) => `#${u.value.getHexString()}`
+const { terrainGrassTint, terrainSandDark, terrainSandLight, terrainRockTint, terrainGrassLow, terrainGrassHigh, terrainEdge } = useControls('⛰️ terrain', {
+  grassTint: { value: hex(terrainUniforms.grassTint), type: 'color' },
+  sandDark: { value: hex(terrainUniforms.groundDark), type: 'color' },
+  sandLight: { value: hex(terrainUniforms.groundLight), type: 'color' },
+  rockTint: { value: hex(terrainUniforms.rockTint), type: 'color' },
+  grassLow: { value: terrainUniforms.grassBlendLow.value, min: 0, max: 1, step: 0.01, type: 'range' },
+  grassHigh: { value: terrainUniforms.grassBlendHigh.value, min: 0, max: 1, step: 0.01, type: 'range' },
+  edge: { value: terrainUniforms.edgeStrength.value, min: 0, max: 2, step: 0.05, type: 'range' },
+}, { uuid })
+
+watch(terrainGrassTint!, (v) => { terrainUniforms.grassTint.value.set(v) })
+watch(terrainSandDark!, (v) => { terrainUniforms.groundDark.value.set(v) })
+watch(terrainSandLight!, (v) => { terrainUniforms.groundLight.value.set(v) })
+watch(terrainRockTint!, (v) => { terrainUniforms.rockTint.value.set(v) })
+watch(terrainGrassLow!, (v) => { terrainUniforms.grassBlendLow.value = v })
+watch(terrainGrassHigh!, (v) => { terrainUniforms.grassBlendHigh.value = v })
+watch(terrainEdge!, (v) => { terrainUniforms.edgeStrength.value = v })
+
+// Built once: the node graph bakes in which maps exist, so a map that loads later would be ignored
+watch([terrain, heightField, controlTexture, grassMap, roadMap, rockMap], ([model, field, control, grass, road, rock]) => {
+  if (!model || !field || !control || !grass || !road || !rock || terrainMaterialReady.value) return
+  // The control map covers the same top-down square as the height field: the terrain's bounds
+  const { material } = buildTerrainMaterial({
+    control: createControlMap({ texture: control, size: field.size, origin: [field.origin.x, field.origin.y] }),
+    grading,
+    grassMap: grass,
+    roadMap: road,
+    rockMap: rock,
+    uniforms: terrainUniforms,
+  })
+  model.traverse((child) => {
+    if ((child as Mesh).isMesh) (child as Mesh).material = material
+  })
+  terrainMaterialReady.value = true
+}, { immediate: true })
 
 watch([terrain, scenery, heightField], ([terrainModel, sceneryModel, field]) => {
   if (!terrainModel || !sceneryModel || !field || collidersBuilt.value) return
@@ -59,6 +146,7 @@ watch([terrain, scenery, heightField], ([terrainModel, sceneryModel, field]) => 
     if ((child as Mesh).isMesh) child.receiveShadow = true
   })
   palmCrowns.value = extractPalmCrownReferences(sceneryModel, { frondScale: palmsSize!.value })
+  torchFlames.value = extractTorchFlameReferences(sceneryModel)
 
   sceneryModel.traverse((child) => {
     const mesh = child as Mesh
@@ -67,9 +155,7 @@ watch([terrain, scenery, heightField], ([terrainModel, sceneryModel, field]) => 
     else mesh.castShadow = mesh.receiveShadow = true
   })
 
-  // Contact occlusion darkens whatever is near the ground. The terrain is the ground,
-  // so its ground goes far below it; props measure from the terrain under them.
-  applyGradingToModel(terrainModel, grading, { groundHeight: float(-1e4) })
+  // Props measure contact occlusion from the terrain under them
   applyGradingToModel(sceneryModel, grading, { groundHeight: sampleHeight(field, positionWorld.xz) })
 
   // The model is not in the scene yet, so its world matrices are not computed.
@@ -112,8 +198,9 @@ watch(palmsSize!, (frondScale) => {
 </script>
 
 <template>
+  <!-- gated on the material so the raw GLB material never shows for a frame -->
   <primitive
-    v-if="terrain"
+    v-if="terrain && terrainMaterialReady"
     :object="terrain"
   />
   <primitive
@@ -138,6 +225,28 @@ watch(palmsSize!, (frondScale) => {
     :grading="grading"
     :wind-angle="wind.angle"
     :wind-strength="wind.strength"
+  />
+  <TorchFlames
+    v-if="torchFlames.length"
+    :key="torchesEmberCount"
+    :references="torchFlames"
+    :grading="grading"
+    :wind-angle="wind.angle"
+    :wind-strength="wind.strength"
+    :rise-speed="torchesRise"
+    :displace-strength="torchesDisplace"
+    :flicker="torchesFlicker"
+    :wind-lean="torchesLean"
+    :emission="torchesEmission"
+    :glow-intensity="torchesGlow"
+    :light-color="torchesLightColor"
+    :light-intensity="torchesLightIntensity"
+    :light-radius="torchesLightRadius"
+    :light-flicker="torchesLightFlicker"
+    :ember-count="torchesEmberCount"
+    :ember-size="torchesEmberSize"
+    :ember-rise="torchesEmberRise"
+    :ember-drift="torchesEmberDrift"
   />
   <Ocean
     v-if="heightField"

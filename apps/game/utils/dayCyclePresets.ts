@@ -19,6 +19,7 @@ export const dayCyclePresets: GradingProps[] = [
         fogColorB: new Color('#9b89ff'),
         fogNearRatio: 0.315,
         fogFarRatio: 1.25,
+        pointLightIntensity: 0.15,
     },
     { // dusk
         lightDirection: sun.clone(),
@@ -29,6 +30,7 @@ export const dayCyclePresets: GradingProps[] = [
         fogColorB: new Color('#ff4ce4'),
         fogNearRatio: 0,
         fogFarRatio: 1.25,
+        pointLightIntensity: 0.7,
     },
     { // night — negative near ratio: fog plane starts behind the camera, heavy haze
         lightDirection: sun.clone(),
@@ -39,6 +41,7 @@ export const dayCyclePresets: GradingProps[] = [
         fogColorB: new Color('#490a42'),
         fogNearRatio: -0.85,
         fogFarRatio: 1,
+        pointLightIntensity: 1,
     },
     { // dawn
         lightDirection: sun.clone(),
@@ -49,6 +52,7 @@ export const dayCyclePresets: GradingProps[] = [
         fogColorB: new Color('#ff7d24'),
         fogNearRatio: 0.3,
         fogFarRatio: 1.25,
+        pointLightIntensity: 0.5,
     },
 ]
 

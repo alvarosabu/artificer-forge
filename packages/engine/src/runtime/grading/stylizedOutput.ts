@@ -1,5 +1,5 @@
 import type { Node } from "three/webgpu"
-import { cameraPosition, float, Fn, mix, normalWorld, positionWorld, step, vec4 } from "three/tsl"
+import { cameraPosition, float, Fn, Loop, mix, normalWorld, positionWorld, sin, step, time, vec3, vec4 } from "three/tsl"
 import { GradingContext } from "./grading"
 
 export interface StylizedOutputOptions {
@@ -20,6 +20,8 @@ export interface StylizedOutputOptions {
     alphaNode?: Node<'float'>
     /** discard threshold applied AFTER fog (cutout edges must not pop against fog) */
     alphaTest?: number
+    /** add the grading's point lights (torch pools). Off for the light sources themselves */
+    hasPointLights?: boolean
 }
 
 /**
@@ -46,6 +48,7 @@ export function stylizedOutput(baseColor: any, grading: GradingContext, options:
     const {
         hasFog = true,
         hasCoreShadows = true,
+        hasPointLights = true,
         normalNode = normalWorld,
         alphaNode = float(1),
     } = options
@@ -96,6 +99,29 @@ export function stylizedOutput(baseColor: any, grading: GradingContext, options:
         }
 
         if (hasFog) out = grading.fogStrength.mix(out, grading.fogColor)
+
+        if (hasPointLights) {
+            const { pointLights, pointLightColors, pointLightCount, pointLightIntensity } = grading.uniforms
+            const tint = vec3(0).toVar()
+            const coverage = float(0).toVar()
+            Loop(pointLightCount, ({ i }: { i: Node<'int'> }) => {
+                const light = pointLights.element(i) as unknown as Node<'vec4'>
+                const color = pointLightColors.element(i) as unknown as Node<'vec4'>
+                const toLight = light.xyz.sub(positionWorld)
+                const distance = toLight.length()
+                const falloff = distance.div(light.w).smoothstep(0, 1).oneMinus()
+                // half-lambert: the pool wraps round the form instead of cutting a hard terminator
+                const facing = normalNode.dot(toLight.div(distance.max(1e-4))).mul(0.5).add(0.5)
+                const phase = time.add(float(i).mul(1.7))
+                const flicker = sin(phase.mul(11)).mul(sin(phase.mul(7.3))).mul(color.w).add(1)
+                const weight = falloff.mul(facing).mul(flicker)
+                tint.addAssign(color.rgb.mul(weight))
+                coverage.addAssign(weight)
+            })
+            // after fog, like the unfogged flames. Replaces the time-of-day light: added on top, warm over a blue night reads pink
+            const lit = baseColor.mul(tint.div(coverage.max(1e-4)))
+            out = mix(out, lit, coverage.saturate().mul(pointLightIntensity))
+        }
 
         // An alphaTest cutout is binary coverage: the pixels that survive are fully
         // opaque. Passing the smooth alpha through instead leaks it to the canvas

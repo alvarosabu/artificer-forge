@@ -176,6 +176,10 @@ _Avoid_: color grading, lighting model, tone
 The finish step a graded material applies to its final color.
 _Avoid_: output node, finish pass, post grading
 
+**Point light**:
+A pool of light the grading blends over graded materials around a source such as a torch. Three lights do nothing on graded materials. The day cycle scales every pool by time of day.
+_Avoid_: local light, torch light, light pool
+
 **Preset track**:
 A loop from 0 to 1 that blends between ordered presets. An app's day cycle drives it; the day cycle itself is app policy.
 _Avoid_: day cycle (in the Engine), timeline, tween

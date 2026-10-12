@@ -378,6 +378,7 @@ watch(
   [
     scene,
     camera.activeCamera,
+    () => !!props.bloom,
     () => !!props.dof,
     () => !!props.tiltShift,
     () => props.tiltShift?.sigma,
