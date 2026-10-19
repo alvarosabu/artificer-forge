@@ -1,6 +1,6 @@
 import { Fn, mix, mx_noise_float, mx_noise_vec3, normalWorld, positionWorld, rotateUV, smoothstep, texture, uniform } from 'three/tsl'
 import { Color } from 'three'
-import { MeshLambertNodeMaterial, RepeatWrapping, SRGBColorSpace, Texture } from 'three/webgpu'
+import { MeshLambertNodeMaterial, RepeatWrapping, SRGBColorSpace, Texture, type Node } from 'three/webgpu'
 import { controlUv, type ControlMap } from './controlMap'
 import type { GradingContext } from '../grading/grading'
 import { createDropShadowCatcher, stylizedOutput } from '../grading/stylizedOutput'
@@ -110,11 +110,13 @@ export function buildTerrainMaterial(options: {
   rockMap?: Texture
   /** pass one in to tune the look live; omitted, the material makes its own */
   uniforms?: TerrainUniforms
+  /** 0 to 1 per fragment, mixed toward `wetGround` on top of the static shore band */
+  wetness?: Node<'float'>
 }) {
   // Lambert even on the graded path: the lighting result is discarded by the
   // finish, the material is lit only so the shadow catcher runs (see stylizedOutput)
   const material = new MeshLambertNodeMaterial()
-  const { control, grading, grassMap, groundMap, roadMap, rockMap } = options
+  const { control, grading, grassMap, groundMap, roadMap, rockMap, wetness } = options
   const u = options.uniforms ?? createTerrainUniforms()
   const data = texture(control.texture, controlUv(control.uniforms, positionWorld.xz))
 
@@ -170,7 +172,8 @@ export function buildTerrainMaterial(options: {
     const h = positionWorld.y.sub(u.waterLevel).toVar()
     const below = smoothstep(0, u.dampAbove, h).oneMinus()
     const shallow = smoothstep(u.dampBelow, 0, h)
-    const wet = below.mul(shallow).mul(smoothstep(u.shoreLow, u.shoreHigh, data.b))
+    const shoreWet = below.mul(shallow).mul(smoothstep(u.shoreLow, u.shoreHigh, data.b))
+    const wet = wetness ? shoreWet.max(wetness) : shoreWet
     surface.assign(mix(surface, u.wetGround, wet))
     return surface
   })()

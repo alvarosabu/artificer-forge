@@ -3,8 +3,8 @@ import { useGLTF, useTexture } from '@tresjs/cientos'
 import { useControls } from '@tresjs/leches'
 import { RigidBody } from '@tresjs/rapier'
 import { applyGradingToModel, buildTerrainMaterial, combineWaterQueries, createControlMap, createTerrainUniforms, extractPalmCrownReferences, extractTorchFlameReferences, PalmFronds, sampleHeight, TorchFlames } from '@artificer-forge/engine/runtime'
-import { Euler, Quaternion, Vector3 } from 'three'
-import { positionWorld } from 'three/tsl'
+import { Euler, Quaternion, Vector2, Vector3 } from 'three'
+import { float, positionWorld, uniform } from 'three/tsl'
 import type { Color, Mesh, Object3D, Texture } from 'three'
 
 const TERRAIN = '/models/levels/portfolio-island-terrain'
@@ -42,6 +42,12 @@ terrainUniforms.waterLevel.value = OCEAN_LEVEL
 terrainUniforms.groundDark.value.set('#d9bd72')
 terrainUniforms.groundLight.value.set('#efd890')
 const terrainMaterialReady = ref(false)
+
+const shoreWaves = createShoreWaves()
+provideShoreWaves(shoreWaves)
+const playerPosition = usePlayerPosition()
+const playerXZ = uniform(new Vector2())
+watch(playerPosition, ([x, , z]) => { playerXZ.value.set(x, z) }, { immediate: true })
 
 // An empty placed in Blender. The origin is the fallback if the model has no such node.
 const SPAWN_NODE = 'Spawn_Point_Beach'
@@ -132,6 +138,7 @@ watch([terrain, heightField, controlTexture, grassMap, roadMap, rockMap], ([mode
     roadMap: road,
     rockMap: rock,
     uniforms: terrainUniforms,
+    wetness: sandWetness(shoreWaves, float(OCEAN_LEVEL).sub(positionWorld.y), positionWorld.xz.distance(playerXZ)),
   })
   model.traverse((child) => {
     if ((child as Mesh).isMesh) (child as Mesh).material = material

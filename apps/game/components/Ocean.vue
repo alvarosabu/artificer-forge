@@ -88,29 +88,7 @@ const water = {
   caustics: uniform(0.25),
 }
 
-const waves = {
-  /** metres from the rest level to a crest */
-  height: uniform(0.15),
-  /** wave crests per metre of water depth */
-  frequency: uniform(3),
-  /** seconds between two crests reaching the same spot */
-  period: uniform(4),
-  /** metres of water after which the waves stop rising */
-  reach: uniform(3),
-  /** metres above sea level that a wave can climb up the beach */
-  runUp: uniform(0.4),
-    /** metres from the player where the waves start to flatten */
-  detailNear: uniform(15),
-  /** metres from the player where the sea is flat. Keep the rings here under ~1 m apart */
-  detailFar: uniform(30),
-  /** a wave breaks once crest-to-trough height is this share of the water depth */
-  breakRatio: uniform(0.78),
-  /** how much of a breaking wave, from the crest down, is foam. 0.5 is half the wave */
-  crestFoam: uniform(0.2),
-  /** whether to debug the waves */
-  debug: uniform(0),
-  crestLight: uniform(0.35),
-}
+const waves = useShoreWaves()
 
 const grading = useGrading()
 const backdrop = viewportSharedTexture(screenUV).rgb
@@ -128,15 +106,9 @@ const material = new MeshBasicNodeMaterial({ transparent: true, depthWrite: fals
 const worldXZ = positionGeometry.xz.add(modelPosition.xz)
 const seaDepth = sampleHeight(props.heightField, worldXZ).negate()
 
-// + time, not - time: the phase a crest carries moves to smaller depths, so toward the beach
-const shoaledDepth = seaDepth.max(0).sqrt()
-const phase = shoaledDepth.mul(waves.frequency).add(time.mul(2 * Math.PI).div(waves.period))
-
-const shoaling = waves.reach.div(seaDepth.max(0.2)).pow(0.25)
-const offshoreFade = smoothstep(waves.reach.mul(0.5), waves.reach, seaDepth).oneMinus()
-const landFade = smoothstep(waves.runUp.negate(), 0, seaDepth)
-const detailFade = smoothstep(waves.detailNear, waves.detailFar, positionGeometry.xz.length()).oneMinus()
-const amplitude = waves.height.mul(shoaling).mul(offshoreFade).mul(landFade).mul(detailFade)
+const phase = wavePhase(waves, seaDepth)
+// The disc is centred on the player, so the raw vertex position is the offset from the player
+const amplitude = waveAmplitude(waves, seaDepth, positionGeometry.xz.length())
 const lift = sin(phase).mul(amplitude)
 material.positionNode = positionGeometry.add(vec3(0, lift, 0))
 
@@ -183,12 +155,14 @@ const { waterAbsorption, waterStrength, waterMaxDepth, waterCaustics, waterCaust
   foamScale: { value: seaFoamScale.value, min: 0.5, max: 20, step: 0.1, type: 'range' },
 }, { uuid })
 
-const { wavesHeight, wavesFrequency, wavesPeriod, wavesBreakRatio, wavesCrestFoam, wavesDebug } = useControls('🏄 waves', {
+const { wavesHeight, wavesFrequency, wavesPeriod, wavesBreakRatio, wavesCrestFoam, wavesDryTime, wavesWetStrength, wavesDebug } = useControls('🏄 waves', {
   height: { value: waves.height.value, min: 0, max: 1, step: 0.01, type: 'range' },
   frequency: { value: waves.frequency.value, min: 0.1, max: 20, step: 0.1, type: 'range' },
   period: { value: waves.period.value, min: 0.5, max: 12, step: 0.1, type: 'range' },
   breakRatio: { value: waves.breakRatio.value, min: 0.1, max: 2, step: 0.01, type: 'range' },
   crestFoam: { value: waves.crestFoam.value, min: 0, max: 0.5, step: 0.01, type: 'range' },
+  dryTime: { value: waves.dryTime.value, min: 0.1, max: 20, step: 0.1, type: 'range' },
+  wetStrength: { value: waves.wetStrength.value, min: 0, max: 1, step: 0.01, type: 'range' },
   debug: false,
 }, { uuid })
 
@@ -217,6 +191,8 @@ bindNumber(wavesFrequency!, waves.frequency)
 bindNumber(wavesPeriod!, waves.period)
 bindNumber(wavesBreakRatio!, waves.breakRatio)
 bindNumber(wavesCrestFoam!, waves.crestFoam)
+bindNumber(wavesDryTime!, waves.dryTime)
+bindNumber(wavesWetStrength!, waves.wetStrength)
 watch(wavesDebug!, (on) => { debugView.value = on ? 1 : 0 })
 </script>
 
