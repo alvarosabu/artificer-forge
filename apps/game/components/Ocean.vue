@@ -1,28 +1,30 @@
 <script setup lang="ts">
 import { useControls } from '@tresjs/leches'
-import { createFoamUniforms, stylizedOutput, toonShoreFoam } from '@artificer-forge/engine/runtime'
-import { cameraFar, cameraNear, cameraPosition, color, exp, float, linearDepth, mix, mx_noise_float, mx_worley_noise_float, parallaxUV, positionWorld, screenUV, time, uniform, uv, vec3, vec4, viewportLinearDepth, viewportSharedTexture } from 'three/tsl'
+import { createFoamUniforms, sampleHeight, stylizedOutput, toonShoreFoam, type HeightField } from '@artificer-forge/engine/runtime'
+import { cameraFar, cameraNear, cameraPosition, color, exp, positionGeometry, linearDepth, mix, mx_noise_float, mx_worley_noise_float, parallaxUV, positionWorld, screenUV, time, uniform, uv, vec3, vec4, viewportLinearDepth, viewportSharedTexture, modelPosition, varying, sin, smoothstep, step } from 'three/tsl'
 import { Color, PlaneGeometry } from 'three'
 import { MeshBasicNodeMaterial } from 'three/webgpu'
 import type { Ref } from 'vue'
 
-// Place it with `position` on the component: the attribute falls through to the mesh.
 const props = defineProps<{
-  /** Side of the square plane, in metres */
-  size: number
+  heightField: HeightField
 }>()
 
-// The shader was tuned on a 4 m wide disc. Scale uv to that tile so caustics
-// and foam keep their size in metres, whatever the plane size.
+// The camera sees up to 200 m (its far plane) from up to 30 m behind the player.
+const RADIUS = 250
+const playerPosition = usePlayerPosition()
+const geometry = createOceanGeometry({ minStep: 0.25, radius: RADIUS, segments: 192 })
+
+// The shader was tuned on a 4 m wide disc. Dividing world metres by that tile keeps
+// caustics and foam the same size in metres, and they stay put if the mesh moves.
 const TILE = 4
+const tiledUv = positionWorld.xz.div(TILE)
 
-const geometry = new PlaneGeometry(props.size, props.size, 1, 1)
-geometry.rotateX(-Math.PI / 2)
+const toCamera = cameraPosition.sub(positionWorld).normalize()
+// Not parallaxUV: it builds its tangent frame from uv, and the disc has no uv.
+// On a flat surface, world x and z are that frame.
+const depthUv = tiledUv.sub(toCamera.xz.mul(0.5))
 
-const tiledUv = uv().mul(props.size / TILE)
-
-// @types/three types parallaxUV as an untyped Node.
-const depthUv = (parallaxUV(tiledUv, float(0.5)) as ReturnType<typeof uv>).xy
 // Cells per TILE, not per metre.
 const causticsScale = uniform(2)
 const seaFoamScale = uniform(2)
@@ -64,9 +66,8 @@ const wobble = mx_noise_float(vec3(positionWorld.xz.mul(shore.foamNoiseScale), t
   .mul(shore.foamWobble)
 const shoreMask = toonShoreFoam(waterDepth.add(wobble).max(0), shore)
 
-// Fade only over the last ~8% of the plane, so it has no hard border against the
-// sky. A wider fade reached the island and let the sand show through the sea.
-const edgeFade = uv().sub(0.5).length().smoothstep(0.5, 0.42)
+const edgeFade = positionGeometry.xz.length().smoothstep(RADIUS, RADIUS * 0.84)
+
 
 // Same Beer-Lambert absorption as the playground water (engine waterMaterial.ts).
 // The ocean writes no blue of its own: it reads the sea floor behind it and eats
@@ -87,6 +88,30 @@ const water = {
   caustics: uniform(0.25),
 }
 
+const waves = {
+  /** metres from the rest level to a crest */
+  height: uniform(0.15),
+  /** wave crests per metre of water depth */
+  frequency: uniform(3),
+  /** seconds between two crests reaching the same spot */
+  period: uniform(4),
+  /** metres of water after which the waves stop rising */
+  reach: uniform(3),
+  /** metres above sea level that a wave can climb up the beach */
+  runUp: uniform(0.4),
+    /** metres from the player where the waves start to flatten */
+  detailNear: uniform(15),
+  /** metres from the player where the sea is flat. Keep the rings here under ~1 m apart */
+  detailFar: uniform(30),
+  /** a wave breaks once crest-to-trough height is this share of the water depth */
+  breakRatio: uniform(0.78),
+  /** how much of a breaking wave, from the crest down, is foam. 0.5 is half the wave */
+  crestFoam: uniform(0.2),
+  /** whether to debug the waves */
+  debug: uniform(0),
+  crestLight: uniform(0.35),
+}
+
 const grading = useGrading()
 const backdrop = viewportSharedTexture(screenUV).rgb
 // alongRay, not waterDepth: light crosses the water along the view ray, so a low
@@ -99,13 +124,43 @@ const causticsLight = color(0x11EEFF).mul(causticsNoise).mul(water.caustics)
 // the correctly fogged pixel instead.
 const seaFloor = mix(backdrop.add(causticsLight).mul(transmission), backdrop, grading.fogStrength)
 
+const material = new MeshBasicNodeMaterial({ transparent: true, depthWrite: false})
+const worldXZ = positionGeometry.xz.add(modelPosition.xz)
+const seaDepth = sampleHeight(props.heightField, worldXZ).negate()
+
+// + time, not - time: the phase a crest carries moves to smaller depths, so toward the beach
+const shoaledDepth = seaDepth.max(0).sqrt()
+const phase = shoaledDepth.mul(waves.frequency).add(time.mul(2 * Math.PI).div(waves.period))
+
+const shoaling = waves.reach.div(seaDepth.max(0.2)).pow(0.25)
+const offshoreFade = smoothstep(waves.reach.mul(0.5), waves.reach, seaDepth).oneMinus()
+const landFade = smoothstep(waves.runUp.negate(), 0, seaDepth)
+const detailFade = smoothstep(waves.detailNear, waves.detailFar, positionGeometry.xz.length()).oneMinus()
+const amplitude = waves.height.mul(shoaling).mul(offshoreFade).mul(landFade).mul(detailFade)
+const lift = sin(phase).mul(amplitude)
+material.positionNode = positionGeometry.add(vec3(0, lift, 0))
+
+// Crest to trough is twice the amplitude. The 5 cm floor makes the thin sheet on the sand
+// always count as broken.
+const heightToDepth = varying(amplitude.mul(2).div(seaDepth.max(0.05)))
+const breaking = step(waves.breakRatio, heightToDepth)
+// sin(phase) is 1 on a crest and -1 in a trough
+const onCrest = step(waves.crestFoam.mul(2).oneMinus(), varying(sin(phase)))
+const crestMask = onCrest.mul(breaking)
+
 // The foam has its own colour, so it is graded like the island: day-cycle light
 // and fog. No core shadows: the plane faces straight up.
-const foam = shoreMask.max(foamMask)
-const foamLit = stylizedOutput(mix(foamColor, shore.foamColor, shoreMask), grading, { hasCoreShadows: false })
+const whiteFoam = shoreMask.max(crestMask)
+const foam = whiteFoam.max(foamMask)
+const foamLit = stylizedOutput(mix(foamColor, shore.foamColor, whiteFoam), grading, { hasCoreShadows: false })
+const seaColor = vec4(mix(seaFloor, foamLit.rgb, foam), edgeFade)
 
-const material = new MeshBasicNodeMaterial({ transparent: true, depthWrite: false })
-material.outputNode = vec4(mix(seaFloor, foamLit.rgb, foam), edgeFade)
+// Debug view: the lift as grey, black in a trough and white on a crest.
+const debugView = uniform(0)
+const heightView = vec4(vec3(varying(lift).div(waves.height).mul(0.5).add(0.5).saturate()), 1)
+const crestTint = varying(lift).div(waves.height).mul(waves.crestLight).add(1)
+
+material.outputNode = vec4(mix(seaFloor.mul(crestTint), foamLit.rgb, foam), edgeFade)
 
 const uuid = inject<string>('uuid')
 const { foamColor: foamColorControl, foamDepth, foamEdge, foamLines, foamWidth, foamDrift, foamWobble, foamNoise } = useControls('🫧 foam', {
@@ -128,6 +183,15 @@ const { waterAbsorption, waterStrength, waterMaxDepth, waterCaustics, waterCaust
   foamScale: { value: seaFoamScale.value, min: 0.5, max: 20, step: 0.1, type: 'range' },
 }, { uuid })
 
+const { wavesHeight, wavesFrequency, wavesPeriod, wavesBreakRatio, wavesCrestFoam, wavesDebug } = useControls('🏄 waves', {
+  height: { value: waves.height.value, min: 0, max: 1, step: 0.01, type: 'range' },
+  frequency: { value: waves.frequency.value, min: 0.1, max: 20, step: 0.1, type: 'range' },
+  period: { value: waves.period.value, min: 0.5, max: 12, step: 0.1, type: 'range' },
+  breakRatio: { value: waves.breakRatio.value, min: 0.1, max: 2, step: 0.01, type: 'range' },
+  crestFoam: { value: waves.crestFoam.value, min: 0, max: 0.5, step: 0.01, type: 'range' },
+  debug: false,
+}, { uuid })
+
 function bindColor(source: Ref<string>, target: { value: Color }) {
   watch(source, (hex) => { target.value.set(hex) })
 }
@@ -148,6 +212,12 @@ bindNumber(waterMaxDepth!, water.maxDepth)
 bindNumber(waterCaustics!, water.caustics)
 bindNumber(waterCausticsScale!, causticsScale)
 bindNumber(waterFoamScale!, seaFoamScale)
+bindNumber(wavesHeight!, waves.height)
+bindNumber(wavesFrequency!, waves.frequency)
+bindNumber(wavesPeriod!, waves.period)
+bindNumber(wavesBreakRatio!, waves.breakRatio)
+bindNumber(wavesCrestFoam!, waves.crestFoam)
+watch(wavesDebug!, (on) => { debugView.value = on ? 1 : 0 })
 </script>
 
 <template>
@@ -155,5 +225,6 @@ bindNumber(waterFoamScale!, seaFoamScale)
     name="ocean"
     :geometry="geometry"
     :material="material"
+    :position="[playerPosition[0], 0, playerPosition[2]]"
   />
 </template>

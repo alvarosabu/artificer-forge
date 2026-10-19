@@ -20,7 +20,8 @@ useOutlinePassProvider()
 useDofFocusProvider()
 
 // Chamo writes this as it moves and the camera follows it.
-const playerPosition = ref<[number, number, number]>([0, 0, 0])
+const playerPosition = ref<PlayerPosition>([0, 0, 0])
+providePlayerPosition(playerPosition)
 
 // Snap the spawn point to the terrain, so an empty placed a bit high or low still lands on the ground.
 function spawnOn(

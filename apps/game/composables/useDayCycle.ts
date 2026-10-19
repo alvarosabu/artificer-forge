@@ -17,7 +17,7 @@ export function useDayCycle() {
   const current: GradingProps = track.sample(0)
 
   // Gameplay-delta driven, not wall clock: pausing the loop pauses time.
-  const auto = { running: true, duration: 240 }
+  const auto = { running: false, duration: 240 }
 
   // Bruno-style sun orbit on a spherical path. Lerping preset vectors would cut
   // a chord through the sky dome and collapse near zero mid-transition.

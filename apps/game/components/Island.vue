@@ -250,8 +250,7 @@ watch(palmsSize!, (frondScale) => {
   />
   <Ocean
     v-if="heightField"
-    :size="heightField.size"
-    :position="[heightField.origin.x, 0, heightField.origin.y]"
+    :height-field="heightField"
   />
   <!-- Only once the colliders exist: a body that moves before them falls through the island. -->
   <slot
