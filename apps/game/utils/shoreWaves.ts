@@ -1,5 +1,6 @@
 import { asin, exp, fract, sin, smoothstep, step, time, uniform } from 'three/tsl'
 import type { Node } from 'three/webgpu'
+import { MathUtils } from 'three'
 
 export function createShoreWaves() {
   return {
@@ -58,4 +59,20 @@ export function sandWetness(waves: ShoreWaves, seaDepth: Node<'float'>, playerDi
   const sinceLeft = fract(phase.sub(leaveAt).div(2 * Math.PI)).mul(waves.period)
   const drying = exp(sinceLeft.div(waves.dryTime).negate())
   return covered.max(drying).mul(everReached).mul(waves.wetStrength)
+}
+
+export function waveLiftAt(waves: ShoreWaves, seaDepth: number, playerDistance: number) {
+  // The time the vertex shader used on the last frame. useLoop's elapsed is a separate clock
+  const seconds = time.value
+  const phase = Math.sqrt(Math.max(seaDepth, 0)) * waves.frequency.value + (seconds * 2 * Math.PI) / waves.period.value
+
+  const reach = waves.reach.value
+  // MathUtils.smoothstep takes x first, unlike the TSL one
+  const shoaling = (reach / Math.max(seaDepth, 0.2)) ** 0.25
+  const offshoreFade = 1 - MathUtils.smoothstep(seaDepth, reach * 0.5, reach)
+  const landFade = MathUtils.smoothstep(seaDepth, -waves.runUp.value, 0)
+  const detailFade = 1 - MathUtils.smoothstep(playerDistance, waves.detailNear.value, waves.detailFar.value)
+  const amplitude = waves.height.value * shoaling * offshoreFade * landFade * detailFade
+
+  return Math.sin(phase) * amplitude
 }

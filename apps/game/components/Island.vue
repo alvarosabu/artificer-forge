@@ -10,8 +10,9 @@ import type { Color, Mesh, Object3D, Texture } from 'three'
 const TERRAIN = '/models/levels/portfolio-island-terrain'
 const CONTROL_MAP = '/models/levels/level-control-1024.png'
 const OCEAN_LEVEL = 0
+
 const waterAt = combineWaterQueries(
-  () => OCEAN_LEVEL,
+  oceanAt,
   //  createWaterQuery(control, () => terrain.waterLevel.value, water),
 )
 
@@ -202,6 +203,13 @@ watch([terrain, scenery, heightField], ([terrainModel, sceneryModel, field]) => 
 watch(palmsSize!, (frondScale) => {
   if (scenery.value && collidersBuilt.value) palmCrowns.value = extractPalmCrownReferences(scenery.value, { frondScale })
 })
+
+function oceanAt(x: number, z: number) {
+  const ground = heightAt(x, z)
+  if (ground === null) return OCEAN_LEVEL
+  const [px, , pz] = playerPosition.value
+  return OCEAN_LEVEL + waveLiftAt(shoreWaves, OCEAN_LEVEL - ground, Math.hypot(x - px, z - pz))
+}
 </script>
 
 <template>
