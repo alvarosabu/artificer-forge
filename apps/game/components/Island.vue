@@ -3,8 +3,8 @@ import { useGLTF, useTexture } from '@tresjs/cientos'
 import { useControls } from '@tresjs/leches'
 import { RigidBody } from '@tresjs/rapier'
 import { applyGradingToModel, buildTerrainMaterial, combineWaterQueries, CONTROL_CHANNEL, createControlMap, createTerrainUniforms, extractPalmCrownReferences, extractTorchFlameReferences, PalmFronds, readControlPixels, sampleControlChannel, sampleHeight, TorchFlames, type ControlMap } from '@artificer-forge/engine/runtime'
-import { Euler, Quaternion, Vector2, Vector3 } from 'three'
-import { float, positionWorld, uniform } from 'three/tsl'
+import { Euler, Quaternion, Vector3 } from 'three'
+import { float, positionWorld } from 'three/tsl'
 import type { Color, Mesh, Object3D, Texture } from 'three'
 
 const TERRAIN = '/models/levels/portfolio-island-terrain'
@@ -37,18 +37,26 @@ const grassMap = whenLoaded(useTexture('/textures/grass.webp').state)
 const roadMap = whenLoaded(useTexture('/textures/road.webp').state)
 const rockMap = whenLoaded(useTexture('/textures/rock.webp').state)
 
-const terrainUniforms = createTerrainUniforms()
-terrainUniforms.waterLevel.value = OCEAN_LEVEL
-// No ground map on purpose: bare ground is sand, a noise gradient around the GLB's old flat colour
-terrainUniforms.groundDark.value.set('#d9bd72')
-terrainUniforms.groundLight.value.set('#efd890')
+const terrainDefaults = createTerrainUniforms()
+const terrainUniforms = {
+  ...terrainDefaults,
+  ...useUniforms({
+    waterLevel: OCEAN_LEVEL,
+    // No ground map on purpose: bare ground is sand, a noise gradient around the GLB's old flat colour
+    groundDark: '#d9bd72',
+    groundLight: '#efd890',
+    grassTint: terrainDefaults.grassTint.value,
+    rockTint: terrainDefaults.rockTint.value,
+    grassBlendLow: terrainDefaults.grassBlendLow.value,
+    grassBlendHigh: terrainDefaults.grassBlendHigh.value,
+    edgeStrength: terrainDefaults.edgeStrength.value,
+  }, 'terrain'),
+}
 const terrainMaterialReady = ref(false)
 
-const shoreWaves = createShoreWaves()
-provideShoreWaves(shoreWaves)
+const shoreWaves = useShoreWaves()
 const playerPosition = usePlayerPosition()
-const playerXZ = uniform(new Vector2())
-watch(playerPosition, ([x, , z]) => { playerXZ.value.set(x, z) }, { immediate: true })
+const playerXZ = useUniform('playerXZ', () => ({ x: playerPosition.value[0], y: playerPosition.value[2] }))
 
 // An empty placed in Blender. The origin is the fallback if the model has no such node.
 const SPAWN_NODE = 'Spawn_Point_Beach'
@@ -121,13 +129,15 @@ const { terrainGrassTint, terrainSandDark, terrainSandLight, terrainRockTint, te
   edge: { value: terrainUniforms.edgeStrength.value, min: 0, max: 2, step: 0.05, type: 'range' },
 }, { uuid })
 
-watch(terrainGrassTint!, (v) => { terrainUniforms.grassTint.value.set(v) })
-watch(terrainSandDark!, (v) => { terrainUniforms.groundDark.value.set(v) })
-watch(terrainSandLight!, (v) => { terrainUniforms.groundLight.value.set(v) })
-watch(terrainRockTint!, (v) => { terrainUniforms.rockTint.value.set(v) })
-watch(terrainGrassLow!, (v) => { terrainUniforms.grassBlendLow.value = v })
-watch(terrainGrassHigh!, (v) => { terrainUniforms.grassBlendHigh.value = v })
-watch(terrainEdge!, (v) => { terrainUniforms.edgeStrength.value = v })
+useUniforms({
+  grassTint: terrainGrassTint!,
+  groundDark: terrainSandDark!,
+  groundLight: terrainSandLight!,
+  rockTint: terrainRockTint!,
+  grassBlendLow: terrainGrassLow!,
+  grassBlendHigh: terrainGrassHigh!,
+  edgeStrength: terrainEdge!,
+}, 'terrain')
 
 let controlMap: ControlMap | null = null
 // Built once: the node graph bakes in which maps exist, so a map that loads later would be ignored

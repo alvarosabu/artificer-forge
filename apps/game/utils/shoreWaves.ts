@@ -1,36 +1,35 @@
-import { asin, exp, fract, sin, smoothstep, step, time, uniform } from 'three/tsl'
+import { asin, exp, fract, sin, smoothstep, step, time } from 'three/tsl'
 import type { Node } from 'three/webgpu'
+import type { UniformNodesOf } from '@tresjs/core/webgpu'
 import { MathUtils } from 'three'
 
-export function createShoreWaves() {
-  return {
-    /** metres from the rest level to a crest */
-    height: uniform(0.15),
-    /** wave crests per metre of water depth */
-    frequency: uniform(3),
-    /** seconds between two crests reaching the same spot */
-    period: uniform(4),
-    /** metres of water after which the waves stop rising */
-    reach: uniform(3),
-    /** metres above sea level that a wave can climb up the beach */
-    runUp: uniform(0.4),
-    /** metres from the player where the waves start to flatten */
-    detailNear: uniform(15),
-    /** metres from the player where the sea is flat. Keep the rings here under ~1 m apart */
-    detailFar: uniform(30),
-    /** a wave breaks once crest-to-trough height is this share of the water depth */
-    breakRatio: uniform(0.78),
-    /** how much of a breaking wave, from the crest down, is foam. 0.5 is half the wave */
-    crestFoam: uniform(0.2),
-    crestLight: uniform(0.35),
-    /** seconds for wet sand to dry back once the water leaves it */
-    dryTime: uniform(3),
-    /** how far wet sand goes toward the terrain's wetGround colour */
-    wetStrength: uniform(0.5),
-  }
+export const SHORE_WAVE_DEFAULTS = {
+  /** metres from the rest level to a crest */
+  height: 0.15,
+  /** wave crests per metre of water depth */
+  frequency: 3,
+  /** seconds between two crests reaching the same spot */
+  period: 4,
+  /** metres of water after which the waves stop rising */
+  reach: 3,
+  /** metres above sea level that a wave can climb up the beach */
+  runUp: 0.4,
+  /** metres from the player where the waves start to flatten */
+  detailNear: 15,
+  /** metres from the player where the sea is flat. Keep the rings here under ~1 m apart */
+  detailFar: 30,
+  /** a wave breaks once crest-to-trough height is this share of the water depth */
+  breakRatio: 0.78,
+  /** how much of a breaking wave, from the crest down, is foam. 0.5 is half the wave */
+  crestFoam: 0.2,
+  crestLight: 0.35,
+  /** seconds for wet sand to dry back once the water leaves it */
+  dryTime: 3,
+  /** how far wet sand goes toward the terrain's wetGround colour */
+  wetStrength: 0.5,
 }
 
-export type ShoreWaves = ReturnType<typeof createShoreWaves>
+export type ShoreWaves = UniformNodesOf<typeof SHORE_WAVE_DEFAULTS>
 
 export function wavePhase(waves: ShoreWaves, seaDepth: Node<'float'>) {
   // + time, not - time: the phase a crest carries moves to smaller depths, so toward the beach

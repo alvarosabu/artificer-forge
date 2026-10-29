@@ -16,7 +16,7 @@ catalog:
 
 catalogMode: prefer
 
-# pkg.pr.new builds depend on each other by URL. Restore when TresJS PR #1527 is released.
+# pkg.pr.new builds depend on each other by URL. Restore when TresJS PR #1545 is released.
 blockExoticSubdeps: false
 
 allowBuilds:
@@ -31,8 +31,8 @@ allowBuilds:
 
 overrides:
   ipx: 3.0.2
-  '@tresjs/core': https://pkg.pr.new/@tresjs/core@a3c5d3f
-  '@tresjs/cientos': https://pkg.pr.new/@tresjs/cientos@a3c5d3f
+  '@tresjs/core': https://pkg.pr.new/@tresjs/core@2640ac2
+  '@tresjs/cientos': https://pkg.pr.new/@tresjs/cientos@2640ac2
 
 catalogs:
   build:
@@ -53,14 +53,14 @@ catalogs:
     zod: ^4.6.5
     zod-to-json-schema: ^3.25.2
   three:
-    # TresJS PR #1527 preview build (nuxt `renderer: 'webgpu'`), pinned to commit a3c5d3f
-    '@tresjs/cientos': https://pkg.pr.new/@tresjs/cientos@a3c5d3f
-    '@tresjs/core': https://pkg.pr.new/@tresjs/core@a3c5d3f
-    '@tresjs/eslint-config': https://pkg.pr.new/@tresjs/eslint-config@a3c5d3f
-    '@tresjs/leches': https://pkg.pr.new/@tresjs/leches@a3c5d3f
-    '@tresjs/nuxt': https://pkg.pr.new/@tresjs/nuxt@a3c5d3f
-    '@tresjs/post-processing': https://pkg.pr.new/@tresjs/post-processing@a3c5d3f
-    '@tresjs/rapier': https://pkg.pr.new/@tresjs/rapier@a3c5d3f
+    # TresJS PR #1545 preview build (TSL composables in @tresjs/core/webgpu), pinned to commit 2640ac2
+    '@tresjs/cientos': https://pkg.pr.new/@tresjs/cientos@2640ac2
+    '@tresjs/core': https://pkg.pr.new/@tresjs/core@2640ac2
+    '@tresjs/eslint-config': https://pkg.pr.new/@tresjs/eslint-config@2640ac2
+    '@tresjs/leches': https://pkg.pr.new/@tresjs/leches@2640ac2
+    '@tresjs/nuxt': https://pkg.pr.new/@tresjs/nuxt@2640ac2
+    '@tresjs/post-processing': https://pkg.pr.new/@tresjs/post-processing@2640ac2
+    '@tresjs/rapier': https://pkg.pr.new/@tresjs/rapier@2640ac2
     '@types/three': ^0.186.0
     three: ^0.186.1
   typescript:

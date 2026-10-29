@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { useControls } from '@tresjs/leches'
-import { createFoamUniforms, sampleHeight, stylizedOutput, toonShoreFoam, type HeightField } from '@artificer-forge/engine/runtime'
-import { cameraFar, cameraNear, cameraPosition, color, exp, positionGeometry, linearDepth, mix, mx_noise_float, mx_worley_noise_float, parallaxUV, positionWorld, screenUV, time, uniform, uv, vec3, vec4, viewportLinearDepth, viewportSharedTexture, modelPosition, varying, sin, smoothstep, step } from 'three/tsl'
-import { Color, PlaneGeometry } from 'three'
+import { sampleHeight, stylizedOutput, toonShoreFoam, type HeightField } from '@artificer-forge/engine/runtime'
+import { cameraFar, cameraNear, cameraPosition, color, exp, positionGeometry, linearDepth, mix, mx_noise_float, mx_worley_noise_float, parallaxUV, positionWorld, screenUV, time, uv, vec3, vec4, viewportLinearDepth, viewportSharedTexture, modelPosition, varying, sin, smoothstep, step } from 'three/tsl'
 import { MeshBasicNodeMaterial } from 'three/webgpu'
-import type { Ref } from 'vue'
+import type { Color } from 'three'
 
 const props = defineProps<{
   heightField: HeightField
@@ -13,6 +12,44 @@ const props = defineProps<{
 // The camera sees up to 200 m (its far plane) from up to 30 m behind the player.
 const RADIUS = 250
 const playerPosition = usePlayerPosition()
+const waves = useShoreWaves()
+
+// Tuned in the panel on the island (2026-10-08).
+const shore = useUniforms({
+  // no sun glitter on this surface, so pure-ish white costs nothing
+  foamColor: '#f6fcff',
+  foamDepth: 0.48,
+  foamLines: 2,
+  foamWidth: 0.28,
+  foamDrift: 0.16,
+  foamEdge: 0.15,
+  foamWobble: 0.3,
+  /** noise cells per metre of the wobble. High values break the stripes into blobs */
+  foamNoiseScale: 2.65,
+}, 'foam')
+
+// Same Beer-Lambert absorption as the playground water (engine waterMaterial.ts).
+// The ocean writes no blue of its own: it reads the sea floor behind it and eats
+// light per metre of water the view ray crosses. Shallows stay sand-coloured and
+// deep water goes blue-green.
+const water = useUniforms({
+  /**
+   * The colour the water EATS, not the colour it looks. Orange takes the red out of
+   * the sand and some of the green, which leaves it teal-blue. The playground's
+   * redder #ff5a1e keeps all the green, and over this sand it reads green.
+   */
+  absorption: '#ff9a40',
+  /** how hard absorption bites per metre of water travelled */
+  absorbStrength: 0.55,
+  /** metres of water after which the colour stops deepening */
+  maxDepth: 8,
+  /** brightness of the caustic light on the sea floor */
+  caustics: 0.25,
+  /** Cells per TILE, not per metre. */
+  causticsScale: 2,
+  seaFoamScale: 2,
+  debugView: 0,
+}, 'ocean')
 
 // The shader was tuned on a 4 m wide disc. Dividing world metres by that tile keeps
 // caustics and foam the same size in metres, and they stay put if the mesh moves.
@@ -24,31 +61,12 @@ const toCamera = cameraPosition.sub(positionWorld).normalize()
 // On a flat surface, world x and z are that frame.
 const depthUv = tiledUv.sub(toCamera.xz.mul(0.5))
 
-// Cells per TILE, not per metre.
-const causticsScale = uniform(2)
-const seaFoamScale = uniform(2)
-
-const causticsUv = vec3(depthUv.mul(causticsScale), time.mul(0.3))
+const causticsUv = vec3(depthUv.mul(water.causticsScale), time.mul(0.3))
 const causticsNoise = mx_worley_noise_float(causticsUv).pow3()
 
-const foamUv = vec3(tiledUv.mul(seaFoamScale), time.mul(0.1))
+const foamUv = vec3(tiledUv.mul(water.seaFoamScale), time.mul(0.1))
 const foamMask = mx_noise_float(foamUv).abs().step(0.05).oneMinus()
 const foamColor = color(0xE5F7FF)
-
-// Tuned in the panel on the island (2026-10-08).
-const shore = {
-  ...createFoamUniforms(),
-  // no sun glitter on this surface, so pure-ish white costs nothing
-  foamColor: uniform(new Color('#f6fcff')),
-  foamDepth: uniform(0.48),
-  foamLines: uniform(2),
-  foamWidth: uniform(0.28),
-  foamDrift: uniform(0.16),
-  foamEdge: uniform(0.15),
-  foamWobble: uniform(0.3),
-  /** noise cells per metre of the wobble. High values break the stripes into blobs */
-  foamNoiseScale: uniform(2.65),
-}
 
 // The ocean is transparent, so it draws after the opaque pass and the depth buffer
 // holds the sand or rock under each fragment. The gap between the two is the water
@@ -67,27 +85,6 @@ const shoreMask = toonShoreFoam(waterDepth.add(wobble).max(0), shore)
 
 const edgeFade = positionGeometry.xz.length().smoothstep(RADIUS, RADIUS * 0.84)
 
-
-// Same Beer-Lambert absorption as the playground water (engine waterMaterial.ts).
-// The ocean writes no blue of its own: it reads the sea floor behind it and eats
-// light per metre of water the view ray crosses. Shallows stay sand-coloured and
-// deep water goes blue-green.
-const water = {
-  /**
-   * The colour the water EATS, not the colour it looks. Orange takes the red out of
-   * the sand and some of the green, which leaves it teal-blue. The playground's
-   * redder #ff5a1e keeps all the green, and over this sand it reads green.
-   */
-  absorption: uniform(new Color('#ff9a40')),
-  /** how hard absorption bites per metre of water travelled */
-  absorbStrength: uniform(0.55),
-  /** metres of water after which the colour stops deepening */
-  maxDepth: uniform(8),
-  /** brightness of the caustic light on the sea floor */
-  caustics: uniform(0.25),
-}
-
-const waves = useShoreWaves()
 // detailFar is read once: raising it later leaves waves on the coarse outer band
 const geometry = createOceanGeometry({ minStep: 0.5, detailRadius: waves.detailFar.value, radius: RADIUS, segments: 96 })
 
@@ -129,15 +126,15 @@ const foamLit = stylizedOutput(mix(foamColor, shore.foamColor, whiteFoam), gradi
 const seaColor = vec4(mix(seaFloor, foamLit.rgb, foam), edgeFade)
 
 // Debug view: the lift as grey, black in a trough and white on a crest.
-const debugView = uniform(0)
 const heightView = vec4(vec3(varying(lift).div(waves.height).mul(0.5).add(0.5).saturate()), 1)
 const crestTint = varying(lift).div(waves.height).mul(waves.crestLight).add(1)
 
 material.outputNode = vec4(mix(seaFloor.mul(crestTint), foamLit.rgb, foam), edgeFade)
 
 const uuid = inject<string>('uuid')
+const hex = (u: { value: Color }) => `#${u.value.getHexString()}`
 const { foamColor: foamColorControl, foamDepth, foamEdge, foamLines, foamWidth, foamDrift, foamWobble, foamNoise } = useControls('🫧 foam', {
-  color: { value: `#${shore.foamColor.value.getHexString()}`, type: 'color' },
+  color: { value: hex(shore.foamColor), type: 'color' },
   depth: { value: shore.foamDepth.value, min: 0.05, max: 4, step: 0.01, type: 'range' },
   edge: { value: shore.foamEdge.value, min: 0.01, max: 1, step: 0.01, type: 'range' },
   lines: { value: shore.foamLines.value, min: 1, max: 12, step: 1, type: 'range' },
@@ -148,12 +145,12 @@ const { foamColor: foamColorControl, foamDepth, foamEdge, foamLines, foamWidth, 
 }, { uuid })
 
 const { waterAbsorption, waterStrength, waterMaxDepth, waterCaustics, waterCausticsScale, waterFoamScale } = useControls('🌊 water', {
-  absorption: { value: `#${water.absorption.value.getHexString()}`, type: 'color' },
+  absorption: { value: hex(water.absorption), type: 'color' },
   strength: { value: water.absorbStrength.value, min: 0, max: 3, step: 0.01, type: 'range' },
   maxDepth: { value: water.maxDepth.value, min: 0.5, max: 20, step: 0.1, type: 'range' },
   caustics: { value: water.caustics.value, min: 0, max: 1, step: 0.01, type: 'range' },
-  causticsScale: { value: causticsScale.value, min: 0.5, max: 20, step: 0.1, type: 'range' },
-  foamScale: { value: seaFoamScale.value, min: 0.5, max: 20, step: 0.1, type: 'range' },
+  causticsScale: { value: water.causticsScale.value, min: 0.5, max: 20, step: 0.1, type: 'range' },
+  foamScale: { value: water.seaFoamScale.value, min: 0.5, max: 20, step: 0.1, type: 'range' },
 }, { uuid })
 
 const { wavesHeight, wavesFrequency, wavesPeriod, wavesBreakRatio, wavesCrestFoam, wavesDryTime, wavesWetStrength, wavesDebug } = useControls('🏄 waves', {
@@ -167,34 +164,35 @@ const { wavesHeight, wavesFrequency, wavesPeriod, wavesBreakRatio, wavesCrestFoa
   debug: false,
 }, { uuid })
 
-function bindColor(source: Ref<string>, target: { value: Color }) {
-  watch(source, (hex) => { target.value.set(hex) })
-}
-function bindNumber(source: Ref<number>, target: { value: number }) {
-  watch(source, (v) => { target.value = v })
-}
-bindColor(foamColorControl as Ref<string>, shore.foamColor)
-bindNumber(foamDepth!, shore.foamDepth)
-bindNumber(foamEdge!, shore.foamEdge)
-bindNumber(foamLines!, shore.foamLines)
-bindNumber(foamWidth!, shore.foamWidth)
-bindNumber(foamDrift!, shore.foamDrift)
-bindNumber(foamWobble!, shore.foamWobble)
-bindNumber(foamNoise!, shore.foamNoiseScale)
-bindColor(waterAbsorption as Ref<string>, water.absorption)
-bindNumber(waterStrength!, water.absorbStrength)
-bindNumber(waterMaxDepth!, water.maxDepth)
-bindNumber(waterCaustics!, water.caustics)
-bindNumber(waterCausticsScale!, causticsScale)
-bindNumber(waterFoamScale!, seaFoamScale)
-bindNumber(wavesHeight!, waves.height)
-bindNumber(wavesFrequency!, waves.frequency)
-bindNumber(wavesPeriod!, waves.period)
-bindNumber(wavesBreakRatio!, waves.breakRatio)
-bindNumber(wavesCrestFoam!, waves.crestFoam)
-bindNumber(wavesDryTime!, waves.dryTime)
-bindNumber(wavesWetStrength!, waves.wetStrength)
-watch(wavesDebug!, (on) => { debugView.value = on ? 1 : 0 })
+// The uniforms exist already, so these calls only keep them in sync with the panel
+useUniforms({
+  foamColor: foamColorControl!,
+  foamDepth: foamDepth!,
+  foamEdge: foamEdge!,
+  foamLines: foamLines!,
+  foamWidth: foamWidth!,
+  foamDrift: foamDrift!,
+  foamWobble: foamWobble!,
+  foamNoiseScale: foamNoise!,
+}, 'foam')
+useUniforms({
+  absorption: waterAbsorption!,
+  absorbStrength: waterStrength!,
+  maxDepth: waterMaxDepth!,
+  caustics: waterCaustics!,
+  causticsScale: waterCausticsScale!,
+  seaFoamScale: waterFoamScale!,
+  debugView: () => (wavesDebug!.value ? 1 : 0),
+}, 'ocean')
+useUniforms({
+  height: wavesHeight!,
+  frequency: wavesFrequency!,
+  period: wavesPeriod!,
+  breakRatio: wavesBreakRatio!,
+  crestFoam: wavesCrestFoam!,
+  dryTime: wavesDryTime!,
+  wetStrength: wavesWetStrength!,
+}, 'waves')
 </script>
 
 <template>
