@@ -1,6 +1,6 @@
 import type { TresColor } from '@tresjs/core'
 import { Color, DoubleSide, Group, LatheGeometry, Mesh, Object3D, Vector2, Vector3 } from 'three'
-import { abs, cos, cross, dot, float, floor, Fn, fract, mix, modelNormalMatrix, modelPosition, normalGeometry, positionGeometry, positionViewDirection, select, sin, smoothstep, time, transformNormalToView, uniform, varying, vec3, vec4 } from 'three/tsl'
+import { abs, clamp, cos, cross, dot, float, floor, Fn, fract, mix, modelNormalMatrix, modelPosition, normalGeometry, positionGeometry, positionViewDirection, select, sin, smoothstep, time, transformNormalToView, uniform, varying, vec3, vec4 } from 'three/tsl'
 import { MeshLambertNodeMaterial, MeshStandardNodeMaterial } from 'three/webgpu'
 import type { ColorRepresentation, Node } from 'three/webgpu'
 import { createWindUniforms, windOffset, type WindSettings } from '../wind/wind'
@@ -58,6 +58,7 @@ const MARBLE_VEINS = 5
 const DISPLACE_MID = 0.5
 // the base stays pinned to the torch below this height
 const BASE_MASK = 0.18
+const TIP_CLAMP = 0.8
 const NORMAL_EPS = 0.02
 const OCTAVES = 3
 
@@ -161,8 +162,12 @@ function buildTorchFlameMaterial(uniforms: FlameUniforms, grading?: GradingConte
     const nor = normalGeometry.normalize()
     const mask = smoothstep(0, BASE_MASK, positionGeometry.y)
 
-    const displace = (pos: Node<'vec3'>) =>
-        pos.add(nor.mul(marble(pos.add(fieldOffset)).sub(DISPLACE_MID).mul(uniforms.displaceStrength).mul(mask)))
+    // capped by the local radius: on the thin tip a larger push folds the surface through the axis
+    const displace = (pos: Node<'vec3'>) => {
+        const limit = pos.xz.length().mul(TIP_CLAMP)
+        const amount = marble(pos.add(fieldOffset)).sub(DISPLACE_MID).mul(uniforms.displaceStrength).mul(mask)
+        return pos.add(nor.mul(clamp(amount, limit.negate(), limit)))
+    }
     // tip bends downwind on an arc |w|²/2 so it does not stretch
     const bend = (pos: Node<'vec3'>) => {
         const weight = pos.y.mul(pos.y)

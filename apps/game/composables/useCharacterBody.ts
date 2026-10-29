@@ -51,6 +51,7 @@ export function useCharacterBody(body: ShallowRef<ExposedRigidBody | null | unde
   /** What the last move() did after collisions. Shorter than the request when something blocked it. */
   const movement = new Vector3()
   let grounded = false
+  let groundCollider: number | null = null
   let pushing = false
   let waitedOneStep = false
 
@@ -103,6 +104,7 @@ export function useCharacterBody(body: ShallowRef<ExposedRigidBody | null | unde
     )
     grounded = !!hit && hit.normal.y >= MIN_GROUND_NORMAL_Y
     if (hit && grounded) position.y = groundRay.origin.y - hit.timeOfImpact
+    groundCollider = hit && grounded ? hit.collider.handle : null
 
     movement.set(position.x - current.x, position.y - current.y, position.z - current.z)
     rigidBody.setNextKinematicTranslation(position)
@@ -115,6 +117,8 @@ export function useCharacterBody(body: ShallowRef<ExposedRigidBody | null | unde
     move,
     isReady,
     isGrounded: () => grounded,
+    /** Handle of the collider under the feet, or null in the air. */
+    groundCollider: () => groundCollider,
     /** True when the last move() ran into a dynamic body. The controller has pushed it by then. */
     isPushing: () => pushing,
   }

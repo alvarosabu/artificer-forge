@@ -13,7 +13,6 @@ const props = defineProps<{
 // The camera sees up to 200 m (its far plane) from up to 30 m behind the player.
 const RADIUS = 250
 const playerPosition = usePlayerPosition()
-const geometry = createOceanGeometry({ minStep: 0.25, radius: RADIUS, segments: 192 })
 
 // The shader was tuned on a 4 m wide disc. Dividing world metres by that tile keeps
 // caustics and foam the same size in metres, and they stay put if the mesh moves.
@@ -89,6 +88,8 @@ const water = {
 }
 
 const waves = useShoreWaves()
+// detailFar is read once: raising it later leaves waves on the coarse outer band
+const geometry = createOceanGeometry({ minStep: 0.5, detailRadius: waves.detailFar.value, radius: RADIUS, segments: 96 })
 
 const grading = useGrading()
 const backdrop = viewportSharedTexture(screenUV).rgb

@@ -3,20 +3,24 @@ import { BufferGeometry, Float32BufferAttribute } from 'three'
 export interface OceanGeometryOptions {
   /** metres between the rings near the centre: the finest detail */
   minStep: number
+  /** metres from the centre past which the sea is flat, so one ring spans the rest */
+  detailRadius: number
   /** metres from the centre to the last ring */
   radius: number
   /** vertices on each ring */
   segments: number
 }
 
-export function ringRadii({ minStep, radius, segments }: OceanGeometryOptions) {
+export function ringRadii({ minStep, detailRadius, radius, segments }: OceanGeometryOptions) {
   const radii: number[] = []
   let r = 0
-  while (r < radius) {
+  while (r < detailRadius) {
     // the second term keeps each quad about as deep as it is wide
     r += Math.max(minStep, (r * 2 * Math.PI) / segments)
-    radii.push(Math.min(r, radius))
+    radii.push(Math.min(r, detailRadius))
   }
+  // No lift out here, and every fragment input is linear on a flat triangle, so one band is exact
+  radii.push(radius)
   return radii
 }
 

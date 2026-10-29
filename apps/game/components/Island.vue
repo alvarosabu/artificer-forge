@@ -2,7 +2,7 @@
 import { useGLTF, useTexture } from '@tresjs/cientos'
 import { useControls } from '@tresjs/leches'
 import { RigidBody } from '@tresjs/rapier'
-import { applyGradingToModel, buildTerrainMaterial, combineWaterQueries, createControlMap, createTerrainUniforms, extractPalmCrownReferences, extractTorchFlameReferences, PalmFronds, sampleHeight, TorchFlames } from '@artificer-forge/engine/runtime'
+import { applyGradingToModel, buildTerrainMaterial, combineWaterQueries, CONTROL_CHANNEL, createControlMap, createTerrainUniforms, extractPalmCrownReferences, extractTorchFlameReferences, PalmFronds, readControlPixels, sampleControlChannel, sampleHeight, TorchFlames, type ControlMap } from '@artificer-forge/engine/runtime'
 import { Euler, Quaternion, Vector2, Vector3 } from 'three'
 import { float, positionWorld, uniform } from 'three/tsl'
 import type { Color, Mesh, Object3D, Texture } from 'three'
@@ -56,6 +56,7 @@ const spawn = ref<[number, number, number]>([0, 0, 0])
 
 // Blender exports a collision hull next to each solid prop, named `<mesh>-convcolonly`
 const isHull = (mesh: Mesh) => mesh.name.includes('-convcolonly')
+const isWoodFloor = (mesh: Mesh) => /^(Deck_Surface|Wood_Plank)/.test(mesh.name)
 // A `-rigid` mesh is a dynamic body whose collider comes from its own geometry (Godot's suffix,
 // as read by `tres gltf --physics rapier`). `includes`, because Blender's `.001` arrives as `001`.
 const isRigid = (object: Object3D) => object.name.includes('-rigid')
@@ -128,18 +129,20 @@ watch(terrainGrassLow!, (v) => { terrainUniforms.grassBlendLow.value = v })
 watch(terrainGrassHigh!, (v) => { terrainUniforms.grassBlendHigh.value = v })
 watch(terrainEdge!, (v) => { terrainUniforms.edgeStrength.value = v })
 
+let controlMap: ControlMap | null = null
 // Built once: the node graph bakes in which maps exist, so a map that loads later would be ignored
 watch([terrain, heightField, controlTexture, grassMap, roadMap, rockMap], ([model, field, control, grass, road, rock]) => {
   if (!model || !field || !control || !grass || !road || !rock || terrainMaterialReady.value) return
   // The control map covers the same top-down square as the height field: the terrain's bounds
+  controlMap = createControlMap({ texture: control, size: field.size, origin: [field.origin.x, field.origin.y] }) 
   const { material } = buildTerrainMaterial({
-    control: createControlMap({ texture: control, size: field.size, origin: [field.origin.x, field.origin.y] }),
+    control: controlMap,
     grading,
     grassMap: grass,
     roadMap: road,
     rockMap: rock,
     uniforms: terrainUniforms,
-    wetness: sandWetness(shoreWaves, float(OCEAN_LEVEL).sub(positionWorld.y), positionWorld.xz.distance(playerXZ)),
+    wetness: sandWetness(shoreWaves, float(OCEAN_LEVEL).sub(positionWorld.y), positionWorld.xz.distance(playerXZ))
   })
   model.traverse((child) => {
     if ((child as Mesh).isMesh) (child as Mesh).material = material
@@ -195,7 +198,11 @@ watch([terrain, scenery, heightField], ([terrainModel, sceneryModel, field]) => 
   })
 
   colliders.build(terrainModel, () => 'trimesh')
-  colliders.build(sceneryModel, mesh => (isHull(mesh) ? 'convexHull' : null))
+  colliders.build(
+    sceneryModel,
+    mesh => (isHull(mesh) ? 'convexHull' : null),
+    mesh => (isWoodFloor(mesh) ? 'wood' : null),
+  )
   collidersBuilt.value = true
 }, { immediate: true })
 
@@ -209,6 +216,11 @@ function oceanAt(x: number, z: number) {
   if (ground === null) return OCEAN_LEVEL
   const [px, , pz] = playerPosition.value
   return OCEAN_LEVEL + waveLiftAt(shoreWaves, OCEAN_LEVEL - ground, Math.hypot(x - px, z - pz))
+}
+
+function grassAt(x: number, z: number) {
+  const pixels = controlMap && readControlPixels(controlMap)
+  return controlMap && pixels ? sampleControlChannel(controlMap, pixels, x, z, CONTROL_CHANNEL.grass) : 0
 }
 </script>
 
@@ -270,6 +282,6 @@ function oceanAt(x: number, z: number) {
   <!-- Only once the colliders exist: a body that moves before them falls through the island. -->
   <slot
     v-if="collidersBuilt && heightField"
-    v-bind="{ heightField, heightAt, spawn, waterAt }"
+    v-bind="{ heightField, heightAt, spawn, waterAt, grassAt, surfaceAt: colliders.surfaceOf }"
   />
 </template>

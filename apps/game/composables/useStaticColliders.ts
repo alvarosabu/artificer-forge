@@ -3,6 +3,8 @@ import { Vector3 } from 'three'
 import type { Mesh, Object3D } from 'three'
 
 export type StaticColliderShape = 'trimesh' | 'convexHull'
+/** What a collider is made of, for the step sounds. Untagged colliders fall back to the terrain's control map. */
+export type ColliderSurface = 'wood'
 
 /**
  * Builds fixed Rapier colliders from the meshes of a loaded model. Call it inside `<Physics>`.
@@ -14,9 +16,15 @@ export function useStaticColliders() {
   const { world, rapier } = useRapier()
   let body: ReturnType<typeof world.value.createRigidBody> | null = null
   const vertex = new Vector3()
+  // Rapier.js colliders have no user data, so the tags live here, keyed by collider handle.
+  const surfaces = new Map<number, ColliderSurface>()
 
-  /** `shapeOf` picks the shape per mesh. Return null to skip a mesh. */
-  function build(model: Object3D, shapeOf: (mesh: Mesh) => StaticColliderShape | null) {
+  /** `shapeOf` picks the shape per mesh. Return null to skip a mesh. `surfaceOf` tags the collider. */
+  function build(
+    model: Object3D,
+    shapeOf: (mesh: Mesh) => StaticColliderShape | null,
+    surfaceOf?: (mesh: Mesh) => ColliderSurface | null,
+  ) {
     body ??= world.value.createRigidBody(rapier.value.RigidBodyDesc.fixed())
     model.updateWorldMatrix(true, true)
 
@@ -52,7 +60,9 @@ export function useStaticColliders() {
         console.warn(`[useStaticColliders] no ${shape} for "${mesh.name}"`)
         return
       }
-      world.value.createCollider(desc, body!)
+      const collider = world.value.createCollider(desc, body!)
+      const surface = surfaceOf?.(mesh)
+      if (surface) surfaces.set(collider.handle, surface)
     })
   }
 
@@ -60,7 +70,12 @@ export function useStaticColliders() {
     // the world can be gone already when <Physics> unmounts first
     if (body && world.value?.getRigidBody(body.handle)) world.value.removeRigidBody(body)
     body = null
+    surfaces.clear()
   })
 
-  return { build }
+  return {
+    build,
+    /** The surface tag of a collider, or null when it has none. */
+    surfaceOf: (handle: number | null) => (handle === null ? null : surfaces.get(handle) ?? null),
+  }
 }

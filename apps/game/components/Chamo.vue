@@ -11,6 +11,7 @@ import { MathUtils, Vector2, Vector3 } from 'three'
 import { positionWorld } from 'three/tsl'
 import type { Group, Mesh } from 'three'
 import { RIDE_HEIGHT } from '~/composables/useCharacterBody'
+import type { ColliderSurface } from '~/composables/useStaticColliders'
 import { isSwimming, PLAYER_TUNING } from '~/composables/usePlayerController'
 import type { PlayerState, PlayerTuning } from '~/composables/usePlayerController'
 
@@ -19,12 +20,18 @@ const props = withDefaults(defineProps<{
   spawn?: [number, number, number]
   /** Ground for the grading's contact occlusion. Without it the ground is y = 0. */
   heightField?: HeightField | null
+  /** The grass coverage at a point, or 0 where there is no grass. */
+  grassAt?: (x: number, z: number) => number
+  /** The surface tag of a collider handle, or null for untagged ground. */
+  surfaceAt?: (collider: number | null) => ColliderSurface | null
   /** Height of the water surface at a point, or null where there is no water. Defaults to the Ocean at y = 0. */
   waterAt?: (x: number, z: number) => number | null
 }>(), {
   spawn: () => [0, 0, 0],
   heightField: null,
+  grassAt: () => 0,
   waterAt: () => null,
+  surfaceAt: () => null,
 })
 
 const position = defineModel<[number, number, number]>('position', { default: () => [0, 0, 0] })
@@ -158,6 +165,9 @@ const surfacePoint = new Vector3()
 const SPAWN_LIFT = 0.25
 const FULL_BURST_IMPACT = 6
 
+const audio = useAudio()
+audio.load('stepSand', 'stepGrass', 'stepWater', 'stepWood', 'land', 'splash', 'swim')
+const IMPACT_SPEEDS = { quiet: 3, loud: 12 }
 
 /** The point on the water surface above `at`, or null when `at` is not under water. */
 function waterAbove(at: Vector3) {
@@ -199,7 +209,7 @@ function emitStep(at: Vector3, velocity: Vector3, playerState: PlayerState) {
 
 function emitLandDust(at: Vector3, impactSpeed: number) {
   if (waterAbove(at)) return
-
+  audio.play('land', { volume: impactLevel({ impactSpeed, ...IMPACT_SPEEDS }) })
   const strength = MathUtils.clamp(impactSpeed / FULL_BURST_IMPACT, 0.3, 1.5)
   const count = Math.round(5 + 5 * strength)
   const size = (dustSize?.value ?? 0.4) * (0.7 + 0.4 * strength)
@@ -237,7 +247,10 @@ const controller = usePlayerController(root, body, actions, {
   onStep: emitStep,
   onLand: emitLandDust,
   waterAt: props.waterAt,
-  onSplash: splash.burst,
+  onSplash: (surface, impactSpeed, motion) => {
+    splash.burst(surface, motion.length())
+    audio.play('splash', { volume: impactLevel({ impactSpeed, ...IMPACT_SPEEDS }) })
+  },
 })
 
 // One bob every 2π / 2.4 ≈ 2.6 seconds.
@@ -258,11 +271,28 @@ watch(root, (group, previous) => {
   if (previous) dofFocus?.clearFocusTarget(previous)
   if (group) dofFocus?.setFocusTarget(group)
 }, { immediate: true })
+
 onUnmounted(() => {
   if (root.value) dofFocus?.clearFocusTarget(root.value)
 })
 
+const feet = new Vector3()
+
+/** The step sound for the ground under the feet: water over the feet wins, then a tagged collider, then grass, then the sand everywhere else. */
+function stepSound(): SoundName {
+  feet.fromArray(position.value)
+  if (waterAbove(feet)) return 'stepWater'
+  if (props.surfaceAt(controller.groundCollider()) === 'wood') return 'stepWood'
+  return props.grassAt(feet.x, feet.z) > 0.5 ? 'stepGrass' : 'stepSand'
+}
+
+const contacts = useClipContacts(actions, controller.state, (state) => {
+  audio.play(isSwimming(state) ? 'swim' : stepSound())
+})
+
 onBeforeRender(({ elapsed, delta }) => {
+  contacts.update(elapsed)
+
   const group = root.value
   if (!group) return
   const swimming = isSwimming(controller.state.value)

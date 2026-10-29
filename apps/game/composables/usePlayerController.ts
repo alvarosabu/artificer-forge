@@ -517,5 +517,5 @@ export function usePlayerController(
     if (movement.lengthSq() > 1e-6) options.onMove?.(position)
   })
 
-  return { state: readonly(state) }
+  return { state: readonly(state), groundCollider: characterBody.groundCollider }
 }

@@ -47,6 +47,7 @@ const { physicsDebug } = useControls('⚛️ physics', {
   />
   <TresCanvas
     window-size
+    :dpr="[1, 1.5]"
     shadows
     :alpha="false"
     :shadow-map-type="PCFShadowMap"
@@ -56,6 +57,7 @@ const { physicsDebug } = useControls('⚛️ physics', {
       v-slot="{ wind }"
       :focus="playerPosition"
     >
+    <AudioController>
       <!-- Physics loads Rapier's WASM in an async setup, so it needs Suspense. -->
       <Suspense>
         <!-- One step per frame instead of the default fixed 1/60: tres-rapier copies body positions
@@ -64,16 +66,19 @@ const { physicsDebug } = useControls('⚛️ physics', {
           time-step="vary"
           :debug="physicsDebug"
         >
-          <Island v-slot="{ heightField, heightAt, spawn, waterAt }">
+          <Island v-slot="{ heightField, heightAt, spawn, waterAt, grassAt, surfaceAt }">
             <Chamo
               v-model:position="playerPosition"
               :spawn="spawnOn(spawn, heightAt)"
               :height-field="heightField"
               :water-at="waterAt"
+              :grass-at="grassAt"
+              :surface-at="surfaceAt"
             />
           </Island>
         </Physics>
       </Suspense>
+      </AudioController>
       <!-- WindLines spawns at an absolute height, so the lines follow the player over the terrain -->
       <WindLines
         :wind-angle="wind.angle"
