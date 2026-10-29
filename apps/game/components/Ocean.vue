@@ -34,17 +34,16 @@ const shore = useUniforms({
 // deep water goes blue-green.
 const water = useUniforms({
   /**
-   * The colour the water EATS, not the colour it looks. Orange takes the red out of
-   * the sand and some of the green, which leaves it teal-blue. The playground's
-   * redder #ff5a1e keeps all the green, and over this sand it reads green.
+   * The colour the water EATS, not the colour it looks. Red-orange takes the red out
+   * of the sand and keeps the green, so the shallows go green-teal.
    */
-  absorption: '#ff9a40',
+  absorption: '#ff5900',
   /** how hard absorption bites per metre of water travelled */
-  absorbStrength: 0.55,
+  absorbStrength: 0.22,
   /** metres of water after which the colour stops deepening */
   maxDepth: 8,
   /** brightness of the caustic light on the sea floor */
-  caustics: 0.25,
+  caustics: 0.57,
   /** Cells per TILE, not per metre. */
   causticsScale: 2,
   seaFoamScale: 2,
