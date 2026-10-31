@@ -3,9 +3,9 @@ import { useControls } from '@tresjs/leches'
 import { MathUtils, Vector2, Vector3 } from 'three'
 import type { PerspectiveCamera } from 'three'
 
-// Fixed-angle follow camera, modelled on Bruno Simon's Folio 2025 View.js:
-// the angle never changes, zoom only moves along the view ray, dragging pans the
-// focus point and a magnet pulls it back to the tracked target.
+// Follow camera, modelled on Bruno Simon's Folio 2025 View.js: zoom only moves along
+// the view ray, dragging pans the focus point and a magnet pulls it back to the
+// tracked target. Only the gamepad right stick changes the angle.
 const props = withDefaults(defineProps<{
   target?: [number, number, number]
 }>(), {
@@ -29,6 +29,7 @@ const {
   cameraEasing,
   cameraPan,
   cameraMagnet,
+  cameraStickOrbit,
   cameraFraming,
 } = useControls('🎥 camera', {
   free: { value: true, type: 'boolean' },
@@ -44,6 +45,8 @@ const {
   easing: { value: 10, min: 0.5, max: 30, step: 0.5, type: 'range' },
   pan: { value: true, type: 'boolean' },
   magnet: { value: 0.25, min: 0, max: 1, step: 0.01, type: 'range' },
+  // Right-stick orbit speed in degrees per second at full tilt.
+  stickOrbit: { value: 120, min: 0, max: 360, step: 5, type: 'range' },
   // Player height on screen, from the bottom: 0.5 is the center, 0.33 the lower third
   framing: { value: 0.33, min: 0.1, max: 0.9, step: 0.01, type: 'range' },
 }, { uuid })
@@ -73,6 +76,14 @@ const zoomRatio = ref(cameraZoom?.value ?? 0.6)
 watch(() => cameraZoom?.value, (value) => { if (value !== undefined) zoomRatio.value = value })
 let smoothZoom = zoomRatio.value
 
+// The right stick writes here; moving the panel sliders overrides it.
+const PHI_MIN = 20
+const PHI_MAX = 85
+let theta = cameraTheta?.value ?? 22
+let phi = cameraPhi?.value ?? 70
+watch(() => cameraTheta?.value, (value) => { if (value !== undefined) theta = value })
+watch(() => cameraPhi?.value, (value) => { if (value !== undefined) phi = value })
+
 // A new target means the player moved: follow them again, like Bruno's resume on drive input.
 watch(() => props.target, () => { isTracking = true }, { deep: true })
 
@@ -99,6 +110,13 @@ onBeforeRender(({ delta, camera }) => {
     smoothFocus.copy(tracked)
     orbitTarget.value = [tracked.x, tracked.y, tracked.z]
     return
+  }
+  // Non-inverted: stick right turns the view right, stick up lowers the camera to look up.
+  const look = readLookStick()
+  if (look) {
+    const speed = (cameraStickOrbit?.value ?? 120) * delta
+    theta -= look.x * speed
+    phi = MathUtils.clamp(phi - look.y * speed, PHI_MIN, PHI_MAX)
   }
   if (isTracking) {
     focus.x = tracked.x
@@ -129,8 +147,8 @@ onBeforeRender(({ delta, camera }) => {
 
   offset.setFromSphericalCoords(
     radius,
-    MathUtils.degToRad(cameraPhi?.value ?? 70),
-    MathUtils.degToRad(cameraTheta?.value ?? 45),
+    MathUtils.degToRad(phi),
+    MathUtils.degToRad(theta),
   )
 
   cam.position.copy(smoothFocus).add(offset)
@@ -163,7 +181,7 @@ function onPointerMove(event: PointerEvent) {
 
   // Rotate screen movement by the azimuth so the map follows the cursor on screen.
   pan.set(event.movementX, event.movementY)
-  pan.rotateAround(origin, -MathUtils.degToRad(cameraTheta?.value ?? 45))
+  pan.rotateAround(origin, -MathUtils.degToRad(theta))
   pan.multiplyScalar(10 / Math.min(canvas.clientWidth, canvas.clientHeight))
 
   focus.x -= pan.x * 2

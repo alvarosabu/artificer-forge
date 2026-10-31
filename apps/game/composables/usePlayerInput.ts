@@ -33,6 +33,22 @@ function firstGamepad() {
   return navigator.getGamepads().find(pad => pad?.connected) ?? null
 }
 
+// Remap so the length starts at 0 just past the deadzone instead of jumping to 15%.
+function readStick(pad: Gamepad, axisX: number, axisY: number) {
+  const stickX = pad.axes[axisX] ?? 0
+  const stickY = pad.axes[axisY] ?? 0
+  const magnitude = Math.hypot(stickX, stickY)
+  if (magnitude <= STICK_DEADZONE) return null
+  const scale = Math.min(1, (magnitude - STICK_DEADZONE) / (1 - STICK_DEADZONE)) / magnitude
+  return { x: stickX * scale, y: stickY * scale }
+}
+
+/** Right stick of the first gamepad, deadzone applied, in raw axis signs (down is +y). Null at rest. */
+export function readLookStick() {
+  const pad = firstGamepad()
+  return pad ? readStick(pad, 2, 3) : null
+}
+
 /**
  * Merges keyboard and the first gamepad into one PlayerInput.
  * The Gamepad API has no events for sticks or buttons, so call read() once per frame.
@@ -89,14 +105,10 @@ export function usePlayerInput() {
 
     const pad = firstGamepad()
     if (pad) {
-      const stickX = pad.axes[0] ?? 0
-      const stickY = pad.axes[1] ?? 0
-      const magnitude = Math.hypot(stickX, stickY)
-      if (magnitude > STICK_DEADZONE) {
-        // Remap so speed starts at 0 just past the deadzone instead of jumping to 15%.
-        const scale = Math.min(1, (magnitude - STICK_DEADZONE) / (1 - STICK_DEADZONE)) / magnitude
-        x += stickX * scale
-        y -= stickY * scale // stick up reports -1
+      const stick = readStick(pad, 0, 1)
+      if (stick) {
+        x += stick.x
+        y -= stick.y // stick up reports -1
       }
       else {
         padSprint = false
