@@ -54,10 +54,10 @@ const { physicsDebug } = useControls('⚛️ physics', {
   >
     <CameraController :target="playerPosition" />
     <EnvironmentController
-      v-slot="{ wind }"
+      v-slot="{ wind, dayPhase }"
       :focus="playerPosition"
     >
-    <AudioController>
+    <AudioController :day-phase="dayPhase">
       <!-- Physics loads Rapier's WASM in an async setup, so it needs Suspense. -->
       <Suspense>
         <!-- One step per frame instead of the default fixed 1/60: tres-rapier copies body positions

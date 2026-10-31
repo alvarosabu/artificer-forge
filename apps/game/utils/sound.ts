@@ -21,13 +21,23 @@ const takes = (name: string, count: number) =>
   Array.from({ length: count }, (_, i) => `/audio/sfx/${name}-${String(i + 1).padStart(2, '0')}.ogg`)
 
 export const SOUNDS = {
-  stepSand: { files: takes('step-sand', 6), volume: -10, pitchJitter: 150, volumeJitter: 2 },
-  stepGrass: { files: takes('step-grass', 5), volume: -4, pitchJitter: 150, volumeJitter: 2 },
-  stepWood: { files: takes('step-wood', 5), volume: -6, pitchJitter: 150, volumeJitter: 2 },
-  stepWater: { files: takes('step-water', 5), volume: -2, pitchJitter: 200, volumeJitter: 3 },
-  land: { files: takes('land', 5), volume: -6, pitchJitter: 100, volumeJitter: 1 },
-  splash: { files: takes('splash', 13), volume: 0, pitchJitter: 100, volumeJitter: 1 },
+  stepSand: { files: takes('step-sand', 6), volume: -20, pitchJitter: 150, volumeJitter: 2 },
+  stepGrass: { files: takes('step-grass', 5), volume: -16, pitchJitter: 150, volumeJitter: 2 },
+  stepWood: { files: takes('step-wood', 5), volume: -12, pitchJitter: 150, volumeJitter: 2 },
+  stepWater: { files: takes('step-water', 5), volume: -12, pitchJitter: 200, volumeJitter: 3 },
+  land: { files: takes('land', 5), volume: -11, pitchJitter: 100, volumeJitter: 1 },
+  splash: { files: [...takes('splash', 3), '/audio/sfx/splash-13.ogg'], volume: 0, pitchJitter: 100, volumeJitter: 1 },
+  splashBig: { files: ['/audio/sfx/splash-big.ogg'], volume: 0, pitchJitter: 150, volumeJitter: 1 },
   swim: { files: takes('step-water', 5), volume: -8, pitchJitter: 300, volumeJitter: 3 },
+  // Synthesized placeholder knocks. Our recorded thuds are almost all below 150 Hz, which laptop speakers drop.
+  hit: { files: takes('hit', 3), volume: 0, pitchJitter: 200, volumeJitter: 1, maxVoices: 8 },
+  surf: { files: ['/audio/ambience/surf.ogg'], bus: 'ambience', volume: 6 },
+  wind: { files: ['/audio/ambience/wind.ogg'], bus: 'ambience', volume: 0 },
+  // The recording averages about -41 dB, so it needs the boost.
+  fire: { files: ['/audio/ambience/fire.ogg'], bus: 'ambience', volume: 12 },
+  // Streamed with audio.stream(), never decoded: load() on these would hold minutes of raw samples.
+  musicDay: { files: ['/audio/music/day.ogg'], bus: 'music' },
+  musicNight: { files: ['/audio/music/night.ogg'], bus: 'music' },
 } satisfies Record<string, SoundDefinition>
 
 export type SoundName = keyof typeof SOUNDS

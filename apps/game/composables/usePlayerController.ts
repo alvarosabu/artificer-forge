@@ -49,6 +49,10 @@ export interface PlayerTuning {
   floatDamping: number
   /** Fraction of the fall speed the water keeps when the swim state starts. */
   plungeKeep: number
+  /** Extra speed a dynamic body gets on first contact, as a fraction of the player's speed. */
+  hitKick: number
+  /** Upward part of the kick, as a fraction of its horizontal part. */
+  hitLift: number
 }
 
 export const PLAYER_TUNING: PlayerTuning = {
@@ -74,6 +78,8 @@ export const PLAYER_TUNING: PlayerTuning = {
   floatFrequency: 0.9,
   floatDamping: 0.3,
   plungeKeep: 0.35,
+  hitKick: 0.5,
+  hitLift: 0.35,
 }
 
 const TAKEOFF_TIME = 0.29 // the crouch ends and the feet leave the ground
@@ -88,6 +94,8 @@ const BUOYANCY = 6
 const SWIM_ENTER_MARGIN = 0.05
 const MIN_SPLASH_SPEED = 2
 const MAX_PLUNGE_SPEED = 5
+// Brushing past a prop while turning is not a hit.
+const MIN_HIT_SPEED = 0.5
 // Distance between two swim strokes. One arm pull covers more water than one foot covers ground.
 const STROKE_LENGTH = 0.9
 
@@ -152,6 +160,7 @@ export function usePlayerController(
   const up = new Vector3(0, 1, 0)
   const splashPoint = new Vector3()
   const splashMotion = new Vector3()
+  const hitImpulse = new Vector3()
   const waterAt = options.waterAt ?? (() => 0)
 
 
@@ -450,6 +459,16 @@ export function usePlayerController(
   
     if (!characterBody.move(translation)) return
     const { movement, position } = characterBody
+
+    const hitSpeed = Math.hypot(velocity.x, velocity.z)
+    if (hitSpeed > MIN_HIT_SPEED) {
+      for (const other of characterBody.hits()) {
+        // Rapier's push only matches the player's speed, so a prop never flies. The kick on top is mass-scaled, so every prop reacts the same.
+        const kick = other.mass() * hitSpeed * tuning.hitKick
+        hitImpulse.set(velocity.x / hitSpeed * kick, kick * tuning.hitLift, velocity.z / hitSpeed * kick)
+        other.applyImpulse(hitImpulse, true)
+      }
+    }
     const touchingGround = characterBody.isGrounded()
 
     let splashed = false

@@ -2,6 +2,7 @@
 import { useGLTF, useTexture } from '@tresjs/cientos'
 import { useControls } from '@tresjs/leches'
 import { RigidBody } from '@tresjs/rapier'
+import type { ExposedRigidBody } from '@tresjs/rapier'
 import { applyGradingToModel, buildTerrainMaterial, combineWaterQueries, CONTROL_CHANNEL, createControlMap, createTerrainUniforms, extractPalmCrownReferences, extractTorchFlameReferences, PalmFronds, readControlPixels, sampleControlChannel, sampleHeight, TorchFlames, type ControlMap } from '@artificer-forge/engine/runtime'
 import { Euler, Quaternion, Vector3 } from 'three'
 import { float, positionWorld } from 'three/tsl'
@@ -77,8 +78,12 @@ interface RigidProp {
   collider: 'cuboid' | 'convexHull'
 }
 const rigidProps = shallowRef<RigidProp[]>([])
+const propBodies = useTemplateRef<ExposedRigidBody[]>('propBodies')
+const splash = provideSplash()
+useImpactSounds(propBodies, 'hit', { waterAt, onSplash: splash.burst })
 const palmCrowns = shallowRef<Object3D[]>([])
 const torchFlames = shallowRef<Object3D[]>([])
+useIslandAmbience(heightAt, torchFlames)
 
 const uuid = inject<string>('uuid')
 // Frond length in marker radii. The marker sphere shows where a crown sits, not how far it reaches
@@ -246,6 +251,7 @@ function grassAt(x: number, z: number) {
   />
   <RigidBody
     v-for="prop in rigidProps"
+    ref="propBodies"
     :key="prop.mesh.uuid"
     type="dynamic"
     :collider="prop.collider"
@@ -254,6 +260,7 @@ function grassAt(x: number, z: number) {
   >
     <primitive :object="prop.mesh" />
   </RigidBody>
+  <primitive :object="splash.object" />
   <!-- PalmFronds bakes its references at creation, so a resize needs a remount -->
   <PalmFronds
     v-if="palmCrowns.length"

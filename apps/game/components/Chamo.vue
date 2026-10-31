@@ -71,6 +71,8 @@ const {
   playerFloatFrequency,
   playerFloatDamping,
   playerPlungeKeep,
+  playerHitKick,
+  playerHitLift,
 } = useControls('🏃 player', {
   walkSpeed: { value: PLAYER_TUNING.walkSpeed, min: 0.1, max: 5, step: 0.05, type: 'range' },
   runSpeed: { value: PLAYER_TUNING.runSpeed, min: 0.5, max: 10, step: 0.1, type: 'range' },
@@ -94,6 +96,8 @@ const {
   floatFrequency: { value: PLAYER_TUNING.floatFrequency, min: 0.2, max: 3, step: 0.05, type: 'range' },
   floatDamping: { value: PLAYER_TUNING.floatDamping, min: 0.05, max: 1.5, step: 0.01, type: 'range' },
   plungeKeep: { value: PLAYER_TUNING.plungeKeep, min: 0, max: 1, step: 0.05, type: 'range' },
+  hitKick: { value: PLAYER_TUNING.hitKick, min: 0, max: 4, step: 0.05, type: 'range' },
+  hitLift: { value: PLAYER_TUNING.hitLift, min: 0, max: 1.5, step: 0.05, type: 'range' },
 }, { uuid })
 
 const tuning = computed<PlayerTuning>(() => ({
@@ -119,6 +123,8 @@ const tuning = computed<PlayerTuning>(() => ({
   floatFrequency: playerFloatFrequency?.value ?? PLAYER_TUNING.floatFrequency,
   floatDamping: playerFloatDamping?.value ?? PLAYER_TUNING.floatDamping,
   plungeKeep: playerPlungeKeep?.value ?? PLAYER_TUNING.plungeKeep,
+  hitKick: playerHitKick?.value ?? PLAYER_TUNING.hitKick,
+  hitLift: playerHitLift?.value ?? PLAYER_TUNING.hitLift,
 }))
 
 // Shaded by the same grading as the world, so the dust follows the day cycle and the cel ramp.
@@ -166,8 +172,10 @@ const SPAWN_LIFT = 0.25
 const FULL_BURST_IMPACT = 6
 
 const audio = useAudio()
-audio.load('stepSand', 'stepGrass', 'stepWater', 'stepWood', 'land', 'splash', 'swim')
-const IMPACT_SPEEDS = { quiet: 3, loud: 12 }
+audio.load('stepSand', 'stepGrass', 'stepWater', 'stepWood', 'land', 'splash', 'splashBig', 'swim')
+const IMPACT_SPEEDS = { quietImpact: 3, loudImpact: 12 }
+// A jump from flat ground lands at about 6 m/s, so a jump into the sea is big and walking off a step is not.
+const BIG_SPLASH_SPEED = 5
 
 /** The point on the water surface above `at`, or null when `at` is not under water. */
 function waterAbove(at: Vector3) {
@@ -249,7 +257,7 @@ const controller = usePlayerController(root, body, actions, {
   waterAt: props.waterAt,
   onSplash: (surface, impactSpeed, motion) => {
     splash.burst(surface, motion.length())
-    audio.play('splash', { volume: impactLevel({ impactSpeed, ...IMPACT_SPEEDS }) })
+    audio.play(impactSpeed >= BIG_SPLASH_SPEED ? 'splashBig' : 'splash', { volume: impactLevel({ impactSpeed, ...IMPACT_SPEEDS }) })
   },
 })
 
@@ -346,5 +354,4 @@ watch(scene, (model) => {
     </TresGroup>
   </RigidBody>
   <primitive :object="dust.mesh" />
-  <primitive :object="splash.object" />
 </template>

@@ -212,5 +212,6 @@ onBeforeRender(({ delta }) => {
   <slot
     :grading="grading"
     :wind="wind.state"
+    :day-phase="dayCycle.phase.value"
   />
 </template>

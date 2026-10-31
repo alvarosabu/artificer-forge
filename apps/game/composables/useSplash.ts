@@ -1,6 +1,7 @@
 import { useControls } from '@tresjs/leches'
 import { createSplashCrowns, createSplashDroplets, createSplashRipples, createSwimWake } from '@artificer-forge/vfx'
 import { Group, MathUtils, Vector3 } from 'three'
+import type { InjectionKey } from 'vue'
 import type { Color, Node } from 'three/webgpu'
 import { stylizedOutput } from '@artificer-forge/engine/runtime'
 
@@ -11,8 +12,7 @@ const SURFACE_LIFT = 0.02
 // How far ahead of the body the V starts, so its point sits in front of the head.
 const WAKE_LEAD = 0.7
 
-
-export function useSplash() {
+function createSplash() {
   const uuid = inject<string>('uuid')
   const grading = useGrading()
   const shade = (color: Node<'color'>, normal: Node<'vec3'>) =>
@@ -141,4 +141,21 @@ export function useSplash() {
   }
 
   return { object, burst, stroke, tread, swim, endSwim: wake.stop }
+}
+
+export type Splash = ReturnType<typeof createSplash>
+
+const SplashKey: InjectionKey<Splash> = Symbol('splash')
+
+/** Creates the one splash pool for the scene. A second pool would take over its leches folders, as the last registration wins. */
+export function provideSplash() {
+  const splash = createSplash()
+  provide(SplashKey, splash)
+  return splash
+}
+
+export function useSplash() {
+  const splash = inject(SplashKey, null)
+  if (!splash) throw new Error('useSplash() needs a provideSplash() ancestor')
+  return splash
 }

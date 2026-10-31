@@ -54,6 +54,9 @@ export function useCharacterBody(body: ShallowRef<ExposedRigidBody | null | unde
   let groundCollider: number | null = null
   let pushing = false
   let waitedOneStep = false
+  let touching = new Set<number>()
+  let touchingNow = new Set<number>()
+  const hits: ReturnType<typeof world.value.createRigidBody>[] = []
 
   /** False until the body and its collider exist and the world has stepped once with them. */
   function isReady() {
@@ -77,12 +80,19 @@ export function useCharacterBody(body: ShallowRef<ExposedRigidBody | null | unde
     controller.computeColliderMovement(collider, delta)
     const computed = controller.computedMovement()
     pushing = false
+    hits.length = 0
+    touchingNow.clear()
     for (let i = 0; i < controller.numComputedCollisions(); i++) {
-      if (controller.computedCollision(i)?.collider?.parent()?.isDynamic()) {
-        pushing = true
-        break
-      }
+      const other = controller.computedCollision(i)?.collider?.parent()
+      if (!other?.isDynamic()) continue
+      pushing = true
+      if (touchingNow.has(other.handle)) continue
+      touchingNow.add(other.handle)
+      if (!touching.has(other.handle)) hits.push(other)
     }
+    const previous = touching
+    touching = touchingNow
+    touchingNow = previous
     const current = rigidBody.translation()
     position.set(current.x + computed.x, current.y + computed.y, current.z + computed.z)
 
@@ -121,5 +131,7 @@ export function useCharacterBody(body: ShallowRef<ExposedRigidBody | null | unde
     groundCollider: () => groundCollider,
     /** True when the last move() ran into a dynamic body. The controller has pushed it by then. */
     isPushing: () => pushing,
+    /** Dynamic bodies the last move() touched that the move before did not. Read it before the next move(). */
+    hits: () => hits,
   }
 }
