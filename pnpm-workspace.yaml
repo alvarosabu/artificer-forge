@@ -31,8 +31,8 @@ allowBuilds:
 
 overrides:
   ipx: 3.0.2
-  '@tresjs/core': https://pkg.pr.new/@tresjs/core@2640ac2
-  '@tresjs/cientos': https://pkg.pr.new/@tresjs/cientos@2640ac2
+  '@tresjs/core': https://pkg.pr.new/@tresjs/core@957d6fb
+  '@tresjs/cientos': https://pkg.pr.new/@tresjs/cientos@957d6fb
 
 catalogs:
   build:
@@ -53,14 +53,14 @@ catalogs:
     zod: ^4.6.5
     zod-to-json-schema: ^3.25.2
   three:
-    # TresJS PR #1545 preview build (TSL composables in @tresjs/core/webgpu), pinned to commit 2640ac2
-    '@tresjs/cientos': https://pkg.pr.new/@tresjs/cientos@2640ac2
-    '@tresjs/core': https://pkg.pr.new/@tresjs/core@2640ac2
-    '@tresjs/eslint-config': https://pkg.pr.new/@tresjs/eslint-config@2640ac2
-    '@tresjs/leches': https://pkg.pr.new/@tresjs/leches@2640ac2
-    '@tresjs/nuxt': https://pkg.pr.new/@tresjs/nuxt@2640ac2
-    '@tresjs/post-processing': https://pkg.pr.new/@tresjs/post-processing@2640ac2
-    '@tresjs/rapier': https://pkg.pr.new/@tresjs/rapier@2640ac2
+    # TresJS PR #1545 preview build (TSL composables in @tresjs/core/webgpu), pinned to commit 957d6fb
+    '@tresjs/cientos': https://pkg.pr.new/@tresjs/cientos@957d6fb
+    '@tresjs/core': https://pkg.pr.new/@tresjs/core@957d6fb
+    '@tresjs/eslint-config': https://pkg.pr.new/@tresjs/eslint-config@957d6fb
+    '@tresjs/leches': https://pkg.pr.new/@tresjs/leches@957d6fb
+    '@tresjs/nuxt': https://pkg.pr.new/@tresjs/nuxt@957d6fb
+    '@tresjs/post-processing': https://pkg.pr.new/@tresjs/post-processing@957d6fb
+    '@tresjs/rapier': https://pkg.pr.new/@tresjs/rapier@957d6fb
     '@types/three': ^0.186.0
     three: ^0.186.1
   typescript:

@@ -241,17 +241,17 @@ catalogs:
       version: 3.25.2
   three:
     '@tresjs/eslint-config':
-      specifier: https://pkg.pr.new/@tresjs/eslint-config@2640ac2
-      version: https://pkg.pr.new/@tresjs/eslint-config@2640ac2
+      specifier: https://pkg.pr.new/@tresjs/eslint-config@957d6fb
+      version: https://pkg.pr.new/@tresjs/eslint-config@957d6fb
     '@tresjs/leches':
-      specifier: https://pkg.pr.new/@tresjs/leches@2640ac2
-      version: https://pkg.pr.new/@tresjs/leches@2640ac2
+      specifier: https://pkg.pr.new/@tresjs/leches@957d6fb
+      version: https://pkg.pr.new/@tresjs/leches@957d6fb
     '@tresjs/nuxt':
-      specifier: https://pkg.pr.new/@tresjs/nuxt@2640ac2
-      version: https://pkg.pr.new/@tresjs/nuxt@2640ac2
+      specifier: https://pkg.pr.new/@tresjs/nuxt@957d6fb
+      version: https://pkg.pr.new/@tresjs/nuxt@957d6fb
     '@tresjs/rapier':
-      specifier: https://pkg.pr.new/@tresjs/rapier@2640ac2
-      version: https://pkg.pr.new/@tresjs/rapier@2640ac2
+      specifier: https://pkg.pr.new/@tresjs/rapier@957d6fb
+      version: https://pkg.pr.new/@tresjs/rapier@957d6fb
     '@types/three':
       specifier: ^0.186.0
       version: 0.186.0
@@ -278,19 +278,19 @@ catalogs:
 
 overrides:
   ipx: 3.0.2
-  '@tresjs/core': https://pkg.pr.new/@tresjs/core@2640ac2
-  '@tresjs/cientos': https://pkg.pr.new/@tresjs/cientos@2640ac2
+  '@tresjs/core': https://pkg.pr.new/@tresjs/core@957d6fb
+  '@tresjs/cientos': https://pkg.pr.new/@tresjs/cientos@957d6fb
 
 importers:
 
   .:
     dependencies:
       '@tresjs/cientos':
-        specifier: https://pkg.pr.new/@tresjs/cientos@2640ac2
-        version: https://pkg.pr.new/@tresjs/cientos@2640ac2(@tresjs/core@https://pkg.pr.new/@tresjs/core@2640ac2(three@0.186.1)(vue@3.5.43(typescript@5.9.3)))(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
+        specifier: https://pkg.pr.new/@tresjs/cientos@957d6fb
+        version: https://pkg.pr.new/@tresjs/cientos@957d6fb(@tresjs/core@https://pkg.pr.new/@tresjs/core@957d6fb(three@0.186.1)(vue@3.5.43(typescript@5.9.3)))(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
       '@tresjs/core':
-        specifier: https://pkg.pr.new/@tresjs/core@2640ac2
-        version: https://pkg.pr.new/@tresjs/core@2640ac2(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
+        specifier: https://pkg.pr.new/@tresjs/core@957d6fb
+        version: https://pkg.pr.new/@tresjs/core@957d6fb(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
       three:
         specifier: catalog:three
         version: 0.186.1
@@ -306,7 +306,7 @@ importers:
         version: 1.2.3
       '@tresjs/leches':
         specifier: catalog:three
-        version: https://pkg.pr.new/@tresjs/leches@2640ac2(magicast@0.5.5)(unocss@66.6.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.1)))(vue@3.5.43(typescript@5.9.3))
+        version: https://pkg.pr.new/@tresjs/leches@957d6fb(magicast@0.5.5)(unocss@66.6.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.1)))(vue@3.5.43(typescript@5.9.3))
       '@types/three':
         specifier: catalog:three
         version: 0.186.0
@@ -338,17 +338,17 @@ importers:
         specifier: catalog:nuxt
         version: 1.17.0(@typescript-eslint/utils@8.70.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@5.9.3))(@vue/compiler-sfc@3.5.43)(crossws@0.4.12(srvx@0.11.22))(esbuild@0.28.2)(eslint-plugin-format@2.0.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2)))(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(magic-string@1.4.2)(magicast@0.5.5)(oxc-parser@0.151.0)(rolldown@1.2.11)(rollup@4.63.5)(srvx@0.11.22)(supports-color@10.2.2)(typescript@5.9.3)(unplugin@3.4.0(esbuild@0.28.2)(rolldown@1.2.11)(rollup@4.63.5)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))(vite@8.3.3(@types/node@25.4.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0))
       '@tresjs/cientos':
-        specifier: https://pkg.pr.new/@tresjs/cientos@2640ac2
-        version: https://pkg.pr.new/@tresjs/cientos@2640ac2(@tresjs/core@https://pkg.pr.new/@tresjs/core@2640ac2(three@0.186.1)(vue@3.5.43(typescript@5.9.3)))(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
+        specifier: https://pkg.pr.new/@tresjs/cientos@957d6fb
+        version: https://pkg.pr.new/@tresjs/cientos@957d6fb(@tresjs/core@https://pkg.pr.new/@tresjs/core@957d6fb(three@0.186.1)(vue@3.5.43(typescript@5.9.3)))(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
       '@tresjs/leches':
         specifier: catalog:three
-        version: https://pkg.pr.new/@tresjs/leches@2640ac2(magicast@0.5.5)(unocss@66.6.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))(vue@3.5.43(typescript@5.9.3))
+        version: https://pkg.pr.new/@tresjs/leches@957d6fb(magicast@0.5.5)(unocss@66.6.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))(vue@3.5.43(typescript@5.9.3))
       '@tresjs/nuxt':
         specifier: catalog:three
-        version: https://pkg.pr.new/@tresjs/nuxt@2640ac2(08587803592770a6cd21a053d7d3e524)
+        version: https://pkg.pr.new/@tresjs/nuxt@957d6fb(08587803592770a6cd21a053d7d3e524)
       '@tresjs/rapier':
         specifier: catalog:three
-        version: https://pkg.pr.new/@tresjs/rapier@2640ac2(@tresjs/core@https://pkg.pr.new/@tresjs/core@2640ac2(three@0.186.1)(vue@3.5.43(typescript@5.9.3)))(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
+        version: https://pkg.pr.new/@tresjs/rapier@957d6fb(@tresjs/core@https://pkg.pr.new/@tresjs/core@957d6fb(three@0.186.1)(vue@3.5.43(typescript@5.9.3)))(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
       '@vueuse/core':
         specifier: catalog:vue
         version: 15.0.0(vue@3.5.43(typescript@5.9.3))
@@ -370,7 +370,7 @@ importers:
     devDependencies:
       '@tresjs/eslint-config':
         specifier: catalog:three
-        version: https://pkg.pr.new/@tresjs/eslint-config@2640ac2(@typescript-eslint/typescript-estree@8.70.1(supports-color@10.2.2)(typescript@5.9.3))(@typescript-eslint/utils@8.70.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@5.9.3))(@vue/compiler-sfc@3.5.43)(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(ts-declaration-location@1.0.7(typescript@5.9.3))(typescript@5.9.3)(vitest@4.1.8(@opentelemetry/api@1.9.0)(@types/node@25.4.0)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))
+        version: https://pkg.pr.new/@tresjs/eslint-config@957d6fb(@typescript-eslint/typescript-estree@8.70.1(supports-color@10.2.2)(typescript@5.9.3))(@typescript-eslint/utils@8.70.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@5.9.3))(@vue/compiler-sfc@3.5.43)(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(ts-declaration-location@1.0.7(typescript@5.9.3))(typescript@5.9.3)(vitest@4.1.8(@opentelemetry/api@1.9.0)(@types/node@25.4.0)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))
       '@types/three':
         specifier: catalog:three
         version: 0.186.0
@@ -447,14 +447,14 @@ importers:
         specifier: catalog:nuxt
         version: 0.11.3(magicast@0.5.2)(pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@5.9.3)(vue@3.5.43(typescript@5.9.3)))
       '@tresjs/cientos':
-        specifier: https://pkg.pr.new/@tresjs/cientos@2640ac2
-        version: https://pkg.pr.new/@tresjs/cientos@2640ac2(@tresjs/core@https://pkg.pr.new/@tresjs/core@2640ac2(three@0.186.1)(vue@3.5.43(typescript@5.9.3)))(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
+        specifier: https://pkg.pr.new/@tresjs/cientos@957d6fb
+        version: https://pkg.pr.new/@tresjs/cientos@957d6fb(@tresjs/core@https://pkg.pr.new/@tresjs/core@957d6fb(three@0.186.1)(vue@3.5.43(typescript@5.9.3)))(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
       '@tresjs/leches':
         specifier: catalog:three
-        version: https://pkg.pr.new/@tresjs/leches@2640ac2(magicast@0.5.2)(unocss@66.6.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))(vue@3.5.43(typescript@5.9.3))
+        version: https://pkg.pr.new/@tresjs/leches@957d6fb(magicast@0.5.2)(unocss@66.6.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))(vue@3.5.43(typescript@5.9.3))
       '@tresjs/nuxt':
         specifier: catalog:three
-        version: https://pkg.pr.new/@tresjs/nuxt@2640ac2(1641441b2c37220ac5c96d741904d364)
+        version: https://pkg.pr.new/@tresjs/nuxt@957d6fb(1641441b2c37220ac5c96d741904d364)
       '@vueuse/core':
         specifier: catalog:vue
         version: 15.0.0(vue@3.5.43(typescript@5.9.3))
@@ -491,7 +491,7 @@ importers:
     devDependencies:
       '@tresjs/eslint-config':
         specifier: catalog:three
-        version: https://pkg.pr.new/@tresjs/eslint-config@2640ac2(@typescript-eslint/typescript-estree@8.70.1(supports-color@10.2.2)(typescript@5.9.3))(@typescript-eslint/utils@8.70.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@5.9.3))(@vue/compiler-sfc@3.5.43)(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(ts-declaration-location@1.0.7(typescript@5.9.3))(typescript@5.9.3)(vitest@5.0.2(@opentelemetry/api@1.9.0)(@types/node@25.4.0)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))
+        version: https://pkg.pr.new/@tresjs/eslint-config@957d6fb(@typescript-eslint/typescript-estree@8.70.1(supports-color@10.2.2)(typescript@5.9.3))(@typescript-eslint/utils@8.70.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@5.9.3))(@vue/compiler-sfc@3.5.43)(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(ts-declaration-location@1.0.7(typescript@5.9.3))(typescript@5.9.3)(vitest@5.0.2(@opentelemetry/api@1.9.0)(@types/node@25.4.0)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))
       '@types/three':
         specifier: catalog:three
         version: 0.186.0
@@ -579,11 +579,11 @@ importers:
         specifier: workspace:*
         version: link:../vfx
       '@tresjs/cientos':
-        specifier: https://pkg.pr.new/@tresjs/cientos@2640ac2
-        version: https://pkg.pr.new/@tresjs/cientos@2640ac2(@tresjs/core@https://pkg.pr.new/@tresjs/core@2640ac2(three@0.186.1)(vue@3.5.43(typescript@5.9.3)))(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
+        specifier: https://pkg.pr.new/@tresjs/cientos@957d6fb
+        version: https://pkg.pr.new/@tresjs/cientos@957d6fb(@tresjs/core@https://pkg.pr.new/@tresjs/core@957d6fb(three@0.186.1)(vue@3.5.43(typescript@5.9.3)))(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
       '@tresjs/core':
-        specifier: https://pkg.pr.new/@tresjs/core@2640ac2
-        version: https://pkg.pr.new/@tresjs/core@2640ac2(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
+        specifier: https://pkg.pr.new/@tresjs/core@957d6fb
+        version: https://pkg.pr.new/@tresjs/core@957d6fb(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
     devDependencies:
       '@nuxt/ui':
         specifier: catalog:nuxt
@@ -622,8 +622,8 @@ importers:
   packages/post-processing:
     dependencies:
       '@tresjs/core':
-        specifier: https://pkg.pr.new/@tresjs/core@2640ac2
-        version: https://pkg.pr.new/@tresjs/core@2640ac2(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
+        specifier: https://pkg.pr.new/@tresjs/core@957d6fb
+        version: https://pkg.pr.new/@tresjs/core@957d6fb(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
     devDependencies:
       '@types/three':
         specifier: catalog:three
@@ -653,11 +653,11 @@ importers:
   packages/vfx:
     dependencies:
       '@tresjs/cientos':
-        specifier: https://pkg.pr.new/@tresjs/cientos@2640ac2
-        version: https://pkg.pr.new/@tresjs/cientos@2640ac2(@tresjs/core@https://pkg.pr.new/@tresjs/core@2640ac2(three@0.186.1)(vue@3.5.43(typescript@5.9.3)))(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
+        specifier: https://pkg.pr.new/@tresjs/cientos@957d6fb
+        version: https://pkg.pr.new/@tresjs/cientos@957d6fb(@tresjs/core@https://pkg.pr.new/@tresjs/core@957d6fb(three@0.186.1)(vue@3.5.43(typescript@5.9.3)))(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
       '@tresjs/core':
-        specifier: https://pkg.pr.new/@tresjs/core@2640ac2
-        version: https://pkg.pr.new/@tresjs/core@2640ac2(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
+        specifier: https://pkg.pr.new/@tresjs/core@957d6fb
+        version: https://pkg.pr.new/@tresjs/core@957d6fb(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
     devDependencies:
       '@types/three':
         specifier: catalog:three
@@ -4921,41 +4921,41 @@ packages:
       y-protocols: ^1.0.1
       yjs: ^13.5.38
 
-  '@tresjs/cientos@https://pkg.pr.new/@tresjs/cientos@2640ac2':
-    resolution: {integrity: sha512-o2OeGRKHxwtDxzN5+xzyDKNYyv5NjZzT+gBaBBk3DJtewWYQdf/SR9jjRrdp6POGO3axccP/Nlq+EODmtrxfYg==, tarball: https://pkg.pr.new/@tresjs/cientos@2640ac2}
+  '@tresjs/cientos@https://pkg.pr.new/@tresjs/cientos@957d6fb':
+    resolution: {integrity: sha512-Ur1H1ukLEeUI4RxZt3rvXHVcWJdK5H/vTfkcIuVsU+hj8Qpsak3WCV3SMghVWPeRtcpYwVdH3qgA9N8Maas5nQ==, tarball: https://pkg.pr.new/@tresjs/cientos@957d6fb}
     version: 5.10.1
     peerDependencies:
       '@tresjs/core': ^5.9.1
       three: '>=0.133'
       vue: '>=3.5.17'
 
-  '@tresjs/core@https://pkg.pr.new/@tresjs/core@2640ac2':
-    resolution: {integrity: sha512-/4y1tsbU3ojxqW3Y7WlwUcvB7KS6t5afRYPkjaJ8JWhPQDXfsCwqUn+nBTagZSHyr/HfSTDYLMGnEm6KyjsjfQ==, tarball: https://pkg.pr.new/@tresjs/core@2640ac2}
+  '@tresjs/core@https://pkg.pr.new/@tresjs/core@957d6fb':
+    resolution: {integrity: sha512-lfsz5HXB7ETDrLK2iLPJsP1jv+RqGwIW711dgWOnasxwF0hDwHCKQnUGdUQEAiQivXG//9kTQLP0YhH/pUmY9g==, tarball: https://pkg.pr.new/@tresjs/core@957d6fb}
     version: 5.10.1
     peerDependencies:
       three: '>=0.133'
       vue: '>=3.4'
 
-  '@tresjs/eslint-config@https://pkg.pr.new/@tresjs/eslint-config@2640ac2':
-    resolution: {integrity: sha512-/pfhOfs80ncptDd887mG5enAIClhQCyvX7tlsfpjJa795+SBokQYWvqvCbjUtmHMce9PN43hDrhS6ypU9HaB8A==, tarball: https://pkg.pr.new/@tresjs/eslint-config@2640ac2}
+  '@tresjs/eslint-config@https://pkg.pr.new/@tresjs/eslint-config@957d6fb':
+    resolution: {integrity: sha512-/pfhOfs80ncptDd887mG5enAIClhQCyvX7tlsfpjJa795+SBokQYWvqvCbjUtmHMce9PN43hDrhS6ypU9HaB8A==, tarball: https://pkg.pr.new/@tresjs/eslint-config@957d6fb}
     version: 1.7.0
     peerDependencies:
       eslint: '>=8.40.0'
 
-  '@tresjs/leches@https://pkg.pr.new/@tresjs/leches@2640ac2':
-    resolution: {integrity: sha512-DIxQbMENDrtzKPe4BtI4zzucuEXQzF2e9qc/NtHUnEG417mI8Gh7zzqDkdP5M4fDhxua06nZLLJyCTMLXp7FWg==, tarball: https://pkg.pr.new/@tresjs/leches@2640ac2}
+  '@tresjs/leches@https://pkg.pr.new/@tresjs/leches@957d6fb':
+    resolution: {integrity: sha512-VOcUgstwp9ZA8AUJxQiqbJf92FO85Rc8xcmwophdAKX89P5Sk1+5PRvlXbTM7nTz9WL9z9NOiWLJ5HFxrBdDPg==, tarball: https://pkg.pr.new/@tresjs/leches@957d6fb}
     version: 1.3.3
     peerDependencies:
       vue: '>=3.3.4'
 
-  '@tresjs/nuxt@https://pkg.pr.new/@tresjs/nuxt@2640ac2':
-    resolution: {integrity: sha512-Qgo8hFFCB24DIVM9RIpvnW2mv+lQTdJFib784XVyDYNk/92UFv7/3kNtDZ4FMcqm0TDeBAVXKXZp9CQPYHtzGw==, tarball: https://pkg.pr.new/@tresjs/nuxt@2640ac2}
+  '@tresjs/nuxt@https://pkg.pr.new/@tresjs/nuxt@957d6fb':
+    resolution: {integrity: sha512-qhw2rnHQltwfw7xG1YZaHhxPM/IPF8GuFwpF2M0vXL1yogF/p7BWln0wGdiT7Khwxq5O/Ww0wME9NbxdkXe+fw==, tarball: https://pkg.pr.new/@tresjs/nuxt@957d6fb}
     version: 5.8.1
     peerDependencies:
       three: '>=0.133'
 
-  '@tresjs/rapier@https://pkg.pr.new/@tresjs/rapier@2640ac2':
-    resolution: {integrity: sha512-g31BnB/trbogl/Gt2mB+pQ68KmlyzIURuuuF7wIO4IDcRXQVP638u3TF5vmKfMrS5/Nxu8ylMFP+c8Jx722D5A==, tarball: https://pkg.pr.new/@tresjs/rapier@2640ac2}
+  '@tresjs/rapier@https://pkg.pr.new/@tresjs/rapier@957d6fb':
+    resolution: {integrity: sha512-yqta+BVg3i2fnDlSQ1GjPjO31O6WSNqPOP5tzzALxffpZQ1VzNgKfPnsqhG4F6yQLnWRudoTAo+n9kOQxNcS2w==, tarball: https://pkg.pr.new/@tresjs/rapier@957d6fb}
     version: 1.2.1
     peerDependencies:
       '@tresjs/core': ^5.3.2
@@ -19430,9 +19430,9 @@ snapshots:
       y-protocols: 1.0.7(yjs@13.6.29)
       yjs: 13.6.29
 
-  '@tresjs/cientos@https://pkg.pr.new/@tresjs/cientos@2640ac2(@tresjs/core@https://pkg.pr.new/@tresjs/core@2640ac2(three@0.186.1)(vue@3.5.43(typescript@5.9.3)))(three@0.186.1)(vue@3.5.43(typescript@5.9.3))':
+  '@tresjs/cientos@https://pkg.pr.new/@tresjs/cientos@957d6fb(@tresjs/core@https://pkg.pr.new/@tresjs/core@957d6fb(three@0.186.1)(vue@3.5.43(typescript@5.9.3)))(three@0.186.1)(vue@3.5.43(typescript@5.9.3))':
     dependencies:
-      '@tresjs/core': https://pkg.pr.new/@tresjs/core@2640ac2(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
+      '@tresjs/core': https://pkg.pr.new/@tresjs/core@957d6fb(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
       '@vueuse/core': 15.0.0(vue@3.5.43(typescript@5.9.3))
       camera-controls: 3.1.2(three@0.186.1)
       stats-gl: 4.2.3(three@0.186.1)
@@ -19446,7 +19446,7 @@ snapshots:
       - '@react-three/fiber'
       - react
 
-  '@tresjs/core@https://pkg.pr.new/@tresjs/core@2640ac2(three@0.186.1)(vue@3.5.43(typescript@5.9.3))':
+  '@tresjs/core@https://pkg.pr.new/@tresjs/core@957d6fb(three@0.186.1)(vue@3.5.43(typescript@5.9.3))':
     dependencies:
       '@pmndrs/pointer-events': 6.6.30
       '@vue/devtools-api': 8.2.1
@@ -19455,7 +19455,7 @@ snapshots:
       three: 0.186.1
       vue: 3.5.43(typescript@5.9.3)
 
-  '@tresjs/eslint-config@https://pkg.pr.new/@tresjs/eslint-config@2640ac2(@typescript-eslint/typescript-estree@8.70.1(supports-color@10.2.2)(typescript@5.9.3))(@typescript-eslint/utils@8.70.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@5.9.3))(@vue/compiler-sfc@3.5.43)(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(ts-declaration-location@1.0.7(typescript@5.9.3))(typescript@5.9.3)(vitest@4.1.8(@opentelemetry/api@1.9.0)(@types/node@25.4.0)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))':
+  '@tresjs/eslint-config@https://pkg.pr.new/@tresjs/eslint-config@957d6fb(@typescript-eslint/typescript-estree@8.70.1(supports-color@10.2.2)(typescript@5.9.3))(@typescript-eslint/utils@8.70.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@5.9.3))(@vue/compiler-sfc@3.5.43)(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(ts-declaration-location@1.0.7(typescript@5.9.3))(typescript@5.9.3)(vitest@4.1.8(@opentelemetry/api@1.9.0)(@types/node@25.4.0)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))':
     dependencies:
       '@antfu/eslint-config': 9.5.1(@typescript-eslint/typescript-estree@8.70.1(supports-color@10.2.2)(typescript@5.9.3))(@typescript-eslint/utils@8.70.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@5.9.3))(@vue/compiler-sfc@3.5.43)(eslint-plugin-format@2.0.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2)))(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(ts-declaration-location@1.0.7(typescript@5.9.3))(typescript@5.9.3)(vitest@4.1.8(@opentelemetry/api@1.9.0)(@types/node@25.4.0)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))
       eslint: 10.11.0(jiti@2.7.0)(supports-color@10.2.2)
@@ -19491,7 +19491,7 @@ snapshots:
       - typescript
       - vitest
 
-  '@tresjs/eslint-config@https://pkg.pr.new/@tresjs/eslint-config@2640ac2(@typescript-eslint/typescript-estree@8.70.1(supports-color@10.2.2)(typescript@5.9.3))(@typescript-eslint/utils@8.70.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@5.9.3))(@vue/compiler-sfc@3.5.43)(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(ts-declaration-location@1.0.7(typescript@5.9.3))(typescript@5.9.3)(vitest@5.0.2(@opentelemetry/api@1.9.0)(@types/node@25.4.0)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))':
+  '@tresjs/eslint-config@https://pkg.pr.new/@tresjs/eslint-config@957d6fb(@typescript-eslint/typescript-estree@8.70.1(supports-color@10.2.2)(typescript@5.9.3))(@typescript-eslint/utils@8.70.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@5.9.3))(@vue/compiler-sfc@3.5.43)(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(ts-declaration-location@1.0.7(typescript@5.9.3))(typescript@5.9.3)(vitest@5.0.2(@opentelemetry/api@1.9.0)(@types/node@25.4.0)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))':
     dependencies:
       '@antfu/eslint-config': 9.5.1(@typescript-eslint/typescript-estree@8.70.1(supports-color@10.2.2)(typescript@5.9.3))(@typescript-eslint/utils@8.70.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@5.9.3))(@vue/compiler-sfc@3.5.43)(eslint-plugin-format@2.0.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2)))(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(ts-declaration-location@1.0.7(typescript@5.9.3))(typescript@5.9.3)(vitest@5.0.2(@opentelemetry/api@1.9.0)(@types/node@25.4.0)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))
       eslint: 10.11.0(jiti@2.7.0)(supports-color@10.2.2)
@@ -19527,7 +19527,7 @@ snapshots:
       - typescript
       - vitest
 
-  '@tresjs/leches@https://pkg.pr.new/@tresjs/leches@2640ac2(magicast@0.5.2)(unocss@66.6.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))(vue@3.5.43(typescript@5.9.3))':
+  '@tresjs/leches@https://pkg.pr.new/@tresjs/leches@957d6fb(magicast@0.5.2)(unocss@66.6.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))(vue@3.5.43(typescript@5.9.3))':
     dependencies:
       '@unocss/core': 66.10.5
       '@vueuse/components': 15.0.0(vue@3.5.43(typescript@5.9.3))
@@ -19538,7 +19538,7 @@ snapshots:
       - magicast
       - unocss
 
-  '@tresjs/leches@https://pkg.pr.new/@tresjs/leches@2640ac2(magicast@0.5.5)(unocss@66.6.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))(vue@3.5.43(typescript@5.9.3))':
+  '@tresjs/leches@https://pkg.pr.new/@tresjs/leches@957d6fb(magicast@0.5.5)(unocss@66.6.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))(vue@3.5.43(typescript@5.9.3))':
     dependencies:
       '@unocss/core': 66.10.5
       '@vueuse/components': 15.0.0(vue@3.5.43(typescript@5.9.3))
@@ -19549,7 +19549,7 @@ snapshots:
       - magicast
       - unocss
 
-  '@tresjs/leches@https://pkg.pr.new/@tresjs/leches@2640ac2(magicast@0.5.5)(unocss@66.6.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.1)))(vue@3.5.43(typescript@5.9.3))':
+  '@tresjs/leches@https://pkg.pr.new/@tresjs/leches@957d6fb(magicast@0.5.5)(unocss@66.6.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.1)))(vue@3.5.43(typescript@5.9.3))':
     dependencies:
       '@unocss/core': 66.10.5
       '@vueuse/components': 15.0.0(vue@3.5.43(typescript@5.9.3))
@@ -19560,11 +19560,11 @@ snapshots:
       - magicast
       - unocss
 
-  '@tresjs/nuxt@https://pkg.pr.new/@tresjs/nuxt@2640ac2(08587803592770a6cd21a053d7d3e524)':
+  '@tresjs/nuxt@https://pkg.pr.new/@tresjs/nuxt@957d6fb(08587803592770a6cd21a053d7d3e524)':
     dependencies:
       '@nuxt/kit': 4.6.2(@nuxt/schema@4.6.0)(confbox@0.3.1)(dotenv@17.3.1)(giget@3.3.1)(jiti@2.7.0)(magic-string@1.4.2)(mlly@1.8.2)(oxc-parser@0.151.0)(rolldown@1.2.11)(unplugin@3.4.0(esbuild@0.28.2)(rolldown@1.2.11)(rollup@4.63.5)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))
       '@nuxt/ui': 4.12.0(8b4716387e29846a6a39ae36c880f692)
-      '@tresjs/core': https://pkg.pr.new/@tresjs/core@2640ac2(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
+      '@tresjs/core': https://pkg.pr.new/@tresjs/core@957d6fb(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
       defu: 6.1.7
       mlly: 1.8.2
       ohash: 2.0.12
@@ -19663,11 +19663,11 @@ snapshots:
       - yup
       - zod
 
-  '@tresjs/nuxt@https://pkg.pr.new/@tresjs/nuxt@2640ac2(1641441b2c37220ac5c96d741904d364)':
+  '@tresjs/nuxt@https://pkg.pr.new/@tresjs/nuxt@957d6fb(1641441b2c37220ac5c96d741904d364)':
     dependencies:
       '@nuxt/kit': 4.6.2(@nuxt/schema@4.6.0)(confbox@0.3.1)(dotenv@17.3.1)(giget@3.3.1)(jiti@2.7.0)(magic-string@1.4.2)(mlly@1.8.2)(oxc-parser@0.143.0)(rolldown@1.2.11)(unplugin@3.4.0(esbuild@0.27.3)(rolldown@1.2.11)(rollup@4.59.0)(vite@8.3.3(@types/node@25.4.0)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.46.0)(yaml@2.9.0)))
       '@nuxt/ui': 4.12.0(e6d80fd306c49795effdb846c1eda7a4)
-      '@tresjs/core': https://pkg.pr.new/@tresjs/core@2640ac2(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
+      '@tresjs/core': https://pkg.pr.new/@tresjs/core@957d6fb(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
       defu: 6.1.7
       mlly: 1.8.2
       ohash: 2.0.12
@@ -19766,10 +19766,10 @@ snapshots:
       - yup
       - zod
 
-  '@tresjs/rapier@https://pkg.pr.new/@tresjs/rapier@2640ac2(@tresjs/core@https://pkg.pr.new/@tresjs/core@2640ac2(three@0.186.1)(vue@3.5.43(typescript@5.9.3)))(three@0.186.1)(vue@3.5.43(typescript@5.9.3))':
+  '@tresjs/rapier@https://pkg.pr.new/@tresjs/rapier@957d6fb(@tresjs/core@https://pkg.pr.new/@tresjs/core@957d6fb(three@0.186.1)(vue@3.5.43(typescript@5.9.3)))(three@0.186.1)(vue@3.5.43(typescript@5.9.3))':
     dependencies:
       '@dimforge/rapier3d-compat': 0.20.0
-      '@tresjs/core': https://pkg.pr.new/@tresjs/core@2640ac2(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
+      '@tresjs/core': https://pkg.pr.new/@tresjs/core@957d6fb(three@0.186.1)(vue@3.5.43(typescript@5.9.3))
       '@vueuse/core': 15.0.0(vue@3.5.43(typescript@5.9.3))
       three: 0.186.1
       vue: 3.5.43(typescript@5.9.3)
