@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useControls } from '@tresjs/leches'
 import { sampleHeight, stylizedOutput, toonShoreFoam, type HeightField } from '@artificer-forge/engine/runtime'
-import { cameraFar, cameraNear, cameraPosition, color, exp, positionGeometry, linearDepth, mix, mx_noise_float, mx_worley_noise_float, parallaxUV, positionWorld, screenUV, time, uv, vec3, vec4, viewportLinearDepth, viewportSharedTexture, modelPosition, varying, sin, smoothstep, step } from 'three/tsl'
-import { MeshBasicNodeMaterial } from 'three/webgpu'
+import { cameraFar, cameraNear, cameraPosition, color, exp, positionGeometry, linearDepth, mix, mx_noise_float, mx_worley_noise_float, positionView, positionWorld, screenUV, time, vec2, vec3, vec4, viewportLinearDepth, viewportSharedTexture, modelPosition, varying, sin, step } from 'three/tsl'
+import { MeshBasicNodeMaterial, type Node } from 'three/webgpu'
 import type { Color } from 'three'
 
 const props = defineProps<{
@@ -39,13 +39,20 @@ const water = useUniforms({
    */
   absorption: '#ff5900',
   /** how hard absorption bites per metre of water travelled */
-  absorbStrength: 0.22,
+  absorbStrength: 0.16,
   /** metres of water after which the colour stops deepening */
   maxDepth: 8,
   /** brightness of the caustic light on the sea floor */
-  caustics: 0.57,
+  caustics: 1.6,
   /** Cells per TILE, not per metre. */
   causticsScale: 2,
+  /** how fast the caustics die out, per metre of floor depth */
+  causticsFade: 0.15,
+  /** how fast the caustic lines go soft, per metre of floor depth */
+  causticsBlur: 0.2,
+  sunStrength: 1.2,
+  /** the specular exponent. High on purpose: a soft sheen reads as plastic */
+  sunSharpness: 160,
   seaFoamScale: 2,
   debugView: 0,
 }, 'ocean')
@@ -56,12 +63,6 @@ const TILE = 4
 const tiledUv = positionWorld.xz.div(TILE)
 
 const toCamera = cameraPosition.sub(positionWorld).normalize()
-// Not parallaxUV: it builds its tangent frame from uv, and the disc has no uv.
-// On a flat surface, world x and z are that frame.
-const depthUv = tiledUv.sub(toCamera.xz.mul(0.5))
-
-const causticsUv = vec3(depthUv.mul(water.causticsScale), time.mul(0.3))
-const causticsNoise = mx_worley_noise_float(causticsUv).pow3()
 
 const foamUv = vec3(tiledUv.mul(water.seaFoamScale), time.mul(0.1))
 const foamMask = mx_noise_float(foamUv).abs().step(0.05).oneMinus()
@@ -70,7 +71,8 @@ const foamColor = color(0xE5F7FF)
 // The ocean is transparent, so it draws after the opaque pass and the depth buffer
 // holds the sand or rock under each fragment. The gap between the two is the water
 // depth. Anything that breaks the surface gets a rim, with no per-object setup.
-const alongRay = viewportLinearDepth.sub(linearDepth()).mul(cameraFar.sub(cameraNear)).max(0)
+const viewSpan = cameraFar.sub(cameraNear)
+const alongRay = viewportLinearDepth.sub(linearDepth()).mul(viewSpan).max(0)
 // The gap is measured along the view ray, and a low camera crosses more water for the
 // same drop. The ray's vertical part converts it to metres down, or the band gets
 // wider as the camera goes lower.
@@ -87,27 +89,61 @@ const edgeFade = positionGeometry.xz.length().smoothstep(RADIUS, RADIUS * 0.84)
 // detailFar is read once: raising it later leaves waves on the coarse outer band
 const geometry = createOceanGeometry({ minStep: 0.5, detailRadius: waves.detailFar.value, radius: RADIUS, segments: 96 })
 
+// The surface and the floor behind it sit on one view ray, so the ratio of their view
+// depths walks the ray from the surface down to the floor.
+const floorViewDepth = viewportLinearDepth.mul(viewSpan).add(cameraNear)
+const floorWorld = cameraPosition.add(positionWorld.sub(cameraPosition).mul(floorViewDepth.div(positionView.z.negate())))
+const floorDepth = positionWorld.y.sub(floorWorld.y).max(0)
+
+// Sampled at the floor, so the pattern stays on the sand and posts, not on the surface
+const causticsUv = vec3(floorWorld.xz.div(TILE).mul(water.causticsScale), time.mul(0.3))
+// A cheap blur: a lower power widens the bright lines, and (p + 1) / 5 keeps the
+// average light near the p = 4 level, so softer lines do not also get brighter.
+const causticsPower = mix(4, 1.5, floorDepth.mul(water.causticsBlur).saturate())
+const causticsNoise = mx_worley_noise_float(causticsUv).pow(causticsPower).mul(causticsPower.add(1).div(5))
+const causticsLight = color(0x11EEFF).mul(causticsNoise).mul(water.caustics)
+  .mul(exp(floorDepth.mul(water.causticsFade).negate()))
+
 const grading = useGrading()
 const backdrop = viewportSharedTexture(screenUV).rgb
 // alongRay, not waterDepth: light crosses the water along the view ray, so a low
 // camera sees more of it, like a real sea
 const transmission = exp(water.absorption.mul(water.absorbStrength).mul(alongRay.min(water.maxDepth)).negate())
-// caustics are light ON the sea floor, so they fade with the floor as the water deepens
-const causticsLight = color(0x11EEFF).mul(causticsNoise).mul(water.caustics)
-// NOT a fog toward fogColor: the backdrop already carries the island's fog, so fogging
-// again would haze the sea faster than the island. Converging to the backdrop lands on
-// the correctly fogged pixel instead.
-const seaFloor = mix(backdrop.add(causticsLight).mul(transmission), backdrop, grading.fogStrength)
+// Multiplied, not added: caustics focus sunlight, so floor in shadow gets none
+const litFloor = backdrop.mul(causticsLight.add(1))
 
 const material = new MeshBasicNodeMaterial({ transparent: true, depthWrite: false})
-const worldXZ = positionGeometry.xz.add(modelPosition.xz)
-const seaDepth = sampleHeight(props.heightField, worldXZ).negate()
 
-const phase = wavePhase(waves, seaDepth)
 // The disc is centred on the player, so the raw vertex position is the offset from the player
+function liftAt(offset: Node<'vec2'>) {
+  const xz = positionGeometry.xz.add(offset)
+  const depth = sampleHeight(props.heightField, xz.add(modelPosition.xz)).negate()
+  return sin(wavePhase(waves, depth)).mul(waveAmplitude(waves, depth, xz.length()))
+}
+
+const seaDepth = sampleHeight(props.heightField, positionGeometry.xz.add(modelPosition.xz)).negate()
+const phase = wavePhase(waves, seaDepth)
 const amplitude = waveAmplitude(waves, seaDepth, positionGeometry.xz.length())
 const lift = sin(phase).mul(amplitude)
 material.positionNode = positionGeometry.add(vec3(0, lift, 0))
+
+// Finite differences over one ring step. The disc is flat, so three has no normal for the lifted surface.
+const NORMAL_STEP = 0.5
+const waveNormal = varying(vec3(
+  lift.sub(liftAt(vec2(NORMAL_STEP, 0))).div(NORMAL_STEP),
+  1,
+  lift.sub(liftAt(vec2(0, NORMAL_STEP))).div(NORMAL_STEP),
+)).normalize()
+
+// lightDirection points FROM the light INTO the scene
+const halfway = grading.uniforms.lightDirection.negate().add(toCamera).normalize()
+const sunGlint = waveNormal.dot(halfway).saturate().pow(water.sunSharpness).mul(water.sunStrength)
+const specular = grading.uniforms.lightColor.mul(grading.uniforms.lightIntensity).mul(sunGlint)
+
+// NOT a fog toward fogColor: the backdrop already carries the island's fog, so fogging
+// again would haze the sea faster than the island. Converging to the backdrop lands on
+// the correctly fogged pixel instead.
+const sea = mix(litFloor.mul(transmission).add(specular), backdrop, grading.fogStrength)
 
 // Crest to trough is twice the amplitude. The 5 cm floor makes the thin sheet on the sand
 // always count as broken.
@@ -122,13 +158,13 @@ const crestMask = onCrest.mul(breaking)
 const whiteFoam = shoreMask.max(crestMask)
 const foam = whiteFoam.max(foamMask)
 const foamLit = stylizedOutput(mix(foamColor, shore.foamColor, whiteFoam), grading, { hasCoreShadows: false })
-const seaColor = vec4(mix(seaFloor, foamLit.rgb, foam), edgeFade)
+const seaColor = vec4(mix(sea, foamLit.rgb, foam), edgeFade)
 
 // Debug view: the lift as grey, black in a trough and white on a crest.
 const heightView = vec4(vec3(varying(lift).div(waves.height).mul(0.5).add(0.5).saturate()), 1)
 const crestTint = varying(lift).div(waves.height).mul(waves.crestLight).add(1)
 
-material.outputNode = vec4(mix(seaFloor.mul(crestTint), foamLit.rgb, foam), edgeFade)
+material.outputNode = vec4(mix(sea.mul(crestTint), foamLit.rgb, foam), edgeFade)
 
 const uuid = inject<string>('uuid')
 const hex = (u: { value: Color }) => `#${u.value.getHexString()}`
@@ -143,12 +179,16 @@ const { foamColor: foamColorControl, foamDepth, foamEdge, foamLines, foamWidth, 
   noise: { value: shore.foamNoiseScale.value, min: 0.05, max: 3, step: 0.01, type: 'range' },
 }, { uuid })
 
-const { waterAbsorption, waterStrength, waterMaxDepth, waterCaustics, waterCausticsScale, waterFoamScale } = useControls('🌊 water', {
+const { waterAbsorption, waterStrength, waterMaxDepth, waterCaustics, waterCausticsScale, waterCausticsFade, waterCausticsBlur, waterSunStrength, waterSunSharpness, waterFoamScale } = useControls('🌊 water', {
   absorption: { value: hex(water.absorption), type: 'color' },
   strength: { value: water.absorbStrength.value, min: 0, max: 3, step: 0.01, type: 'range' },
   maxDepth: { value: water.maxDepth.value, min: 0.5, max: 20, step: 0.1, type: 'range' },
-  caustics: { value: water.caustics.value, min: 0, max: 1, step: 0.01, type: 'range' },
+  caustics: { value: water.caustics.value, min: 0, max: 4, step: 0.01, type: 'range' },
   causticsScale: { value: water.causticsScale.value, min: 0.5, max: 20, step: 0.1, type: 'range' },
+  causticsFade: { value: water.causticsFade.value, min: 0, max: 2, step: 0.01, type: 'range' },
+  causticsBlur: { value: water.causticsBlur.value, min: 0, max: 2, step: 0.01, type: 'range' },
+  sunStrength: { value: water.sunStrength.value, min: 0, max: 4, step: 0.01, type: 'range' },
+  sunSharpness: { value: water.sunSharpness.value, min: 4, max: 512, step: 1, type: 'range' },
   foamScale: { value: water.seaFoamScale.value, min: 0.5, max: 20, step: 0.1, type: 'range' },
 }, { uuid })
 
@@ -180,6 +220,10 @@ useUniforms({
   maxDepth: waterMaxDepth!,
   caustics: waterCaustics!,
   causticsScale: waterCausticsScale!,
+  causticsFade: waterCausticsFade!,
+  causticsBlur: waterCausticsBlur!,
+  sunStrength: waterSunStrength!,
+  sunSharpness: waterSunSharpness!,
   seaFoamScale: waterFoamScale!,
   debugView: () => (wavesDebug!.value ? 1 : 0),
 }, 'ocean')
