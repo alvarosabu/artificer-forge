@@ -27,6 +27,7 @@ const {
   cameraZoom,
   cameraZoomSensitivity,
   cameraEasing,
+  cameraHeightSmoothing,
   cameraPan,
   cameraMagnet,
   cameraStickOrbit,
@@ -43,6 +44,8 @@ const {
   zoom: { value: 0, min: 0, max: 1, step: 0.01, type: 'range' },
   zoomSensitivity: { value: 0.05, min: 0, max: 0.5, step: 0.005, type: 'range' },
   easing: { value: 10, min: 0.5, max: 30, step: 0.5, type: 'range' },
+  // Seconds the height takes to settle. Separate from easing so small terrain bumps do not shake the view.
+  heightSmoothing: { value: 0.35, min: 0, max: 1.5, step: 0.05, type: 'range' },
   pan: { value: true, type: 'boolean' },
   magnet: { value: 0.25, min: 0, max: 1, step: 0.01, type: 'range' },
   // Right-stick orbit speed in degrees per second at full tilt.
@@ -59,6 +62,7 @@ const tracked = new Vector3()
 const focus = new Vector3(...props.target)
 const smoothFocus = focus.clone()
 const offset = new Vector3()
+let heightVelocity = 0
 const pan = new Vector2()
 const origin = new Vector2()
 let isTracking = true
@@ -87,6 +91,26 @@ watch(() => cameraPhi?.value, (value) => { if (value !== undefined) phi = value 
 // A new target means the player moved: follow them again, like Bruno's resume on drive input.
 watch(() => props.target, () => { isTracking = true }, { deep: true })
 
+// Critically damped spring (Unity's SmoothDamp). Unlike a lerp it also smooths the speed, so each bump does not kink the motion.
+function smoothHeight(current: number, target: number, smoothTime: number, delta: number) {
+  if (smoothTime <= 0 || delta <= 0) {
+    heightVelocity = 0
+    return target
+  }
+  const omega = 2 / smoothTime
+  const x = omega * delta
+  const decay = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x)
+  const change = current - target
+  // Snap once settled, so free mode stops moving the camera instead of creeping forever.
+  if (Math.abs(change) < 1e-4 && Math.abs(heightVelocity) < 1e-4) {
+    heightVelocity = 0
+    return target
+  }
+  const temp = (heightVelocity + omega * change) * delta
+  heightVelocity = (heightVelocity - omega * temp) * decay
+  return target + (change + temp) * decay
+}
+
 const { onBeforeRender } = useLoop()
 
 onBeforeRender(({ delta, camera }) => {
@@ -103,12 +127,17 @@ onBeforeRender(({ delta, camera }) => {
   }
 
   tracked.set(...props.target)
+  const heightTime = cameraHeightSmoothing?.value ?? 0.35
   if (cameraFree?.value && freePlaced) {
-    step.subVectors(tracked, smoothFocus)
+    step.set(
+      tracked.x - smoothFocus.x,
+      smoothHeight(smoothFocus.y, tracked.y, heightTime, delta) - smoothFocus.y,
+      tracked.z - smoothFocus.z,
+    )
     if (step.lengthSq() === 0) return
     cam.position.add(step)
-    smoothFocus.copy(tracked)
-    orbitTarget.value = [tracked.x, tracked.y, tracked.z]
+    smoothFocus.add(step)
+    orbitTarget.value = [smoothFocus.x, smoothFocus.y, smoothFocus.z]
     return
   }
   // Non-inverted: stick right turns the view right, stick up lowers the camera to look up.
@@ -133,11 +162,14 @@ onBeforeRender(({ delta, camera }) => {
 
   // Bruno lerps by delta * 10; the exp form feels the same without frame-rate drift.
   const easing = 1 - Math.exp(-(cameraEasing?.value ?? 10) * delta)
+  const height = smoothFocus.y
   smoothFocus.lerp(focus, easing)
+  smoothFocus.y = smoothHeight(height, focus.y, heightTime, delta)
   smoothZoom = MathUtils.lerp(smoothZoom, zoomRatio.value, easing)
   // Free mode takes this pose once, so skip the easing and land on it now.
   if (cameraFree?.value) {
     smoothFocus.copy(focus)
+    heightVelocity = 0
     smoothZoom = zoomRatio.value
   }
 
