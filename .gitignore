@@ -51,3 +51,5 @@ coverage
 
 # Blender autosave backups
 *.blend1
+
+.mcp.json

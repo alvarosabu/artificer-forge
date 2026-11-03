@@ -8,8 +8,9 @@ import type { ExposedRigidBody } from '@tresjs/rapier'
 import { createDustTrail } from '@artificer-forge/vfx'
 import { useDofFocus } from '@artificer-forge/post-processing'
 import { MathUtils, Vector2, Vector3 } from 'three'
-import { positionWorld } from 'three/tsl'
+import { positionWorld, uniform } from 'three/tsl'
 import type { Group, Mesh } from 'three'
+import type { NodeMaterial } from 'three/webgpu'
 import { RIDE_HEIGHT } from '~/composables/useCharacterBody'
 import type { ColliderSurface } from '~/composables/useStaticColliders'
 import { isSwimming, PLAYER_TUNING } from '~/composables/usePlayerController'
@@ -40,6 +41,12 @@ position.value = [...props.spawn]
 
 const uuid = inject<string>('uuid')
 const grading = useGrading()
+const face = useCharacterFace(grading)
+if (import.meta.dev) useCharacterFaceCommands(face)
+
+// Every Chamo pixel reads the shadow map at this one point above the hair, so Chamo is shaded by the world but not by itself.
+const SHADOW_PROBE_HEIGHT = 2.5
+const shadowProbe = uniform(new Vector3())
 
 const { state } = useGLTF('/models/chamo/Chamo-v4.glb', { draco: true })
 
@@ -49,6 +56,8 @@ const animations = computed(() => state.value?.animations ?? [])
 const { actions } = useAnimations(animations, scene)
 
 const {
+  playerEyes,
+  playerMouth,
   playerWalkSpeed,
   playerRunSpeed,
   playerWalkClipSpeed,
@@ -74,6 +83,8 @@ const {
   playerHitKick,
   playerHitLift,
 } = useControls('🏃 player', {
+  eyes: { value: 0, min: 0, max: 6, step: 1, type: 'range' },
+  mouth: { value: 0, min: 0, max: 5, step: 1, type: 'range' },
   walkSpeed: { value: PLAYER_TUNING.walkSpeed, min: 0.1, max: 5, step: 0.05, type: 'range' },
   runSpeed: { value: PLAYER_TUNING.runSpeed, min: 0.5, max: 10, step: 0.1, type: 'range' },
   walkClipSpeed: { value: PLAYER_TUNING.walkClipSpeed, min: 0.1, max: 3, step: 0.05, type: 'range' },
@@ -157,6 +168,9 @@ watch(dustLifetime!, (v) => { dust.uniforms.lifetime.value = v })
 watch(dustRise!, (v) => { dust.uniforms.rise.value = v })
 watch(dustDrag!, (v) => { dust.uniforms.drag.value = v })
 watch(dustOpacity!, v => dust.setOpacity(v))
+
+watch(playerEyes!, (v) => face.show(v, playerMouth?.value ?? 0))
+watch(playerMouth!, (v) => face.show(playerEyes?.value ?? 0, v))
 
 const { onBeforeRender } = useLoop()
 onBeforeRender(({ elapsed }) => dust.update(elapsed))
@@ -261,6 +275,8 @@ const controller = usePlayerController(root, body, actions, {
   },
 })
 
+if (import.meta.dev) useAnimationCommands(() => animations.value.map(clip => clip.name), controller)
+
 // One bob every 2π / 2.4 ≈ 2.6 seconds.
 const BOB_SPEED = 2.4
 const BOB_HEIGHT = 0.06
@@ -300,6 +316,7 @@ const contacts = useClipContacts(actions, controller.state, (state) => {
 
 onBeforeRender(({ elapsed, delta }) => {
   contacts.update(elapsed)
+  shadowProbe.value.fromArray(position.value).y += SHADOW_PROBE_HEIGHT
 
   const group = root.value
   if (!group) return
@@ -327,10 +344,19 @@ onBeforeRender(({ elapsed, delta }) => {
 watch(scene, (model) => {
   if (!model) return
   model.traverse((child) => {
-    if ((child as Mesh).isMesh) child.castShadow = true
+    if ((child as Mesh).isMesh) child.castShadow = child.receiveShadow = true
   })
+  face.attach(model)
   const groundHeight = props.heightField ? sampleHeight(props.heightField, positionWorld.xz) : undefined
   applyGradingToModel(model, grading, { groundHeight })
+  model.traverse((child) => {
+    const mesh = child as Mesh
+    if (!mesh.isMesh) return
+    const material = mesh.material as NodeMaterial
+    material.receivedShadowPositionNode = shadowProbe
+    // The graded materials are cached on the GLB material, so a remount must rebuild them for its own probe.
+    material.needsUpdate = true
+  })
 }, { immediate: true })
 </script>
 

@@ -5,8 +5,10 @@ export default defineNuxtConfig({
   modules: [
     '@tresjs/nuxt',
     '@nuxt/devtools',
+    '@nuxt/ui',
     '@artificer-forge/assets/nuxt',
   ],
+  css: ['~/assets/css/main.css'],
   tres: {
     renderer: 'webgpu',
   },

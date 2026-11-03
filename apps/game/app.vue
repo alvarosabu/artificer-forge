@@ -1,5 +1,8 @@
 <template>
-  <div>
+  <UApp>
     <NuxtPage />
-  </div>
+    <DevOnly>
+      <DevCommandPalette />
+    </DevOnly>
+  </UApp>
 </template>

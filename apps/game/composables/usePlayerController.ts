@@ -98,6 +98,7 @@ const MAX_PLUNGE_SPEED = 5
 const MIN_HIT_SPEED = 0.5
 // Distance between two swim strokes. One arm pull covers more water than one foot covers ground.
 const STROKE_LENGTH = 0.9
+const PREVIEW_FADE = 0.2
 
 
 interface StateDefinition {
@@ -536,5 +537,23 @@ export function usePlayerController(
     if (movement.lengthSq() > 1e-6) options.onMove?.(position)
   })
 
-  return { state: readonly(state), groundCollider: characterBody.groundCollider }
+  /** Plays any clip in a loop without a state change. The next state change replaces it. */
+  function previewClip(name: string) {
+    const clip = actions[name]
+    if (!clip) return
+    clip.reset()
+    clip.setLoop(LoopRepeat, Infinity)
+    clip.clampWhenFinished = false
+    clip.setEffectiveTimeScale(1)
+    clip.setEffectiveWeight(1)
+    clip.fadeIn(PREVIEW_FADE).play()
+    if (action && action !== clip) action.fadeOut(PREVIEW_FADE)
+    action = clip
+  }
+
+  function stopPreview() {
+    enter(state.value)
+  }
+
+  return { state: readonly(state), groundCollider: characterBody.groundCollider, previewClip, stopPreview }
 }
