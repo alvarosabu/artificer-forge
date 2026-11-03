@@ -56,8 +56,6 @@ const animations = computed(() => state.value?.animations ?? [])
 const { actions } = useAnimations(animations, scene)
 
 const {
-  playerEyes,
-  playerMouth,
   playerWalkSpeed,
   playerRunSpeed,
   playerWalkClipSpeed,
@@ -83,8 +81,6 @@ const {
   playerHitKick,
   playerHitLift,
 } = useControls('🏃 player', {
-  eyes: { value: 0, min: 0, max: 6, step: 1, type: 'range' },
-  mouth: { value: 0, min: 0, max: 5, step: 1, type: 'range' },
   walkSpeed: { value: PLAYER_TUNING.walkSpeed, min: 0.1, max: 5, step: 0.05, type: 'range' },
   runSpeed: { value: PLAYER_TUNING.runSpeed, min: 0.5, max: 10, step: 0.1, type: 'range' },
   walkClipSpeed: { value: PLAYER_TUNING.walkClipSpeed, min: 0.1, max: 3, step: 0.05, type: 'range' },
@@ -168,9 +164,6 @@ watch(dustLifetime!, (v) => { dust.uniforms.lifetime.value = v })
 watch(dustRise!, (v) => { dust.uniforms.rise.value = v })
 watch(dustDrag!, (v) => { dust.uniforms.drag.value = v })
 watch(dustOpacity!, v => dust.setOpacity(v))
-
-watch(playerEyes!, (v) => face.show(v, playerMouth?.value ?? 0))
-watch(playerMouth!, (v) => face.show(playerEyes?.value ?? 0, v))
 
 const { onBeforeRender } = useLoop()
 onBeforeRender(({ elapsed }) => dust.update(elapsed))

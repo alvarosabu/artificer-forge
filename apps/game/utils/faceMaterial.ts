@@ -3,6 +3,7 @@ import { cameraWorldMatrix, normalMap, normalWorld, texture, uniform, uv, vec4 }
 import { MeshLambertNodeMaterial, Vector2 } from 'three/webgpu'
 import { createDropShadowCatcher, stylizedOutput } from '@artificer-forge/engine/runtime'
 import type { GradingContext } from '@artificer-forge/engine/runtime'
+import type { Node } from 'three/webgpu'
 
 export interface AtlasGrid {
     columns: number

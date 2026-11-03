@@ -1,4 +1,4 @@
-import type { Node } from "three/webgpu"
+import type { Node, NodeMaterial } from "three/webgpu"
 import { cameraPosition, float, Fn, Loop, mix, normalWorld, positionWorld, sin, step, time, vec3, vec4 } from "three/tsl"
 import { GradingContext } from "./grading"
 
@@ -37,10 +37,11 @@ export function createDropShadowCatcher() {
     const shadowFactor = float(1).toVar()
     return {
         shadowFactor,
+        // @types/three types this as a zero-argument function, but three calls it with the shadow node.
         receivedShadowNode: Fn(([shadow]: [any]) => {
             shadowFactor.mulAssign(shadow.r)
             return float(1)
-        }),
+        }) as unknown as NonNullable<NodeMaterial['receivedShadowNode']>,
     }
 }
 

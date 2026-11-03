@@ -54,19 +54,10 @@ export function useCharacterFace(grading: GradingContext) {
     return face
   }
 
-  function show(eyesAt: number, mouthAt: number) {
-    const shown = EXPRESSIONS[expression.value]
-
-    eyes?.showCell(EYE_CELLS.indexOf(shown.eyes))
-    mouth?.showCell(MOUTH_CELLS.indexOf(shown.mouth))
-  }
-
   function attach(model: Object3D) {
     eyes = applyFaceMaterial(model, 'Eyes', EYES_GRID)
     mouth = applyFaceMaterial(model, 'Mouth', MOUTH_GRID)
   }
-
-  watch(expression, show)
 
   const { onBeforeRender } = useLoop()
   onBeforeRender(({ elapsed }) => {
@@ -86,7 +77,7 @@ export function useCharacterFace(grading: GradingContext) {
     mouth?.material.dispose()
   })
 
-  return { attach, show, expression }
+  return { attach, expression }
 }
 
 export type CharacterFace = ReturnType<typeof useCharacterFace>
