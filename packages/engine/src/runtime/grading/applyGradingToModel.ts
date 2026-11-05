@@ -42,9 +42,16 @@ export function applyGradingToModel(root: Object3D, grading: GradingContext, { g
 
             const std = source as MeshStandardMaterial
             const tint = uniform(new Color(std.color ?? '#ffffff'))
-            const baseColor = std.map ? texture(std.map).rgb.mul(tint) : tint
-            // No baked AO in our GLBs, so approximate: down-facing surfaces lose sky
-            // light, anything near the ground picks up contact occlusion.
+            const map = std.map ? texture(std.map) : undefined
+            const baseColor = map ? map.rgb.mul(tint) : tint
+            const alphaTest = std.alphaTest > 0 ? std.alphaTest : undefined
+            const alphaNode = std.transparent || alphaTest !== undefined
+                ? (map ? map.a.mul(std.opacity) : float(std.opacity))
+                : undefined
+            material.transparent = std.transparent
+            material.depthWrite = std.depthWrite
+            if (alphaNode && alphaTest !== undefined) material.maskShadowNode = alphaNode.greaterThanEqual(alphaTest)
+       
             const skyAo = normalWorld.y.negate().max(0).mul(0.5).oneMinus()
             const heightAboveGround = positionWorld.y.sub(groundHeight ?? float(0))
             const contactAo = heightAboveGround.smoothstep(0, 0.35).oneMinus().mul(0.6).oneMinus()
@@ -52,7 +59,7 @@ export function applyGradingToModel(root: Object3D, grading: GradingContext, { g
             if (std.aoMap) aoNode = aoNode.mul(texture(std.aoMap, uv(std.aoMap.channel)).r)
             const dropShadow = createDropShadowCatcher()
             material.receivedShadowNode = dropShadow.receivedShadowNode
-            material.outputNode = stylizedOutput(baseColor, grading, { hasMidTone: true, hasRim: true, hasSpecular: true, aoNode, dropShadowNode: dropShadow.shadowFactor })
+            material.outputNode = stylizedOutput(baseColor, grading, { hasMidTone: true, hasRim: true, hasSpecular: true, aoNode, alphaNode, alphaTest, dropShadowNode: dropShadow.shadowFactor })
 
             source.userData.gradedMaterial = material
             source.userData.gradedGrading = grading
