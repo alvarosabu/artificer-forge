@@ -50,8 +50,8 @@ export function applyGradingToModel(root: Object3D, grading: GradingContext, { g
                 : undefined
             material.transparent = std.transparent
             material.depthWrite = std.depthWrite
-            // No baked AO in our GLBs, so approximate: down-facing surfaces lose sky
-            // light, anything near the ground picks up contact occlusion.
+            if (alphaNode && alphaTest !== undefined) material.maskShadowNode = alphaNode.greaterThanEqual(alphaTest)
+       
             const skyAo = normalWorld.y.negate().max(0).mul(0.5).oneMinus()
             const heightAboveGround = positionWorld.y.sub(groundHeight ?? float(0))
             const contactAo = heightAboveGround.smoothstep(0, 0.35).oneMinus().mul(0.6).oneMinus()

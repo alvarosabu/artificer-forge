@@ -321,7 +321,7 @@ export function usePlayerController(
     },
   }
 
-  function enter(next: PlayerState) {
+  function enter(next: PlayerState, { restore = false } = {}) {
     const definition = states[next]
     const nextAction = actions[definition.clip]
     if (!nextAction) return
@@ -338,7 +338,7 @@ export function usePlayerController(
 
     action = nextAction
     state.value = next
-    definition.enter?.(from)
+    if (!restore) definition.enter?.(from)
   }
 
   function updateCameraBasis(camera: Camera | undefined) {
@@ -552,7 +552,7 @@ export function usePlayerController(
   }
 
   function stopPreview() {
-    enter(state.value)
+    enter(state.value, { restore: true })
   }
 
   return { state: readonly(state), groundCollider: characterBody.groundCollider, previewClip, stopPreview }
