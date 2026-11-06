@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 576 384" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:affinity="https://www.affinity.studio/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <path d="M64,0L512,0L512,64L64,64L64,0ZM576,64L576,128L512,128L512,64L576,64ZM512,128L512,192L448,192L448,128L512,128ZM448,192L448,256L384,256L384,192L448,192ZM384,256L384,320L320,320L320,256L384,256ZM320,320L320,384L256,384L256,320L320,320ZM256,320L192,320L192,256L256,256L256,320ZM192,256L128,256L128,192L192,192L192,256ZM128,192L64,192L64,128L128,128L128,192ZM64,128L0,128L0,64L64,64L64,128Z"/>
+    <rect x="0" y="0" width="64" height="64" style="fill:rgb(136,151,153);"/>
+    <rect x="512" y="0" width="64" height="64" style="fill:rgb(136,151,153);"/>
+    <path d="M128,128L64,128L64,64L448,64L448,128L384,128L384,192L256,192L256,256L192,256L192,192L128,192L128,128Z" style="fill:white;"/>
+    <path d="M448,128L448,192L384,192L384,128L448,128ZM448,128L448,64L512,64L512,128L448,128Z" style="fill:rgb(205,213,216);"/>
+    <rect x="256" y="192" width="64" height="64" style="fill:rgb(205,213,216);"/>
+    <path d="M320,256L320,320L256,320L256,256L320,256ZM320,256L320,192L384,192L384,256L320,256Z" style="fill:rgb(136,151,153);"/>
+</svg>
