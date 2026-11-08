@@ -9,6 +9,24 @@ export default defineNuxtConfig({
     '@artificer-forge/assets/nuxt',
   ],
   css: ['~/assets/css/main.css'],
+  // the theme declares its own @font-face for Rando Mono; @nuxt/fonts would try to fetch it from a provider
+  ui: {
+    fonts: false,
+  },
+  // own key: the playground shares the localhost origin and its stored mode would override 'dark'
+  colorMode: {
+    preference: 'dark',
+    fallback: 'dark',
+    storageKey: 'game-color-mode',
+  },
+  app: {
+    head: {
+      link: [
+        { rel: 'preload', as: 'font', type: 'font/otf', href: '/fonts/RandoMono-Bold.otf', crossorigin: '' },
+        { rel: 'preload', as: 'font', type: 'font/otf', href: '/fonts/RandoMono-Chonk.otf', crossorigin: '' },
+      ],
+    },
+  },
   tres: {
     renderer: 'webgpu',
   },

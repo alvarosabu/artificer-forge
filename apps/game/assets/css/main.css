@@ -1,2 +1,53 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+
+/* only Bold and Chonk are declared; any lighter weight (normal body text too) resolves to Bold */
+@font-face {
+  font-family: "Rando Mono";
+  src: url("/fonts/RandoMono-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Rando Mono";
+  src: url("/fonts/RandoMono-Chonk.otf") format("opentype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: "Rando Mono", ui-monospace, monospace;
+  --font-mono: "Rando Mono", ui-monospace, monospace;
+
+  --color-selection: #6A5BBB;
+  --color-accent: #5EDCAE;
+  --color-continue: #C185AD;
+}
+
+/* static: Nuxt UI reads the scale through var(), so Tailwind would prune it as unused */
+@theme static {
+  --color-iris-50: #F4F4FF;
+  --color-iris-100: #E9E9FF;
+  --color-iris-200: #D4D4FF;
+  --color-iris-300: #BAB8FF;
+  --color-iris-400: #9C95FD;
+  --color-iris-500: #7B61FF;
+  --color-iris-600: #664DDB;
+  --color-iris-700: #533EB5;
+  --color-iris-800: #41328E;
+  --color-iris-900: #302568;
+  --color-iris-950: #1D1645;
+}
+
+/* Nuxt UI defaults dark mode to primary-400; the theme wants the exact #7B61FF */
+:root,
+.dark {
+  --ui-primary: var(--ui-color-primary-500);
+  --ui-bg: #333333;
+  --ui-bg-elevated: #505050;
+  --ui-text: #FFFFFF;
+  --ui-text-highlighted: #FFFFFF;
+}
