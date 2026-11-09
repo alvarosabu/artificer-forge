@@ -34,7 +34,7 @@ export function useImpactSounds(
   options: {
     waterAt?: (x: number, z: number) => number | null
     /** Called where a body drops through the water, with its fall speed and horizontal velocity. */
-    onSplash?: (at: Vector3, fallSpeed: number, motion: Vector3) => void
+    onSplash?: (at: Vector3, fallSpeed: number, motion: Vector3, body: ExposedRigidBody) => void
   } = {},
 ) {
   const audio = useAudio()
@@ -75,7 +75,7 @@ export function useImpactSounds(
           refDistance: SPLASH_REF_DISTANCE,
           rolloff: SPLASH_ROLLOFF,
         })
-        options.onSplash?.(at, -velocity.y, motion.set(velocity.x, 0, velocity.z))
+        options.onSplash?.(at, -velocity.y, motion.set(velocity.x, 0, velocity.z), exposed)
       }
       // Knocks on the sea floor would be muffled, and right after the splash they only muddy it.
       else if (aboveWater >= 0 && !body.isSleeping()) {
