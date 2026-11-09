@@ -13,6 +13,7 @@ import { useCharacterController } from '../useCharacterController'
 import { useContextMenu } from '../useContextMenu'
 import { useActionBar } from '../useActionBar'
 import { useEquipment } from '../useEquipment'
+import { type Hand, useHeldItems } from '../useHeldItems'
 import { useStatusEffectOverlay } from '../useStatusEffectOverlay'
 import { useStatusEffectParticles } from '../useStatusEffectParticles'
 import { useStatusEffectAnimations } from '../useStatusEffectAnimations'
@@ -244,27 +245,14 @@ function handleClick() {
   }
 }
 
-const BONE_NAMES: Record<string, string> = {
-  mainHand: 'handslotr',
-  offHand: 'handslotl',
+const heldItems = useHeldItems(rig)
+
+function attachToHand(slot: Hand, object: import('three').Object3D) {
+  heldItems.hold(slot, object)
 }
 
-const extraAttachments: Record<string, import('three').Object3D | null> = {}
-
-function attachToHand(slot: 'mainHand' | 'offHand', object: import('three').Object3D) {
-  const boneName = BONE_NAMES[slot]!
-  const bone = rig.value?.getObjectByName(boneName)
-  if (!bone) return
-  detachFromHand(slot)
-  bone.add(object)
-  extraAttachments[slot] = object
-}
-
-function detachFromHand(slot: 'mainHand' | 'offHand') {
-  const obj = extraAttachments[slot]
-  if (!obj) return
-  obj.parent?.remove(obj)
-  extraAttachments[slot] = null
+function detachFromHand(slot: Hand) {
+  heldItems.release(slot)
 }
 
 // live position: the store only syncs on arrival, so trail/trample effects read this

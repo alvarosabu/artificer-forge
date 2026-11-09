@@ -144,6 +144,10 @@ _Avoid_: pick up (that is a world item), take, plunder
 One of the eleven sockets an item can be equipped in (main hand, off hand, rings, ...). Bare "slot" in the Engine means this.
 _Avoid_: slot (when another slot is meant), gear slot, socket
 
+**Held item**:
+An object parented to a hand slot bone (`handslot.r` for the main hand, `handslot.l` for the off hand) so it follows the hand through every clip. Clips show and hide it by keying the bone's scale. Not an equipment slot: a phone or a tool can be held without being equipped.
+_Avoid_: attachment, prop, socket item
+
 **Encumbrance**:
 The ratio of carried weight to carry capacity.
 _Avoid_: weight limit, load, burden

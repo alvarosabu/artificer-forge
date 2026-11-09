@@ -22,6 +22,7 @@ useDofFocusProvider()
 // Chamo writes this as it moves and the camera follows it.
 const playerPosition = ref<PlayerPosition>([0, 0, 0])
 providePlayerPosition(playerPosition)
+providePhone()
 
 useAchievementCommands()
 
@@ -93,4 +94,5 @@ const { physicsDebug } = useControls('⚛️ physics', {
     </EnvironmentController>
     <PostProcessing />
   </TresCanvas>
+  <PhoneMenu />
 </template>

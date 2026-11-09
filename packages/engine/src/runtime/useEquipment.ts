@@ -5,13 +5,9 @@ import { useGraph, type TresObject3D } from '@tresjs/core'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { type Equipment, useGameStore } from './stores/game'
+import { HAND_BONES } from './useHeldItems'
 
 type Slot = keyof Equipment
-
-const BONE_NAMES: Record<Slot, string> = {
-  mainHand: 'handslotr',
-  offHand: 'handslotl',
-}
 
 const dracoLoader = new DRACOLoader()
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/')
@@ -63,7 +59,7 @@ export function useEquipment(
   const requestIds: Record<Slot, number> = { mainHand: 0, offHand: 0 }
 
   function getBone(slot: Slot) {
-    return graph.value?.nodes?.[BONE_NAMES[slot]] ?? null
+    return graph.value?.nodes?.[HAND_BONES[slot]] ?? null
   }
 
   function detach(slot: Slot) {

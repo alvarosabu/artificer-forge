@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useAnimations, useGLTF } from '@tresjs/cientos'
-import { applyGradingToModel, sampleHeight, stylizedOutput } from '@artificer-forge/engine/runtime'
+import { applyGradingToModel, sampleHeight, stylizedOutput, useHeldItems } from '@artificer-forge/engine/runtime'
 import type { HeightField } from '@artificer-forge/engine/runtime'
 import { useControls } from '@tresjs/leches'
 import { CapsuleCollider, RigidBody } from '@tresjs/rapier'
@@ -9,11 +9,11 @@ import { createDustTrail } from '@artificer-forge/vfx'
 import { useDofFocus } from '@artificer-forge/post-processing'
 import { MathUtils, Vector2, Vector3 } from 'three'
 import { positionWorld, uniform } from 'three/tsl'
-import type { Group, Mesh } from 'three'
+import type { Group, Mesh, Object3D } from 'three'
 import type { NodeMaterial } from 'three/webgpu'
 import { RIDE_HEIGHT } from '~/composables/useCharacterBody'
 import type { ColliderSurface } from '~/composables/useStaticColliders'
-import { isSwimming, PLAYER_TUNING } from '~/composables/usePlayerController'
+import { canTakeOutPhone, isSwimming, isUsingPhone, PLAYER_TUNING } from '~/composables/usePlayerController'
 import type { PlayerState, PlayerTuning } from '~/composables/usePlayerController'
 
 const props = withDefaults(defineProps<{
@@ -54,6 +54,11 @@ const scene = computed(() => state.value?.scene)
 const animations = computed(() => state.value?.animations ?? [])
 
 const { actions } = useAnimations(animations, scene)
+
+const { state: heldItemsState } = useGLTF('/models/chamo/Chamo_Props.glb', { draco: true })
+const phoneModel = computed(() => heldItemsState.value?.scene?.getObjectByName('Phone'))
+const heldItems = useHeldItems(scene)
+const phone = usePhone()
 
 const {
   playerWalkSpeed,
@@ -266,6 +271,26 @@ const controller = usePlayerController(root, body, actions, {
     splash.burst(surface, motion.length())
     audio.play(impactSpeed >= BIG_SPLASH_SPEED ? 'splashBig' : 'splash', { volume: impactLevel({ impactSpeed, ...IMPACT_SPEEDS }) })
   },
+  wantsPhone: () => phone.open.value,
+  // The phone clips hold it in the left hand.
+  onPhoneHold: () => {
+    if (phoneModel.value) heldItems.hold('offHand', phoneModel.value)
+  },
+  onPhoneRelease: () => heldItems.release('offHand'),
+})
+
+watchEffect(() => {
+  const state = controller.state.value
+  phone.available.value = !!phoneModel.value && (canTakeOutPhone(state) || isUsingPhone(state))
+  // A swim or fall cuts the phone short. Clear the request, or Chamo takes the phone out again on landing.
+  if (!canTakeOutPhone(state) && !isUsingPhone(state)) phone.open.value = false
+})
+
+// The clips key the hand slot scale from 0 to 1 when the phone appears, so the panel opens and closes with it.
+onBeforeRender(() => {
+  const inHand = !!heldItems.held('offHand') && (heldItems.bone('offHand')?.scale.x ?? 0) > 0.5
+  if (phone.inHand.value !== inHand) phone.inHand.value = inHand
+  if (root.value) phone.yaw.value = root.value.rotation.y
 })
 
 if (import.meta.dev) useAnimationCommands(() => animations.value.map(clip => clip.name), controller)
@@ -291,6 +316,7 @@ watch(root, (group, previous) => {
 
 onUnmounted(() => {
   if (root.value) dofFocus?.clearFocusTarget(root.value)
+  phone.open.value = phone.available.value = phone.inHand.value = false
 })
 
 const feet = new Vector3()
@@ -334,12 +360,10 @@ onBeforeRender(({ elapsed, delta }) => {
   else splash.endSwim()
 })
 
-watch(scene, (model) => {
-  if (!model) return
+function shade(model: Object3D) {
   model.traverse((child) => {
     if ((child as Mesh).isMesh) child.castShadow = child.receiveShadow = true
   })
-  face.attach(model)
   const groundHeight = props.heightField ? sampleHeight(props.heightField, positionWorld.xz) : undefined
   applyGradingToModel(model, grading, { groundHeight })
   model.traverse((child) => {
@@ -350,6 +374,16 @@ watch(scene, (model) => {
     // The graded materials are cached on the GLB material, so a remount must rebuild them for its own probe.
     material.needsUpdate = true
   })
+}
+
+watch(scene, (model) => {
+  if (!model) return
+  face.attach(model)
+  shade(model)
+}, { immediate: true })
+
+watch(phoneModel, (model) => {
+  if (model) shade(model)
 }, { immediate: true })
 </script>
 
