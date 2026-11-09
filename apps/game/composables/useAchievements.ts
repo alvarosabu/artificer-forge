@@ -50,6 +50,8 @@ export function useAchievements() {
 
   function lock(id: AchievementId) {
     unlocked.value.delete(id)
+    const index = pending.indexOf(id)
+    if (index !== -1) pending.splice(index, 1)
   }
 
   return { unlocked: readonly(unlocked), unlock, lock }
