@@ -100,6 +100,10 @@ function close() {
   phone.open.value = false
 }
 
+// A focused app icon can lag behind the keyboard highlight, so only the other buttons keep their native Enter and Space.
+const activatesItself = (target: EventTarget | null) =>
+  target instanceof HTMLButtonElement && target.getAttribute('role') !== 'menuitem'
+
 function onKeyDown(event: KeyboardEvent) {
   if (isEditableTarget(event)) return
   if (event.code === TOGGLE_KEY) {
@@ -114,6 +118,7 @@ function onKeyDown(event: KeyboardEvent) {
     move(...direction)
   }
   else if (SELECT_KEYS.has(event.code) && !event.repeat) {
+    if (event.code !== 'KeyE' && activatesItself(event.target)) return
     event.preventDefault()
     select(highlighted.value)
   }
