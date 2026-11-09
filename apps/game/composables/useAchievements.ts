@@ -15,6 +15,8 @@ export function useAchievements() {
     showing = id !== undefined
     if (!id) return
     const { name, icon } = ACHIEVEMENTS[id]
+    // Reka's Escape listener is on the window and lives through the exit animation, so close can fire twice.
+    let closed = false
     toast.add({
       title: '🏆 Achievement Unlocked',
       description: name,
@@ -34,7 +36,9 @@ export function useAchievements() {
         description: 'mt-1.5 text-base font-black text-highlighted',
       },
       'onUpdate:open': (open) => {
-        if (!open) setTimeout(showNext, QUEUE_GAP)
+        if (open || closed) return
+        closed = true
+        setTimeout(showNext, QUEUE_GAP)
       },
     })
   }
