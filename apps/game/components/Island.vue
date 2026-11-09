@@ -69,6 +69,8 @@ const isWoodFloor = (mesh: Mesh) => /^(Deck_Surface|Wood_Plank)/.test(mesh.name)
 // A `-rigid` mesh is a dynamic body whose collider comes from its own geometry (Godot's suffix,
 // as read by `tres gltf --physics rapier`). `includes`, because Blender's `.001` arrives as `001`.
 const isRigid = (object: Object3D) => object.name.includes('-rigid')
+// The voxel letters of the name sign on the beach.
+const isLetter = (object: Object3D) => object.name.startsWith('alvarosabu_')
 
 interface RigidProp {
   mesh: Mesh
@@ -80,7 +82,14 @@ interface RigidProp {
 const rigidProps = shallowRef<RigidProp[]>([])
 const propBodies = useTemplateRef<ExposedRigidBody[]>('propBodies')
 const splash = provideSplash()
-useImpactSounds(propBodies, 'hit', { waterAt, onSplash: splash.burst })
+const achievements = useAchievements()
+useImpactSounds(propBodies, 'hit', {
+  waterAt,
+  onSplash(at, fallSpeed, motion, body) {
+    splash.burst(at, fallSpeed, motion)
+    if (body.group.children.some(isLetter)) achievements.unlock('seaPolluter')
+  },
+})
 const palmCrowns = shallowRef<Object3D[]>([])
 const torchFlames = shallowRef<Object3D[]>([])
 useIslandAmbience(heightAt, torchFlames)

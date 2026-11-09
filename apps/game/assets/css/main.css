@@ -51,3 +51,27 @@
   --ui-text: #FFFFFF;
   --ui-text-highlighted: #FFFFFF;
 }
+
+/* unlayered so it beats the toaster's slide animations; `scale` keeps the toaster's stacking `transform` intact */
+.achievement-toast[data-state="open"] {
+  animation: achievement-pop-in 450ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.achievement-toast[data-state="closed"] {
+  animation: achievement-pop-out 250ms cubic-bezier(0.36, 0, 0.66, -0.56) forwards;
+}
+
+@keyframes achievement-pop-in {
+  from { opacity: 0; scale: 0.4; }
+  to { opacity: 1; scale: 1; }
+}
+
+@keyframes achievement-pop-out {
+  from { opacity: 1; scale: 1; }
+  to { opacity: 0; scale: 0.4; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .achievement-toast[data-state="open"] { animation: fade-in 200ms ease-out; }
+  .achievement-toast[data-state="closed"] { animation: fade-out 200ms ease-in forwards; }
+}

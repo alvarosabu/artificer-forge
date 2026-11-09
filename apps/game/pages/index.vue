@@ -23,6 +23,8 @@ useDofFocusProvider()
 const playerPosition = ref<PlayerPosition>([0, 0, 0])
 providePlayerPosition(playerPosition)
 
+useAchievementCommands()
+
 // Snap the spawn point to the terrain, so an empty placed a bit high or low still lands on the ground.
 function spawnOn(
   [x, y, z]: [number, number, number],
