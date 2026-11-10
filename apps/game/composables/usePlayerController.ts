@@ -4,10 +4,13 @@ import type { MaybeRefOrGetter, ShallowRef } from 'vue'
 import { useRapier } from '@tresjs/rapier'
 import type { ExposedRigidBody } from '@tresjs/rapier'
 
-export type PlayerState = 'spawn' | 'idle' | 'walk' | 'run' | 'jumpStart' | 'fall' | 'land' | 'swim' | 'stroke' | 'fastStroke'
+export type PlayerState = 'spawn' | 'idle' | 'walk' | 'run' | 'jumpStart' | 'fall' | 'land' | 'swim' | 'stroke' | 'fastStroke' | 'phoneTakeOut' | 'phoneIdle' | 'phonePutAway'
 
 /** `swim` floats in place, `stroke` swims with input, `fastStroke` swims with run held. All float on the water. */
 export const isSwimming = (state: PlayerState) => state === 'swim' || state === 'stroke' || state === 'fastStroke'
+export const isUsingPhone = (state: PlayerState) => state === 'phoneTakeOut' || state === 'phoneIdle' || state === 'phonePutAway'
+/** The states the phone can be taken out from. */
+export const canTakeOutPhone = (state: PlayerState) => state === 'idle' || state === 'walk' || state === 'run'
 
 export interface PlayerTuning {
   walkSpeed: number
@@ -99,6 +102,7 @@ const MIN_HIT_SPEED = 0.5
 // Distance between two swim strokes. One arm pull covers more water than one foot covers ground.
 const STROKE_LENGTH = 0.9
 const PREVIEW_FADE = 0.2
+const PHONE_FADE = 0.2
 
 
 interface StateDefinition {
@@ -144,6 +148,12 @@ export function usePlayerController(
     onSplash?: (position: Vector3, impactSpeed: number, motion: Vector3) => void
     /** Height of the water surface at a point, or null where there is no water. Defaults to the Ocean at y = 0. */
     waterAt?: (x: number, z: number) => number | null
+    /** True while the player wants the phone out. */
+    wantsPhone?: () => boolean
+    /** Called when the take-out clip owns the hand slot, so the phone can go in the hand. */
+    onPhoneHold?: () => void
+    /** Called when the phone states end, so the phone can leave the hand. */
+    onPhoneRelease?: () => void
   } = {},
 ) {
   const { read } = usePlayerInput()
@@ -163,6 +173,8 @@ export function usePlayerController(
   const splashMotion = new Vector3()
   const hitImpulse = new Vector3()
   const waterAt = options.waterAt ?? (() => 0)
+  const wantsPhone = options.wantsPhone ?? (() => false)
+  let phoneHeld = false
 
 
   let yaw = 0
@@ -205,6 +217,7 @@ export function usePlayerController(
       fade: 0.25,
       update: () => {
         if (!grounded) return 'fall'
+        if (wantsPhone()) return 'phoneTakeOut'
         if (wantsJump()) return 'jumpStart'
         if (moving) return locomotion()
       },
@@ -215,6 +228,7 @@ export function usePlayerController(
       timeScale: () => clipTimeScale(tuning.walkClipSpeed),
       update: () => {
         if (!grounded) return 'fall'
+        if (wantsPhone()) return 'phoneTakeOut'
         if (wantsJump()) return 'jumpStart'
         if (!moving) return 'idle'
         if (input.run) return 'run'
@@ -226,6 +240,7 @@ export function usePlayerController(
       timeScale: () => clipTimeScale(tuning.runClipSpeed),
       update: () => {
         if (!grounded) return 'fall'
+        if (wantsPhone()) return 'phoneTakeOut'
         if (wantsJump()) return 'jumpStart'
         if (!moving) return 'idle'
         if (!input.run) return 'walk'
@@ -319,6 +334,40 @@ export function usePlayerController(
         if (!input.run) return 'stroke'
       },
     },
+    phoneTakeOut: {
+      clip: 'Phone_TakeOut',
+      fade: PHONE_FADE,
+      once: true,
+      locksInput: true,
+      update: () => {
+        if (!grounded) return 'fall'
+        // During the fade the hand slot still blends in the last clip's scale of 1, so the phone would flash at full size.
+        if (!phoneHeld && action && action.time >= PHONE_FADE) {
+          phoneHeld = true
+          options.onPhoneHold?.()
+        }
+        if (finished()) return wantsPhone() ? 'phoneIdle' : 'phonePutAway'
+      },
+    },
+    phoneIdle: {
+      clip: 'Phone_Idle',
+      fade: PHONE_FADE,
+      locksInput: true,
+      update: () => {
+        if (!grounded) return 'fall'
+        if (!wantsPhone()) return 'phonePutAway'
+      },
+    },
+    phonePutAway: {
+      clip: 'Phone_PutAway',
+      fade: PHONE_FADE,
+      once: true,
+      locksInput: true,
+      update: () => {
+        if (!grounded) return 'fall'
+        if (finished()) return wantsPhone() ? 'phoneTakeOut' : 'idle'
+      },
+    },
   }
 
   function enter(next: PlayerState, { restore = false } = {}) {
@@ -338,6 +387,11 @@ export function usePlayerController(
 
     action = nextAction
     state.value = next
+    // Any exit, not only the put-away clip: a swim or fall can cut the phone states short.
+    if (phoneHeld && !isUsingPhone(next)) {
+      phoneHeld = false
+      options.onPhoneRelease?.()
+    }
     if (!restore) definition.enter?.(from)
   }
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useControls } from '@tresjs/leches'
-import { MathUtils, Vector2, Vector3 } from 'three'
+import { MathUtils, Spherical, Vector2, Vector3 } from 'three'
 import type { PerspectiveCamera } from 'three'
 
 // Follow camera, modelled on Bruno Simon's Folio 2025 View.js: zoom only moves along
@@ -52,6 +52,21 @@ const {
   stickOrbit: { value: 120, min: 0, max: 360, step: 5, type: 'range' },
   // Player height on screen, from the bottom: 0.5 is the center, 0.33 the lower third
   framing: { value: 0.33, min: 0.1, max: 0.9, step: 0.01, type: 'range' },
+}, { uuid })
+
+// The phone shot frames Chamo from the front, like a handheld selfie, with Chamo right of center so the phone panel fits on the left.
+const {
+  phoneDistance,
+  phonePhi,
+  phoneLookHeight,
+  phoneShift,
+  phoneDuration,
+} = useControls('📱 phone', {
+  distance: { value: 13, min: 3, max: 40, step: 0.5, type: 'range' },
+  phi: { value: 76, min: 20, max: 95, step: 0.5, type: 'range' },
+  lookHeight: { value: 1.1, min: 0, max: 3, step: 0.05, type: 'range' },
+  shift: { value: 1.3, min: -4, max: 4, step: 0.05, type: 'range' },
+  duration: { value: 0.8, min: 0.1, max: 3, step: 0.05, type: 'range' },
 }, { uuid })
 
 // Bruno adds radius when the viewport is narrower than 16:9 so the framing keeps its width.
@@ -111,6 +126,60 @@ function smoothHeight(current: number, target: number, smoothTime: number, delta
   return target + (change + temp) * decay
 }
 
+const phone = usePhone()
+
+// The pose the camera would take without the phone shot. The shot blends from it and back to it.
+const basePosition = new Vector3()
+const baseLook = new Vector3()
+const shotLook = new Vector3()
+const blendLook = new Vector3()
+const baseSpherical = new Spherical()
+const shotSpherical = new Spherical()
+const screenRight = new Vector3()
+let shotWeight = 0
+// Turns input off and disables OrbitControls, which would otherwise fight the shot for the camera.
+const shotActive = ref(false)
+// Disabled, not unmounted: v-if and template refs on OrbitControls both throw in Vue's patch inside the Tres renderer.
+const { controls, renderer } = useTresContext()
+watchEffect(() => {
+  const orbit = controls.value as { enabled?: boolean } | null
+  if (orbit && 'enabled' in orbit) orbit.enabled = !shotActive.value
+})
+
+function lerpAngle(from: number, to: number, alpha: number) {
+  const delta = MathUtils.euclideanModulo(to - from + Math.PI, Math.PI * 2) - Math.PI
+  return from + delta * alpha
+}
+
+// Returns false when the shot is idle, so the caller places the camera itself.
+function applyPhoneShot(cam: PerspectiveCamera, delta: number) {
+  const goal = phone.open.value ? 1 : 0
+  shotWeight = MathUtils.clamp(shotWeight + Math.sign(goal - shotWeight) * delta / (phoneDuration?.value ?? 0.8), 0, 1)
+  const active = shotWeight > 0 || goal > 0
+  if (shotActive.value !== active) shotActive.value = active
+  if (shotWeight === 0) return false
+
+  const yaw = phone.yaw.value
+  // Screen right while looking at Chamo's front.
+  screenRight.set(Math.cos(yaw), 0, -Math.sin(yaw))
+  shotLook.set(...props.target).addScaledVector(screenRight, -(phoneShift?.value ?? 1.3))
+  shotLook.y += phoneLookHeight?.value ?? 1.1
+  shotSpherical.set(phoneDistance?.value ?? 13, MathUtils.degToRad(phonePhi?.value ?? 76), yaw)
+  baseSpherical.setFromVector3(offset.subVectors(basePosition, baseLook))
+
+  // Orbits around Chamo instead of cutting straight across, so a camera behind Chamo does not pass through them.
+  const t = shotWeight * shotWeight * (3 - 2 * shotWeight)
+  blendLook.lerpVectors(baseLook, shotLook, t)
+  offset.setFromSphericalCoords(
+    MathUtils.lerp(baseSpherical.radius, shotSpherical.radius, t),
+    MathUtils.lerp(baseSpherical.phi, shotSpherical.phi, t),
+    lerpAngle(baseSpherical.theta, shotSpherical.theta, t),
+  )
+  cam.position.copy(blendLook).add(offset)
+  cam.lookAt(blendLook)
+  return true
+}
+
 const { onBeforeRender } = useLoop()
 
 onBeforeRender(({ delta, camera }) => {
@@ -129,6 +198,12 @@ onBeforeRender(({ delta, camera }) => {
   tracked.set(...props.target)
   const heightTime = cameraHeightSmoothing?.value ?? 0.35
   if (cameraFree?.value && freePlaced) {
+    // OrbitControls owns the free camera, so the base pose is wherever it left the camera when the shot began.
+    if (shotWeight === 0) {
+      basePosition.copy(cam.position)
+      baseLook.copy(smoothFocus)
+    }
+    if (applyPhoneShot(cam, delta)) return
     step.set(
       tracked.x - smoothFocus.x,
       smoothHeight(smoothFocus.y, tracked.y, heightTime, delta) - smoothFocus.y,
@@ -141,7 +216,7 @@ onBeforeRender(({ delta, camera }) => {
     return
   }
   // Non-inverted: stick right turns the view right, stick up lowers the camera to look up.
-  const look = readLookStick()
+  const look = shotActive.value ? null : readLookStick()
   if (look) {
     const speed = (cameraStickOrbit?.value ?? 120) * delta
     theta -= look.x * speed
@@ -183,20 +258,24 @@ onBeforeRender(({ delta, camera }) => {
     MathUtils.degToRad(theta),
   )
 
-  cam.position.copy(smoothFocus).add(offset)
-  cam.lookAt(smoothFocus)
+  basePosition.copy(smoothFocus).add(offset)
+  baseLook.copy(smoothFocus)
+  if (!applyPhoneShot(cam, delta)) {
+    cam.position.copy(basePosition)
+    cam.lookAt(baseLook)
+  }
 
   freePlaced = !!cameraFree?.value
   if (freePlaced) orbitTarget.value = [smoothFocus.x, smoothFocus.y, smoothFocus.z]
 })
 
-const { renderer } = useTresContext()
 let canvas: HTMLCanvasElement | null = null
 let dragging = false
 
 function onWheel(event: WheelEvent) {
   if (cameraFree?.value) return
   event.preventDefault()
+  if (shotActive.value) return
   // One wheel notch is about 100px of deltaY; Bruno's normalized spin is about 1.
   const step = (event.deltaY / 100) * (cameraZoomSensitivity?.value ?? 0.05)
   zoomRatio.value = MathUtils.clamp(zoomRatio.value - step, 0, 1)
@@ -208,7 +287,7 @@ function onPointerDown(event: PointerEvent) {
 }
 
 function onPointerMove(event: PointerEvent) {
-  if (!dragging || cameraFree?.value || !cameraPan?.value || !canvas) return
+  if (!dragging || cameraFree?.value || !cameraPan?.value || shotActive.value || !canvas) return
   isTracking = false
 
   // Rotate screen movement by the azimuth so the map follows the cursor on screen.
@@ -251,6 +330,7 @@ onBeforeUnmount(() => {
   <!-- Debug only, like Bruno's MODE_FREE: the mouse owns the angle and distance, the loop only carries the camera along with the player. -->
   <OrbitControls
     v-if="cameraFree"
+    make-default
     :target="orbitTarget"
     enable-damping
   />
