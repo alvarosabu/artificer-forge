@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PhoneApp } from '~/utils/phoneApps'
 
-defineProps<{
+const props = defineProps<{
   app: PhoneApp
   highlighted: boolean
   /** The dock shows icons only. */
@@ -9,15 +9,23 @@ defineProps<{
 }>()
 
 defineEmits<{
-  hover: []
+  highlight: []
   select: []
 }>()
+
+const button = useTemplateRef('button')
+
+// Focus follows the keyboard highlight only once the player tabbed into the icons, so arrows never steal focus from the page.
+watch(() => props.highlighted, (highlighted) => {
+  if (highlighted && document.activeElement?.getAttribute('role') === 'menuitem') button.value?.focus()
+})
 </script>
 
 <template>
   <div class="flex min-w-0 flex-col items-center gap-1.5">
     <div class="relative">
       <button
+        ref="button"
         type="button"
         role="menuitem"
         :aria-label="app.label"
@@ -26,7 +34,8 @@ defineEmits<{
           app.tile,
           highlighted && 'scale-110 ring-3 ring-selection',
         ]"
-        @pointerenter="$emit('hover')"
+        @pointerenter="$emit('highlight')"
+        @focus="$emit('highlight')"
         @click="$emit('select')"
       >
         <UIcon :name="app.icon" class="size-7 text-white drop-shadow-sm" />

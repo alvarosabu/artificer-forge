@@ -100,7 +100,7 @@ function close() {
   phone.open.value = false
 }
 
-// A focused app icon can lag behind the keyboard highlight, so only the other buttons keep their native Enter and Space.
+// App icons select through the shared highlight (a page change drops their focus), so only the other buttons keep native Enter and Space.
 const activatesItself = (target: EventTarget | null) =>
   target instanceof HTMLButtonElement && target.getAttribute('role') !== 'menuitem'
 
@@ -166,7 +166,7 @@ useEventListener(window, 'keydown', onKeyDown)
               :app="app"
               label
               :highlighted="!cursor.dock && index === cursor.index"
-              @hover="cursor = { dock: false, index }"
+              @highlight="cursor = { dock: false, index }"
               @select="select(app)"
             />
           </li>
@@ -202,7 +202,7 @@ useEventListener(window, 'keydown', onKeyDown)
             <PhoneAppIcon
               :app="app"
               :highlighted="cursor.dock && index === cursor.index"
-              @hover="cursor = { dock: true, index }"
+              @highlight="cursor = { dock: true, index }"
               @select="select(app)"
             />
           </li>
