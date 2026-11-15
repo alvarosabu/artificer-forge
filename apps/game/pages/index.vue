@@ -69,7 +69,7 @@ const { physicsDebug } = useControls('⚛️ physics', {
           time-step="vary"
           :debug="physicsDebug"
         >
-          <Island v-slot="{ heightField, heightAt, spawn, waterAt, grassAt, surfaceAt }">
+          <Island v-slot="{ heightField, heightAt, spawn, spawns, waterAt, grassAt, surfaceAt }">
             <Chamo
               v-model:position="playerPosition"
               :spawn="spawnOn(spawn, heightAt)"
@@ -77,6 +77,12 @@ const { physicsDebug } = useControls('⚛️ physics', {
               :water-at="waterAt"
               :grass-at="grassAt"
               :surface-at="surfaceAt"
+            />
+            <RobotEmpanadas
+              v-if="spawns.Robot_Empanadas"
+              :position="spawnOn(spawns.Robot_Empanadas.position, heightAt)"
+              :yaw="spawns.Robot_Empanadas.yaw"
+              :height-field="heightField"
             />
           </Island>
         </Physics>

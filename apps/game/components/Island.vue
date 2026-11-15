@@ -59,9 +59,11 @@ const shoreWaves = useShoreWaves()
 const playerPosition = usePlayerPosition()
 const playerXZ = useUniform('playerXZ', () => ({ x: playerPosition.value[0], y: playerPosition.value[2] }))
 
-// An empty placed in Blender. The origin is the fallback if the model has no such node.
-const SPAWN_NODE = 'Spawn_Point_Beach'
+// Empties placed in Blender, named `Spawn_<who>`. The origin is the fallback if the player's one is missing.
+const SPAWN_PREFIX = 'Spawn_'
+const PLAYER_SPAWN = 'Point_Beach'
 const spawn = ref<[number, number, number]>([0, 0, 0])
+const spawns = shallowRef<Record<string, SpawnPoint>>({})
 
 // Blender exports a collision hull next to each solid prop, named `<mesh>-convcolonly`
 const isHull = (mesh: Mesh) => mesh.name.includes('-convcolonly')
@@ -71,6 +73,11 @@ const isWoodFloor = (mesh: Mesh) => /^(Deck_Surface|Wood_Plank)/.test(mesh.name)
 const isRigid = (object: Object3D) => object.name.includes('-rigid')
 // The voxel letters of the name sign on the beach.
 const isLetter = (object: Object3D) => object.name.startsWith('alvarosabu_')
+
+interface SpawnPoint {
+  position: [number, number, number]
+  yaw: number
+}
 
 interface RigidProp {
   mesh: Mesh
@@ -196,13 +203,16 @@ watch([terrain, scenery, heightField], ([terrainModel, sceneryModel, field]) => 
   // The model is not in the scene yet, so its world matrices are not computed.
   sceneryModel.updateMatrixWorld(true)
 
-  const spawnNode = sceneryModel.getObjectByName(SPAWN_NODE)
-  if (spawnNode) {
-    spawn.value = spawnNode.getWorldPosition(new Vector3()).toArray()
-  }
-  else {
-    console.warn(`[Island] no "${SPAWN_NODE}" node in the scenery model, spawning at the origin`)
-  }
+  const found: Record<string, SpawnPoint> = {}
+  sceneryModel.traverse((child) => {
+    if (!child.name.startsWith(SPAWN_PREFIX)) return
+    // Only the yaw: the empties are tilted a little to sit on the slope, but characters stand upright.
+    const yaw = new Euler().setFromQuaternion(child.getWorldQuaternion(new Quaternion()), 'YXZ').y
+    found[child.name.slice(SPAWN_PREFIX.length)] = { position: child.getWorldPosition(new Vector3()).toArray(), yaw }
+  })
+  spawns.value = found
+  if (found[PLAYER_SPAWN]) spawn.value = found[PLAYER_SPAWN].position
+  else console.warn(`[Island] no "${SPAWN_PREFIX}${PLAYER_SPAWN}" node in the scenery model, spawning at the origin`)
 
   const rigidMeshes: Mesh[] = []
   sceneryModel.traverse((child) => {
@@ -308,6 +318,6 @@ function grassAt(x: number, z: number) {
   <!-- Only once the colliders exist: a body that moves before them falls through the island. -->
   <slot
     v-if="collidersBuilt && heightField"
-    v-bind="{ heightField, heightAt, spawn, waterAt, grassAt, surfaceAt: colliders.surfaceOf }"
+    v-bind="{ heightField, heightAt, spawn, spawns, waterAt, grassAt, surfaceAt: colliders.surfaceOf }"
   />
 </template>
