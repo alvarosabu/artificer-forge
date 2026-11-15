@@ -115,7 +115,10 @@ watchEffect(() => {
       :position="[0, PROMPT_HEIGHT, 0]"
       :scale="0.05"
     >
-      <ProximityPrompt :stage="stage" />
+      <ProximityPrompt 
+        :stage="stage"
+        action="Talk"
+      />
     </Html>
     <CapsuleCollider
       :args="capsuleArgs"
