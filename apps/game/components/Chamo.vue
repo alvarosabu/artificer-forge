@@ -59,6 +59,7 @@ const { state: heldItemsState } = useGLTF('/models/chamo/Chamo_Props.glb', { dra
 const phoneModel = computed(() => heldItemsState.value?.scene?.getObjectByName('Phone'))
 const heldItems = useHeldItems(scene)
 const phone = usePhone()
+const prompts = useProximityPrompts()
 
 const {
   playerWalkSpeed,
@@ -276,6 +277,7 @@ const controller = usePlayerController(root, body, actions, {
     if (phoneModel.value) heldItems.hold('offHand', phoneModel.value)
   },
   onPhoneRelease: () => heldItems.release('offHand'),
+  onInteract: () => prompts.interact(),
 })
 
 watchEffect(() => {

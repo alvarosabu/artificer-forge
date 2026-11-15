@@ -21,6 +21,7 @@ useDofFocusProvider()
 
 // Chamo writes this as it moves and the camera follows it.
 const player = providePlayer()
+provideProximityPrompts()
 providePhone()
 
 useAchievementCommands()

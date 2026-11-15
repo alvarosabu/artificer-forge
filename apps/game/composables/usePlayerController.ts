@@ -154,6 +154,8 @@ export function usePlayerController(
     onPhoneHold?: () => void
     /** Called when the phone states end, so the phone can leave the hand. */
     onPhoneRelease?: () => void
+    /** Called when the player wants to interact with a target. */
+    onInteract?: () => void
   } = {},
 ) {
   const { read } = usePlayerInput()
@@ -430,7 +432,10 @@ export function usePlayerController(
       input.y = 0
       input.jump = false
       input.jumpHeld = false
+      input.interact = false
     }
+    if (input.interact) options.onInteract?.()
+
     const strength = Math.hypot(input.x, input.y)
     moving = strength > 0
 

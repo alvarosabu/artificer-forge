@@ -1,18 +1,53 @@
 <script lang="ts" setup>
 import type { PromptStage } from '~/composables/useProximityPrompt'
+import type { InputDevice } from '~/composables/useInputDevice'
 
-defineProps<{
+const props = defineProps<{
   stage: PromptStage
   action: string
+  presses: number
+  /** Picks the glyph: the E key, the Xbox Y button or the PlayStation triangle. */
+  device: InputDevice
 }>()
+
+const badge = useTemplateRef<HTMLElement>('badge')
+
+  watch(() => props.presses, () => {
+  badge.value?.animate(
+    [{ scale: 1 }, { scale: 0.85 }, { scale: 1.08 }, { scale: 1 }],
+    { duration: 280, easing: 'ease-out' },
+  )
+})
 </script>
 
 <template>
   <Transition name="prompt-pop" type="transition">
-    <div v-if="stage !== 'hidden'" class="proximity-prompt" :class="{ 'interact': stage === 'interact' }"
+    <div ref="badge" v-if="stage !== 'hidden'" class="proximity-prompt" :class="{ 'interact': stage === 'interact' }"
       aria-hidden="true">
       <div class="prompt-body">
-        <kbd class="prompt-key">E</kbd>
+        <kbd
+          v-if="device === 'keyboard'"
+          class="prompt-key"
+        >E</kbd>
+        <span
+          v-else
+          class="prompt-button"
+          :class="`is-${device}`"
+        >
+          <svg
+            v-if="device === 'playstation'"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M12 6.5 17.5 16h-11Z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.4"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <template v-else>Y</template>
+        </span>
         <span class="prompt-label">{{ action }}</span>
       </div>
     </div>
@@ -82,6 +117,30 @@ defineProps<{
 .prompt-label {
   color: #fff;
   font: 700 14px/1 var(--font-sans);
+}
+
+.prompt-button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #111;
+  font: 900 14px/1 var(--font-sans);
+  box-shadow: inset 0 -2px 0 rgb(255 255 255 / 0.15), 0 0 0 1.5px rgb(255 255 255 / 0.3);
+}
+
+.prompt-button.is-xbox {
+  color: #f5c518;
+}
+
+.prompt-button.is-playstation {
+  color: #3ed6c6;
+}
+
+.prompt-button svg {
+  width: 18px;
+  height: 18px;
 }
 
 @keyframes prompt-bob {
