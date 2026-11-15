@@ -35,9 +35,9 @@ const props = withDefaults(defineProps<{
   surfaceAt: () => null,
 })
 
-const position = defineModel<[number, number, number]>('position', { default: () => [0, 0, 0] })
+const player = usePlayer()
 // the camera follows this, and it only changes once the player moves
-position.value = [...props.spawn]
+player.position = [...props.spawn]
 
 const uuid = inject<string>('uuid')
 const grading = useGrading()
@@ -171,7 +171,6 @@ watch(dustDrag!, (v) => { dust.uniforms.drag.value = v })
 watch(dustOpacity!, v => dust.setOpacity(v))
 
 const { onBeforeRender } = useLoop()
-onBeforeRender(({ elapsed }) => dust.update(elapsed))
 onUnmounted(() => dust.dispose())
 
 const back = new Vector3()
@@ -262,7 +261,7 @@ const splash = useSplash()
 
 const controller = usePlayerController(root, body, actions, {
   tuning,
-  onMove: (p) => { position.value = [p.x, p.y, p.z] },
+  onMove: (p) => { player.position = [p.x, p.y, p.z] },
   stepLength: () => dustStepLength?.value ?? 0.3,
   onStep: emitStep,
   onLand: emitLandDust,
@@ -284,13 +283,6 @@ watchEffect(() => {
   phone.available.value = !!phoneModel.value && (canTakeOutPhone(state) || isUsingPhone(state))
   // A swim or fall cuts the phone short. Clear the request, or Chamo takes the phone out again on landing.
   if (!canTakeOutPhone(state) && !isUsingPhone(state)) phone.open.value = false
-})
-
-// The clips key the hand slot scale from 0 to 1 when the phone appears, so the panel opens and closes with it.
-onBeforeRender(() => {
-  const inHand = !!heldItems.held('offHand') && (heldItems.bone('offHand')?.scale.x ?? 0) > 0.5
-  if (phone.inHand.value !== inHand) phone.inHand.value = inHand
-  if (root.value) phone.yaw.value = root.value.rotation.y
 })
 
 if (import.meta.dev) useAnimationCommands(() => animations.value.map(clip => clip.name), controller)
@@ -323,7 +315,7 @@ const feet = new Vector3()
 
 /** The step sound for the ground under the feet: water over the feet wins, then a tagged collider, then grass, then the sand everywhere else. */
 function stepSound(): SoundName {
-  feet.fromArray(position.value)
+  feet.fromArray(player.position)
   if (waterAbove(feet)) return 'stepWater'
   if (props.surfaceAt(controller.groundCollider()) === 'wood') return 'stepWood'
   return props.grassAt(feet.x, feet.z) > 0.5 ? 'stepGrass' : 'stepSand'
@@ -333,12 +325,28 @@ const contacts = useClipContacts(actions, controller.state, (state) => {
   audio.play(isSwimming(state) ? 'swim' : stepSound())
 })
 
+watch(scene, (model) => {
+  if (!model) return
+  face.attach(model)
+  shade(model)
+}, { immediate: true })
+
+watch(phoneModel, (model) => {
+  if (model) shade(model)
+}, { immediate: true })
+
 onBeforeRender(({ elapsed, delta }) => {
+  dust.update(elapsed)
   contacts.update(elapsed)
-  shadowProbe.value.fromArray(position.value).y += SHADOW_PROBE_HEIGHT
+  shadowProbe.value.fromArray(player.position).y += SHADOW_PROBE_HEIGHT
+
+  // The clips key the hand slot scale from 0 to 1 when the phone appears, so the panel opens and closes with it.
+  const inHand = !!heldItems.held('offHand') && (heldItems.bone('offHand')?.scale.x ?? 0) > 0.5
+  if (phone.inHand.value !== inHand) phone.inHand.value = inHand
 
   const group = root.value
   if (!group) return
+  player.yaw = group.rotation.y
   const swimming = isSwimming(controller.state.value)
   floatWeight += ((swimming ? 1 : 0) - floatWeight) * (1 - Math.exp(-4 * delta))
   const phase = elapsed * BOB_SPEED
@@ -349,13 +357,13 @@ onBeforeRender(({ elapsed, delta }) => {
   // Runs on land too, so the first frame in the water does not see an old count and fire a ring on top of the splash.
   const cycle = Math.floor((phase - 1.5 * Math.PI) / (2 * Math.PI))
   if (swimming && cycle !== treadCycle) {
-    const surface = waterAbove(treadPoint.fromArray(position.value))
+    const surface = waterAbove(treadPoint.fromArray(player.position))
     if (surface) splash.tread(surface)
   }
   treadCycle = cycle
 
   const stroking = controller.state.value === 'stroke' || controller.state.value === 'fastStroke'
-  const wakeSurface = stroking ? waterAbove(treadPoint.fromArray(position.value)) : null
+  const wakeSurface = stroking ? waterAbove(treadPoint.fromArray(player.position)) : null
   if (wakeSurface) splash.swim(wakeSurface, group.rotation.y)
   else splash.endSwim()
 })
@@ -376,15 +384,6 @@ function shade(model: Object3D) {
   })
 }
 
-watch(scene, (model) => {
-  if (!model) return
-  face.attach(model)
-  shade(model)
-}, { immediate: true })
-
-watch(phoneModel, (model) => {
-  if (model) shade(model)
-}, { immediate: true })
 </script>
 
 <template>

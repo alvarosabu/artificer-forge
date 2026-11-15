@@ -8,6 +8,7 @@ import { Color, LoopRepeat, Vector3 } from 'three'
 import { positionWorld, uniform } from 'three/tsl'
 import type { AnimationClip, Mesh, Object3D } from 'three'
 import type { NodeMaterial } from 'three/webgpu'
+import { Html } from '@tresjs/cientos/webgpu'
 
 const props = withDefaults(defineProps<{
   /** Feet position. Read once on mount, where the body is created. */
@@ -28,8 +29,15 @@ const CAPSULE_HEIGHT = 2.2
 const capsuleHalfHeight = CAPSULE_HEIGHT / 2 - CAPSULE_RADIUS
 const capsuleArgs: [number, number] = [capsuleHalfHeight, CAPSULE_RADIUS]
 const capsuleOffset: [number, number, number] = [0, CAPSULE_HEIGHT / 2, 0]
+const PROMPT_HEIGHT = 2.9
 
 const grading = useGrading()
+
+const { stage } = useProximityPrompt({
+  position: () => props.position,
+  noticeRadius: 8,
+  interactRadius: 4,
+})
 
 const { state } = useGLTF('/models/robot-empanadas/Robot-empanadas.glb', { draco: true })
 // The robot GLB has the KayKit medium rig but no clips, so they come from the shared animation pack.
@@ -103,6 +111,12 @@ watchEffect(() => {
     :rotation="[0, props.yaw, 0]"
     :collider="false"
   >
+    <Html
+      :position="[0, PROMPT_HEIGHT, 0]"
+      :scale="0.05"
+    >
+      <ProximityPrompt :stage="stage" />
+    </Html>
     <CapsuleCollider
       :args="capsuleArgs"
       :position="capsuleOffset"

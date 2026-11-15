@@ -26,7 +26,7 @@ export function useIslandAmbience(
   torches: Readonly<Ref<Object3D[]>>,
 ) {
   const audio = useAudio()
-  const player = usePlayerPosition()
+  const player = usePlayer()
   const wind = useWind()
 
   const uuid = inject<string>('uuid')
@@ -111,7 +111,7 @@ export function useIslandAmbience(
     if (sinceUpdate < UPDATE_INTERVAL) return
     sinceUpdate = 0
 
-    const [x, , z] = player.value
+    const [x, , z] = player.position
     const sea = seaAround(x, z, ambienceSurfRange!.value)
     surf.setVolume(sea > 0 ? ambienceSurf!.value + ambienceSurfFar!.value * (1 - sea) : -Infinity)
 

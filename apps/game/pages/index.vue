@@ -20,8 +20,7 @@ useOutlinePassProvider()
 useDofFocusProvider()
 
 // Chamo writes this as it moves and the camera follows it.
-const playerPosition = ref<PlayerPosition>([0, 0, 0])
-providePlayerPosition(playerPosition)
+const player = providePlayer()
 providePhone()
 
 useAchievementCommands()
@@ -55,10 +54,10 @@ const { physicsDebug } = useControls('⚛️ physics', {
     :alpha="false"
     :shadow-map-type="PCFShadowMap"
   >
-    <CameraController :target="playerPosition" />
+    <CameraController :target="player.position" />
     <EnvironmentController
       v-slot="{ wind, dayPhase }"
-      :focus="playerPosition"
+      :focus="player.position"
     >
     <AudioController :day-phase="dayPhase">
       <!-- Physics loads Rapier's WASM in an async setup, so it needs Suspense. -->
@@ -71,7 +70,6 @@ const { physicsDebug } = useControls('⚛️ physics', {
         >
           <Island v-slot="{ heightField, heightAt, spawn, spawns, waterAt, grassAt, surfaceAt }">
             <Chamo
-              v-model:position="playerPosition"
               :spawn="spawnOn(spawn, heightAt)"
               :height-field="heightField"
               :water-at="waterAt"
@@ -92,9 +90,9 @@ const { physicsDebug } = useControls('⚛️ physics', {
       <WindLines
         :wind-angle="wind.angle"
         :intensity="wind.strength"
-        :origin-x="playerPosition[0]"
-        :origin-z="playerPosition[2]"
-        :height="playerPosition[1] + 2"
+        :origin-x="player.position[0]"
+        :origin-z="player.position[2]"
+        :height="player.position[1] + 2"
         :radius="15"
       />
       <PostProcessing />

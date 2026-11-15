@@ -11,7 +11,7 @@ const props = defineProps<{
 
 // The camera sees up to 200 m (its far plane) from up to 30 m behind the player.
 const RADIUS = 250
-const playerPosition = usePlayerPosition()
+const player = usePlayer()
 const waves = useShoreWaves()
 
 // Tuned in the panel on the island (2026-10-08).
@@ -243,6 +243,6 @@ useUniforms({
     name="ocean"
     :geometry="geometry"
     :material="material"
-    :position="[playerPosition[0], 0, playerPosition[2]]"
+    :position="[player.position[0], 0, player.position[2]]"
   />
 </template>
