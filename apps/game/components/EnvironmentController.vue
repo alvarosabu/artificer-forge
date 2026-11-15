@@ -20,6 +20,7 @@ const grading = createGradingContext({ sceneNear: 20, sceneFar: 132 })
 provideGrading(grading)
 
 const dayCycle = useDayCycle()
+provideDayCycle(dayCycle)
 
 const wind = createWind()
 provideWind(wind)

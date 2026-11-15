@@ -97,8 +97,8 @@ const { physicsDebug } = useControls('⚛️ physics', {
         :height="playerPosition[1] + 2"
         :radius="15"
       />
+      <PostProcessing />
     </EnvironmentController>
-    <PostProcessing />
   </TresCanvas>
   <PhoneMenu />
 </template>
