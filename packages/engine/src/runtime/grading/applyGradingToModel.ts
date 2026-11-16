@@ -1,6 +1,6 @@
 import type { Mesh, MeshStandardMaterial, Object3D } from 'three'
 import { Color } from 'three'
-import { float, normalWorld, positionWorld, texture, uniform, uv } from 'three/tsl'
+import { float, normalWorld, positionWorld, texture, uniform, uv, vec4 } from 'three/tsl'
 import { MeshLambertNodeMaterial } from 'three/webgpu'
 import type { Node } from 'three/webgpu'
 import type { GradingContext } from './grading'
@@ -12,10 +12,19 @@ export interface ApplyGradingOptions {
     groundHeight?: Node<'float'>
 }
 
+function emissiveOf(std: MeshStandardMaterial) {
+    if (!std.emissive || !(std.emissiveIntensity > 0)) return undefined
+    // Not getHex(): it rounds to 8 bits, so a tiny emissive with a high intensity would read as black.
+    const { r, g, b } = std.emissive
+    if (r === 0 && g === 0 && b === 0) return undefined
+    const glow = uniform(new Color(std.emissive)).mul(std.emissiveIntensity)
+    return std.emissiveMap ? texture(std.emissiveMap).rgb.mul(glow) : glow
+}
+
 /**
  * Lambert base only so the drop-shadow catcher runs; its own lighting is unused.
  * Safe to re-run on the same tree: the graded material is cached on its source, so
- * later calls swap it back in. Base color is snapshot at first build, not tracked.
+ * later calls swap it back in. Base and emissive colors are snapshot at first build, not tracked.
  */
 export function applyGradingToModel(root: Object3D, grading: GradingContext, { groundHeight }: ApplyGradingOptions = {}) {
     root.traverse((child) => {
@@ -59,7 +68,10 @@ export function applyGradingToModel(root: Object3D, grading: GradingContext, { g
             if (std.aoMap) aoNode = aoNode.mul(texture(std.aoMap, uv(std.aoMap.channel)).r)
             const dropShadow = createDropShadowCatcher()
             material.receivedShadowNode = dropShadow.receivedShadowNode
-            material.outputNode = stylizedOutput(baseColor, grading, { hasMidTone: true, hasRim: true, hasSpecular: true, aoNode, alphaNode, alphaTest, dropShadowNode: dropShadow.shadowFactor })
+            const graded = stylizedOutput(baseColor, grading, { hasMidTone: true, hasRim: true, hasSpecular: true, aoNode, alphaNode, alphaTest, dropShadowNode: dropShadow.shadowFactor })
+            const emissive = emissiveOf(std)
+            // After the grading, like the torch flames: the glow ignores shading, fog and time of day.
+            material.outputNode = emissive ? vec4(graded.rgb.add(emissive), graded.a) : graded
 
             source.userData.gradedMaterial = material
             source.userData.gradedGrading = grading

@@ -1,8 +1,8 @@
 import { Spherical } from 'three'
 import { createPhaseTween, createPresetTrack, wrap01 } from '@artificer-forge/engine/runtime'
-import type { GradingProps } from '@artificer-forge/engine/runtime'
+import type { InjectionKey } from 'vue'
 import { DAY_CYCLE_NAMES, DAY_CYCLE_STOPS, DAY_CYCLE_TRACK } from '~/utils/dayCyclePresets'
-import type { DayCycleName } from '~/utils/dayCyclePresets'
+import type { DayCycleName, DayCyclePreset } from '~/utils/dayCyclePresets'
 
 // sun peaks (lowest phi) at phase 0, the day stop: cos(-(0 + 0.5) * 2π) = -1
 const SUN_PHASE_OFFSET = 0.5
@@ -14,7 +14,7 @@ export function useDayCycle() {
   const track = createPresetTrack(DAY_CYCLE_TRACK.presets, DAY_CYCLE_TRACK.stops)
   const tween = createPhaseTween()
   // reusable sample target: no allocation in the render loop
-  const current: GradingProps = track.sample(0)
+  const current: DayCyclePreset = track.sample(0)
 
   // Gameplay-delta driven, not wall clock: pausing the loop pauses time.
   const auto = { running: false, duration: 240 }
@@ -57,4 +57,18 @@ export function useDayCycle() {
   }
 
   return { phase, current, transitionTo, tick, sun, auto }
+}
+
+export type DayCycle = ReturnType<typeof useDayCycle>
+
+const DayCycleKey: InjectionKey<DayCycle> = Symbol('dayCycle')
+
+export function provideDayCycle(dayCycle: DayCycle) {
+  provide(DayCycleKey, dayCycle)
+}
+
+export function injectDayCycle() {
+  const dayCycle = inject(DayCycleKey, null)
+  if (!dayCycle) throw new Error('injectDayCycle() needs an <EnvironmentController> ancestor')
+  return dayCycle
 }

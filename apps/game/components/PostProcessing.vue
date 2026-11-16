@@ -2,6 +2,8 @@
 import { useControls } from '@tresjs/leches'
 import { EffectComposer } from '@artificer-forge/post-processing'
 import type { BloomConfig, TiltShiftConfig } from '@artificer-forge/post-processing'
+import { dayCyclePresets } from '~/utils/dayCyclePresets'
+import type { DayCyclePreset } from '~/utils/dayCyclePresets'
 
 const uuid = inject<string>('uuid')
 
@@ -30,23 +32,59 @@ const {
   resolutionScale: { value: 0.5, min: 0.125, max: 1, step: 0.125, type: 'range' },
 }, { uuid })
 
-// Threshold 1: only HDR emissives (torch glow) bloom, the graded world stays at or below 1.
-const { bloomEnabled, bloomStrength, bloomRadius, bloomThreshold, bloomSmoothWidth } = useControls('✨ bloom', {
+const dayCycle = injectDayCycle()
+const [dayPreset, duskPreset, nightPreset, dawnPreset] = dayCyclePresets as [DayCyclePreset, DayCyclePreset, DayCyclePreset, DayCyclePreset]
+
+// Strength, radius and threshold blend with the day cycle. The day knobs also write dusk and dawn: only the night has its own bloom.
+const {
+  bloomEnabled,
+  bloomDayStrength,
+  bloomDayRadius,
+  bloomDayThreshold,
+  bloomNightStrength,
+  bloomNightRadius,
+  bloomNightThreshold,
+  bloomSmoothWidth,
+} = useControls('✨ bloom', {
   enabled: { value: true, type: 'boolean' },
-  strength: { value: 0.25, min: 0, max: 3, step: 0.01, type: 'range' },
-  radius: { value: 0, min: 0, max: 1, step: 0.01, type: 'range' },
-  threshold: { value: 1, min: 0, max: 2, step: 0.01, type: 'range' },
+  dayStrength: { value: dayPreset.bloomStrength, min: 0, max: 3, step: 0.01, type: 'range' },
+  dayRadius: { value: dayPreset.bloomRadius, min: 0, max: 1, step: 0.01, type: 'range' },
+  dayThreshold: { value: dayPreset.bloomThreshold, min: 0, max: 2, step: 0.01, type: 'range' },
+  nightStrength: { value: nightPreset.bloomStrength, min: 0, max: 3, step: 0.01, type: 'range' },
+  nightRadius: { value: nightPreset.bloomRadius, min: 0, max: 1, step: 0.01, type: 'range' },
+  nightThreshold: { value: nightPreset.bloomThreshold, min: 0, max: 2, step: 0.01, type: 'range' },
   smoothWidth: { value: 1, min: 0, max: 1, step: 0.01, type: 'range' },
 }, { uuid })
 
-const bloom = computed<BloomConfig | undefined>(() => {
-  if (!bloomEnabled?.value) return undefined
-  return {
-    strength: bloomStrength?.value,
-    radius: bloomRadius?.value,
-    threshold: bloomThreshold?.value,
-    smoothWidth: bloomSmoothWidth?.value,
+watchEffect(() => {
+  for (const preset of [dayPreset, duskPreset, dawnPreset]) {
+    preset.bloomStrength = bloomDayStrength!.value
+    preset.bloomRadius = bloomDayRadius!.value
+    preset.bloomThreshold = bloomDayThreshold!.value
   }
+  nightPreset.bloomStrength = bloomNightStrength!.value
+  nightPreset.bloomRadius = bloomNightRadius!.value
+  nightPreset.bloomThreshold = bloomNightThreshold!.value
+})
+
+// The day cycle samples its presets every frame, so the bloom follows it here and not in a computed.
+const bloom = shallowRef<BloomConfig | undefined>({
+  strength: dayCycle.current.bloomStrength,
+  radius: dayCycle.current.bloomRadius,
+  threshold: dayCycle.current.bloomThreshold,
+  smoothWidth: bloomSmoothWidth!.value,
+})
+const { onBeforeRender } = useLoop()
+onBeforeRender(() => {
+  if (!bloomEnabled!.value) {
+    bloom.value = undefined
+    return
+  }
+  const { bloomStrength: strength, bloomRadius: radius, bloomThreshold: threshold } = dayCycle.current
+  const smoothWidth = bloomSmoothWidth!.value
+  const last = bloom.value
+  if (last && last.strength === strength && last.radius === radius && last.threshold === threshold && last.smoothWidth === smoothWidth) return
+  bloom.value = { strength, radius, threshold, smoothWidth }
 })
 
 const tiltShift = computed<TiltShiftConfig | undefined>(() => {

@@ -7,14 +7,12 @@ export interface Phone {
   available: Ref<boolean>
   /** The phone is in Chamo's hand at full size, so the panel shows. */
   inHand: Ref<boolean>
-  /** Chamo's facing angle around +Y, 0 facing +Z. The phone camera shot frames Chamo from the front. */
-  yaw: Ref<number>
 }
 
 const PhoneKey: InjectionKey<Phone> = Symbol('phone')
 
 export function providePhone() {
-  const phone: Phone = { open: ref(false), available: ref(false), inHand: ref(false), yaw: ref(0) }
+  const phone: Phone = { open: ref(false), available: ref(false), inHand: ref(false) }
   provide(PhoneKey, phone)
   return phone
 }

@@ -56,8 +56,8 @@ const terrainUniforms = {
 const terrainMaterialReady = ref(false)
 
 const shoreWaves = useShoreWaves()
-const playerPosition = usePlayerPosition()
-const playerXZ = useUniform('playerXZ', () => ({ x: playerPosition.value[0], y: playerPosition.value[2] }))
+const player = usePlayer()
+const playerXZ = useUniform('playerXZ', () => ({ x: player.position[0], y: player.position[2] }))
 
 // Empties placed in Blender, named `Spawn_<who>`. The origin is the fallback if the player's one is missing.
 const SPAWN_PREFIX = 'Spawn_'
@@ -248,7 +248,7 @@ watch(palmsSize!, (frondScale) => {
 function oceanAt(x: number, z: number) {
   const ground = heightAt(x, z)
   if (ground === null) return OCEAN_LEVEL
-  const [px, , pz] = playerPosition.value
+  const [px, , pz] = player.position
   return OCEAN_LEVEL + waveLiftAt(shoreWaves, OCEAN_LEVEL - ground, Math.hypot(x - px, z - pz))
 }
 

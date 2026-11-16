@@ -127,6 +127,7 @@ function smoothHeight(current: number, target: number, smoothTime: number, delta
 }
 
 const phone = usePhone()
+const player = usePlayer()
 
 // The pose the camera would take without the phone shot. The shot blends from it and back to it.
 const basePosition = new Vector3()
@@ -159,7 +160,7 @@ function applyPhoneShot(cam: PerspectiveCamera, delta: number) {
   if (shotActive.value !== active) shotActive.value = active
   if (shotWeight === 0) return false
 
-  const yaw = phone.yaw.value
+  const yaw = player.yaw
   // Screen right while looking at Chamo's front.
   screenRight.set(Math.cos(yaw), 0, -Math.sin(yaw))
   shotLook.set(...props.target).addScaledVector(screenRight, -(phoneShift?.value ?? 1.3))

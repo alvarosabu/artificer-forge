@@ -9,7 +9,17 @@ export const DAY_CYCLE_STOPS = [0, 0.25, 0.35, 0.8]
 
 const sun = new Vector3(-1, -1, -1).normalize()
 
-export const dayCyclePresets: GradingProps[] = [
+export interface DayCyclePreset extends GradingProps {
+  bloomStrength: number
+  bloomRadius: number
+  bloomThreshold: number
+}
+
+// Below threshold 1 the graded world blooms too, so only the night drops it.
+const DAY_BLOOM = { bloomStrength: 0.25, bloomRadius: 0, bloomThreshold: 1 }
+const NIGHT_BLOOM = { bloomStrength: 0.82, bloomRadius: 0.06, bloomThreshold: 0.39 }
+
+export const dayCyclePresets: DayCyclePreset[] = [
   { // day
     lightDirection: sun.clone(),
     lightColor: new Color('#ffd2c2'),
@@ -20,6 +30,7 @@ export const dayCyclePresets: GradingProps[] = [
     fogNearRatio: 0.315,
     fogFarRatio: 1.25,
     pointLightIntensity: 0.15,
+    ...DAY_BLOOM,
   },
   { // dusk
     lightDirection: sun.clone(),
@@ -31,6 +42,7 @@ export const dayCyclePresets: GradingProps[] = [
     fogNearRatio: 0,
     fogFarRatio: 1.25,
     pointLightIntensity: 0.7,
+    ...DAY_BLOOM,
   },
   { // night — negative near ratio: fog plane starts behind the camera, heavy haze
     lightDirection: sun.clone(),
@@ -42,6 +54,7 @@ export const dayCyclePresets: GradingProps[] = [
     fogNearRatio: -0.85,
     fogFarRatio: 1,
     pointLightIntensity: 1,
+    ...NIGHT_BLOOM,
   },
   { // dawn
     lightDirection: sun.clone(),
@@ -53,13 +66,14 @@ export const dayCyclePresets: GradingProps[] = [
     fogNearRatio: 0.3,
     fogFarRatio: 1.25,
     pointLightIntensity: 0.5,
+    ...DAY_BLOOM,
   },
 ]
 
 // Bruno's keyframe shape: day and night are HELD (repeated at two stops) so an
 // auto loop dwells on the stable looks instead of spending it all mid-lerp.
 // Repeated entries reference the SAME preset object — live edits stay in sync
-const [day, dusk, night, dawn] = dayCyclePresets as [GradingProps, GradingProps, GradingProps, GradingProps]
+const [day, dusk, night, dawn] = dayCyclePresets as [DayCyclePreset, DayCyclePreset, DayCyclePreset, DayCyclePreset]
 export const DAY_CYCLE_TRACK = {
   presets: [day, day, dusk, night, night, dawn, day],
   stops: [0, 0.15, 0.25, 0.35, 0.6, 0.8, 0.9],

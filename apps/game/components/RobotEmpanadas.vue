@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { useAnimations, useGLTF } from '@tresjs/cientos'
 import { applyGradingToModel, sampleHeight } from '@artificer-forge/engine/runtime'
-import type { HeightField } from '@artificer-forge/engine/runtime'
+import type { HeightField, PointLight } from '@artificer-forge/engine/runtime'
+import { useControls } from '@tresjs/leches'
 import { CapsuleCollider, RigidBody } from '@tresjs/rapier'
-import { LoopRepeat, Vector3 } from 'three'
+import { Color, LoopRepeat, Vector3 } from 'three'
 import { positionWorld, uniform } from 'three/tsl'
 import type { AnimationClip, Mesh, Object3D } from 'three'
 import type { NodeMaterial } from 'three/webgpu'
+import { Html } from '@tresjs/cientos/webgpu'
 
 const props = withDefaults(defineProps<{
   /** Feet position. Read once on mount, where the body is created. */
@@ -27,8 +29,17 @@ const CAPSULE_HEIGHT = 2.2
 const capsuleHalfHeight = CAPSULE_HEIGHT / 2 - CAPSULE_RADIUS
 const capsuleArgs: [number, number] = [capsuleHalfHeight, CAPSULE_RADIUS]
 const capsuleOffset: [number, number, number] = [0, CAPSULE_HEIGHT / 2, 0]
+const PROMPT_HEIGHT = 2.9
 
 const grading = useGrading()
+
+const device = useInputDevice()
+const { stage, presses } = useProximityPrompt({
+  position: () => props.position,
+  noticeRadius: 8,
+  interactRadius: 4,
+  onInteract: () => console.info('[RobotEmpanadas] talk'),
+})
 
 const { state } = useGLTF('/models/robot-empanadas/Robot-empanadas.glb', { draco: true })
 // The robot GLB has the KayKit medium rig but no clips, so they come from the shared animation pack.
@@ -64,6 +75,35 @@ function shade(model: Object3D) {
 watch(scene, (model) => {
   if (model) shade(model)
 }, { immediate: true })
+
+// The stall roof covers the shadow probe, so the robot is all in shadow. A grading point light lifts it back.
+const uuid = inject<string>('uuid')
+const {
+  bulbColor,
+  bulbIntensity,
+  bulbRadius,
+  bulbHeight,
+  bulbForward,
+} = useControls('💡 bulb', {
+  color: '#ffd28a',
+  intensity: { value: 1.2, min: 0, max: 5, step: 0.05, type: 'range' },
+  radius: { value: 4, min: 0.5, max: 12, step: 0.25, type: 'range' },
+  height: { value: 2.85, min: 1, max: 3.2, step: 0.05, type: 'range' },
+  forward: { value: 1.3, min: -1.5, max: 1.5, step: 0.05, type: 'range' },
+}, { uuid })
+
+const UP = new Vector3(0, 1, 0)
+const bulbLight: PointLight = { position: new Vector3(), radius: 4, color: new Color(), intensity: 1, flicker: 0 }
+const removeBulbLight = grading.addPointLights([bulbLight])
+onUnmounted(removeBulbLight)
+
+watchEffect(() => {
+  bulbLight.position.set(0, bulbHeight!.value, bulbForward!.value).applyAxisAngle(UP, props.yaw).add(new Vector3(...props.position))
+  bulbLight.radius = bulbRadius!.value
+  bulbLight.color.set(bulbColor!.value)
+  bulbLight.intensity = bulbIntensity!.value
+  grading.updatePointLights()
+})
 </script>
 
 <template>
@@ -73,6 +113,17 @@ watch(scene, (model) => {
     :rotation="[0, props.yaw, 0]"
     :collider="false"
   >
+    <Html
+      center
+      :position="[0, PROMPT_HEIGHT, 0]"
+    >
+      <ProximityPrompt 
+        :stage="stage"
+        action="Talk"
+        :presses="presses"
+        :device="device"
+      />
+    </Html>
     <CapsuleCollider
       :args="capsuleArgs"
       :position="capsuleOffset"

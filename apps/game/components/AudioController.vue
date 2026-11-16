@@ -44,7 +44,7 @@ for (const [name] of sfxSounds) {
 // The camera sits 15 to 30 m from the player, so ears there hear every nearby sound as far away.
 // The ears go on the player and take only their direction from the camera.
 const EAR_HEIGHT = 1.5
-const player = usePlayerPosition()
+const player = usePlayer()
 const ears = new Vector3()
 const forward = new Vector3()
 const up = new Vector3()
@@ -56,7 +56,7 @@ onBeforeRender(({ camera }) => {
   view.getWorldDirection(forward)
   // The camera looks down, so its up is not +Y. A wrong up tilts left and right.
   up.setFromMatrixColumn(view.matrixWorld, 1)
-  const [x, y, z] = player.value
+  const [x, y, z] = player.position
   audio.setListener(ears.set(x, y + EAR_HEIGHT, z), forward, up)
 })
 </script>

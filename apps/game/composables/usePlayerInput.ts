@@ -9,6 +9,8 @@ export interface PlayerInput {
   jump: boolean
   /** True while the button is down. Releasing it during the rise cuts the jump short. */
   jumpHeld: boolean
+  /** True on the one read that follows a press of E or the pad's top face button. */
+  interact: boolean
 }
 
 // event.code is the physical key, so WASD stays in place on AZERTY and other layouts.
@@ -25,6 +27,7 @@ const MOVE_KEYS: Record<string, [number, number]> = {
 
 // Button indices of the W3C "standard" gamepad mapping, which Xbox and PlayStation pads report.
 const PAD_BOTTOM = 0
+const PAD_TOP = 3
 const PAD_LEFT_STICK = 10
 const STICK_DEADZONE = 0.15
 
@@ -55,16 +58,20 @@ export function readLookStick() {
  */
 export function usePlayerInput() {
   const held = new Set<string>()
-  const input: PlayerInput = { x: 0, y: 0, run: false, jump: false, jumpHeld: false }
+  const input: PlayerInput = { x: 0, y: 0, run: false, jump: false, jumpHeld: false, interact: false }
   let jumpQueued = false
   let padJumpHeld = false
   let padStickHeld = false
   let padSprint = false
+  let interactQueued = false
+  let padInteractHeld = false
 
   function onKeyDown(event: KeyboardEvent) {
     if (isEditableTarget(event)) return
+    setInputDevice('keyboard')
     if (event.code === 'Space' || event.code in MOVE_KEYS) event.preventDefault()
     if (event.code === 'Space' && !event.repeat) jumpQueued = true
+    if (event.code === 'KeyE' && !event.repeat) interactQueued = true
     held.add(event.code)
   }
 
@@ -103,9 +110,16 @@ export function usePlayerInput() {
     jumpQueued = false
     let jumpHeld = held.has('Space')
 
+    let interact = interactQueued
+    interactQueued = false
+
     const pad = firstGamepad()
     if (pad) {
       const stick = readStick(pad, 0, 1)
+      // The stick reads null inside the deadzone, so a resting pad with a little drift does not steal the glyphs.
+      if (stick || pad.buttons.some(button => button.pressed)) {
+        setInputDevice(padFamily(pad))
+      }
       if (stick) {
         x += stick.x
         y -= stick.y // stick up reports -1
@@ -124,6 +138,10 @@ export function usePlayerInput() {
       padJumpHeld = bottomPressed
       jumpHeld ||= bottomPressed
 
+      const topPressed = !!pad.buttons[PAD_TOP]?.pressed
+      if (topPressed && !padInteractHeld) interact = true
+      padInteractHeld = topPressed
+
       run ||= padSprint
     }
 
@@ -139,6 +157,7 @@ export function usePlayerInput() {
     input.run = run
     input.jump = jump
     input.jumpHeld = jumpHeld
+    input.interact = interact
     return input
   }
 
