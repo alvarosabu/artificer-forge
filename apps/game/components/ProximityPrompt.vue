@@ -1,19 +1,19 @@
 <script lang="ts" setup>
-import type { PromptStage } from '~/composables/useProximityPrompt'
+import type { PromptAction, PromptStage } from '~/composables/useProximityPrompt'
 import type { InputDevice } from '~/composables/useInputDevice'
 
 const props = defineProps<{
   stage: PromptStage
-  action: string
+  action: PromptAction
   presses: number
   /** Picks the glyph: the E key, the Xbox Y button or the PlayStation triangle. */
   device: InputDevice
 }>()
 
-const badge = useTemplateRef<HTMLElement>('badge')
+const prompt = useTemplateRef<HTMLElement>('prompt')
 
-  watch(() => props.presses, () => {
-  badge.value?.animate(
+watch(() => props.presses, () => {
+  prompt.value?.animate(
     [{ scale: 1 }, { scale: 0.85 }, { scale: 1.08 }, { scale: 1 }],
     { duration: 280, easing: 'ease-out' },
   )
@@ -22,7 +22,7 @@ const badge = useTemplateRef<HTMLElement>('badge')
 
 <template>
   <Transition name="prompt-pop" type="transition">
-    <div ref="badge" v-if="stage !== 'hidden'" class="proximity-prompt" :class="{ 'interact': stage === 'interact' }"
+    <div ref="prompt" v-if="stage !== 'hidden'" class="proximity-prompt" :class="{ 'interact': stage === 'interact' }"
       aria-hidden="true">
       <div class="prompt-body">
         <kbd
@@ -57,6 +57,10 @@ const badge = useTemplateRef<HTMLElement>('badge')
 <style scoped>
 .proximity-prompt {
   --morph: 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* The pad glyphs copy the real buttons, so they are not theme colors. */
+  --pad-face: #111;
+  --pad-xbox-y: #f5c518;
+  --pad-ps-triangle: #3ed6c6;
   display: grid;
   grid-template-columns: 0fr;
   width: max-content;
@@ -65,7 +69,7 @@ const badge = useTemplateRef<HTMLElement>('badge')
   padding: 0;
   rotate: 45deg;
   border-radius: 3px;
-  background: #fff;
+  background: var(--ui-text);
   box-shadow: 0 0 0 2px var(--ui-bg), 0 4px 10px rgb(0 0 0 / 0.35);
   animation: prompt-bob 1.6s ease-in-out infinite;
   transition:
@@ -108,14 +112,14 @@ const badge = useTemplateRef<HTMLElement>('badge')
   width: 24px;
   height: 24px;
   border-radius: 6px;
-  background: #fff;
+  background: var(--ui-text);
   color: var(--ui-bg);
   font: 900 14px/1 var(--font-sans);
   box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.2);
 }
 
 .prompt-label {
-  color: #fff;
+  color: var(--ui-text);
   font: 700 14px/1 var(--font-sans);
 }
 
@@ -125,17 +129,17 @@ const badge = useTemplateRef<HTMLElement>('badge')
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #111;
+  background: var(--pad-face);
   font: 900 14px/1 var(--font-sans);
   box-shadow: inset 0 -2px 0 rgb(255 255 255 / 0.15), 0 0 0 1.5px rgb(255 255 255 / 0.3);
 }
 
 .prompt-button.is-xbox {
-  color: #f5c518;
+  color: var(--pad-xbox-y);
 }
 
 .prompt-button.is-playstation {
-  color: #3ed6c6;
+  color: var(--pad-ps-triangle);
 }
 
 .prompt-button svg {

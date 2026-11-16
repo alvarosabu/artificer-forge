@@ -35,7 +35,7 @@ const props = withDefaults(defineProps<{
   surfaceAt: () => null,
 })
 
-const player = usePlayer()
+const player = useWritablePlayer()
 // the camera follows this, and it only changes once the player moves
 player.position = [...props.spawn]
 

@@ -1,55 +1,60 @@
 import { MathUtils } from 'three'
+import type { Vector3Tuple } from 'three'
 import type { ComputedRef, InjectionKey, MaybeRefOrGetter, Ref } from 'vue'
 
 export type PromptStage = 'hidden' | 'notice' | 'interact'
 
+/** The Entity action names a prompt badge can show. */
+export type PromptAction = 'Examine' | 'Talk' | 'Attack' | 'Loot' | 'Pick Up'
+
 export interface ProximityPromptOptions {
-  /** Feet position of the target. */
-  position: MaybeRefOrGetter<[number, number, number]>
+  /** Feet position of the thing the prompt floats above. */
+  position: MaybeRefOrGetter<Vector3Tuple>
   /** Within this ground distance, in meters, the marker shows. */
   noticeRadius?: number
-  /** Within this ground distance, in meters, and facing the target, the player can interact. */
+  /** Within this ground distance, in meters, and facing the prompt, the player can interact. */
   interactRadius?: number
   /** Half the width of the facing cone, in degrees. */
-  facingAngle?: MaybeRefOrGetter<number>
-  /** Runs when the player presses the interact button while this target's badge shows. */
+  facingAngle?: number
+  /** Runs when the player presses the interact button while this prompt's badge shows. */
   onInteract?: () => void
 }
 
-interface PromptTarget {
-  /** The stage from distance and facing alone, before the registry picks one target. */
+interface PromptEntry {
+  // The stage from distance and facing alone, before the registry picks one prompt.
   reach: ComputedRef<PromptStage>
   distance: ComputedRef<number>
   presses: Ref<number>
   onInteract?: () => void
 }
 
-// Once shown, the marker stays until the player is this far past the radius, so standing on the edge does not flicker it.
+// Once shown, a stage stays until the player is this much past its limit, so standing on the edge does not flicker it.
 const EXIT_MARGIN = 0.5
-// The same idea for the facing cone, in degrees.
 const EXIT_ANGLE = 10
 
-function createPromptRegistry() {
-  const targets = shallowReactive(new Set<PromptTarget>())
+const hysteresis = (limit: number, margin: number, shown: boolean) => shown ? limit + margin : limit
 
-  /** The nearest target in reach to interact. Only this one shows the badge and takes the press. */
+function createPromptRegistry() {
+  const prompts = shallowReactive(new Set<PromptEntry>())
+
+  // Only the nearest prompt in interact reach shows the badge and takes the press.
   const active = computed(() => {
-    let nearest: PromptTarget | null = null
-    for (const target of targets) {
-      if (target.reach.value !== 'interact') continue
-      if (!nearest || target.distance.value < nearest.distance.value) nearest = target
+    let nearest: PromptEntry | null = null
+    for (const prompt of prompts) {
+      if (prompt.reach.value !== 'interact') continue
+      if (!nearest || prompt.distance.value < nearest.distance.value) nearest = prompt
     }
     return nearest
   })
 
   function interact() {
-    const target = active.value
-    if (!target) return
-    target.presses.value++
-    target.onInteract?.()
+    const prompt = active.value
+    if (!prompt) return
+    prompt.presses.value++
+    prompt.onInteract?.()
   }
 
-  return { targets, active, interact }
+  return { prompts, active, interact }
 }
 
 type PromptRegistry = ReturnType<typeof createPromptRegistry>
@@ -69,44 +74,43 @@ export function useProximityPrompts() {
   return registry
 }
 
-/** The prompt stage of one target, from the player's distance to it and the way the player faces. */
+/** The stage of one prompt, from the player's distance to it and the way the player faces. */
 export function useProximityPrompt(options: ProximityPromptOptions) {
   const registry = useProximityPrompts()
   const player = usePlayer()
   const noticeRadius = options.noticeRadius ?? 6
   const interactRadius = options.interactRadius ?? 2.5
-  const facingAngle = () => toValue(options.facingAngle) ?? 60
-  const enterCos = computed(() => Math.cos(MathUtils.degToRad(facingAngle())))
-  const exitCos = computed(() => Math.cos(MathUtils.degToRad(facingAngle() + EXIT_ANGLE)))
+  const facingAngle = options.facingAngle ?? 60
 
   const offset = computed(() => {
     const [px, , pz] = player.position
-    const [tx, , tz] = toValue(options.position)
-    return { dx: tx - px, dz: tz - pz }
+    const [x, , z] = toValue(options.position)
+    return { dx: x - px, dz: z - pz }
   })
   const distance = computed(() => Math.hypot(offset.value.dx, offset.value.dz))
 
   const reach = computed<PromptStage>((previous) => {
     const { dx, dz } = offset.value
     const wasInteract = previous === 'interact'
-    if (distance.value <= (wasInteract ? interactRadius + EXIT_MARGIN : interactRadius)) {
+    if (distance.value <= hysteresis(interactRadius, EXIT_MARGIN, wasInteract)) {
       const yaw = player.yaw
       const facing = (Math.sin(yaw) * dx + Math.cos(yaw) * dz) / distance.value
-      if (facing >= (wasInteract ? exitCos.value : enterCos.value)) return 'interact'
+      const cone = MathUtils.degToRad(hysteresis(facingAngle, EXIT_ANGLE, wasInteract))
+      if (facing >= Math.cos(cone)) return 'interact'
     }
 
     const shown = previous === 'notice' || wasInteract
-    return distance.value <= (shown ? noticeRadius + EXIT_MARGIN : noticeRadius) ? 'notice' : 'hidden'
+    return distance.value <= hysteresis(noticeRadius, EXIT_MARGIN, shown) ? 'notice' : 'hidden'
   })
 
-  const target: PromptTarget = { reach, distance, presses: ref(0), onInteract: options.onInteract }
-  registry.targets.add(target)
-  onScopeDispose(() => registry.targets.delete(target))
+  const entry: PromptEntry = { reach, distance, presses: ref(0), onInteract: options.onInteract }
+  registry.prompts.add(entry)
+  onScopeDispose(() => registry.prompts.delete(entry))
 
-  // A target in reach that lost to a nearer one keeps its marker.
+  // A prompt in interact reach that lost to a nearer one keeps its marker.
   const stage = computed<PromptStage>(() =>
-    reach.value === 'interact' && registry.active.value !== target ? 'notice' : reach.value,
+    reach.value === 'interact' && registry.active.value !== entry ? 'notice' : reach.value,
   )
 
-  return { stage, presses: readonly(target.presses) }
+  return { stage, presses: readonly(entry.presses) }
 }

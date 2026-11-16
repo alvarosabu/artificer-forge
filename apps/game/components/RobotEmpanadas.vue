@@ -114,8 +114,8 @@ watchEffect(() => {
     :collider="false"
   >
     <Html
+      center
       :position="[0, PROMPT_HEIGHT, 0]"
-      :scale="0.05"
     >
       <ProximityPrompt 
         :stage="stage"

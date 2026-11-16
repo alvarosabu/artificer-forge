@@ -65,11 +65,10 @@ export function usePlayerInput() {
   let padSprint = false
   let interactQueued = false
   let padInteractHeld = false
-  const device = useInputDevice()
 
   function onKeyDown(event: KeyboardEvent) {
     if (isEditableTarget(event)) return
-    if (device.value !== 'keyboard') device.value = 'keyboard'
+    setInputDevice('keyboard')
     if (event.code === 'Space' || event.code in MOVE_KEYS) event.preventDefault()
     if (event.code === 'Space' && !event.repeat) jumpQueued = true
     if (event.code === 'KeyE' && !event.repeat) interactQueued = true
@@ -119,8 +118,7 @@ export function usePlayerInput() {
       const stick = readStick(pad, 0, 1)
       // The stick reads null inside the deadzone, so a resting pad with a little drift does not steal the glyphs.
       if (stick || pad.buttons.some(button => button.pressed)) {
-        const family = padFamily(pad)
-        if (device.value !== family) device.value = family
+        setInputDevice(padFamily(pad))
       }
       if (stick) {
         x += stick.x

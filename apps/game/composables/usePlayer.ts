@@ -11,16 +11,25 @@ export interface Player {
 
 const PlayerKey: InjectionKey<Player> = Symbol('player')
 
-// Chamo is the only writer. Replace position with a new array: shallowReactive does not see in-place changes.
+// shallowReactive does not see in-place changes, so replace position with a new array.
 export function providePlayer() {
   const player = shallowReactive<Player>({ position: [0, 0, 0], yaw: 0 })
   provide(PlayerKey, player)
   return player
 }
 
-/** Where the player is and where they face, shared by everything that reacts to them. */
-export function usePlayer() {
+function injectPlayer() {
   const player = inject(PlayerKey, null)
   if (!player) throw new Error('usePlayer() needs providePlayer() in the page')
   return player
+}
+
+/** Where the player is and where they face, shared by everything that reacts to them. */
+export function usePlayer(): Readonly<Player> {
+  return shallowReadonly(injectPlayer())
+}
+
+/** Write access for the one component that moves the player. Everything else uses `usePlayer()`. */
+export function useWritablePlayer() {
+  return injectPlayer()
 }

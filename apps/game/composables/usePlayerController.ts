@@ -154,7 +154,7 @@ export function usePlayerController(
     onPhoneHold?: () => void
     /** Called when the phone states end, so the phone can leave the hand. */
     onPhoneRelease?: () => void
-    /** Called when the player wants to interact with a target. */
+    /** Called when the player presses the interact button. */
     onInteract?: () => void
   } = {},
 ) {
