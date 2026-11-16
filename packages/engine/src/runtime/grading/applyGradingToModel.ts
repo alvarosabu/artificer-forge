@@ -13,7 +13,10 @@ export interface ApplyGradingOptions {
 }
 
 function emissiveOf(std: MeshStandardMaterial) {
-    if (!std.emissive || std.emissive.getHex() === 0 || !(std.emissiveIntensity > 0)) return undefined
+    if (!std.emissive || !(std.emissiveIntensity > 0)) return undefined
+    // Not getHex(): it rounds to 8 bits, so a tiny emissive with a high intensity would read as black.
+    const { r, g, b } = std.emissive
+    if (r === 0 && g === 0 && b === 0) return undefined
     const glow = uniform(new Color(std.emissive)).mul(std.emissiveIntensity)
     return std.emissiveMap ? texture(std.emissiveMap).rgb.mul(glow) : glow
 }
