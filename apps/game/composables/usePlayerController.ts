@@ -1,5 +1,5 @@
 import { LoopOnce, LoopRepeat, MathUtils, Vector3 } from 'three'
-import type { AnimationAction, Camera, Object3D } from 'three'
+import type { AnimationAction, Camera, Object3D, Vector3Tuple } from 'three'
 import type { MaybeRefOrGetter, ShallowRef } from 'vue'
 import { useRapier } from '@tresjs/rapier'
 import type { ExposedRigidBody } from '@tresjs/rapier'
@@ -156,6 +156,10 @@ export function usePlayerController(
     onPhoneRelease?: () => void
     /** Called when the player presses the interact button. */
     onInteract?: () => void
+    /** While true, the input is ignored, as in the states that lock it. */
+    locked?: () => boolean
+    /** A point Chamo turns to face, or null. Wins over the direction of travel. */
+    faceTarget?: () => Readonly<Vector3Tuple> | null
   } = {},
 ) {
   const { read } = usePlayerInput()
@@ -176,6 +180,8 @@ export function usePlayerController(
   const hitImpulse = new Vector3()
   const waterAt = options.waterAt ?? (() => 0)
   const wantsPhone = options.wantsPhone ?? (() => false)
+  const locked = options.locked ?? (() => false)
+  const faceTarget = options.faceTarget ?? (() => null)
   let phoneHeld = false
 
 
@@ -427,9 +433,10 @@ export function usePlayerController(
     }
 
     input = read()
-    if (states[state.value].locksInput) {
+    if (states[state.value].locksInput || locked()) {
       input.x = 0
       input.y = 0
+      input.run = false
       input.jump = false
       input.jumpHeld = false
       input.interact = false
@@ -498,8 +505,15 @@ export function usePlayerController(
 
     // Face the direction of travel, not the input, so a reversal skids facing forward and turns once it stops.
     // From rest, velocity starts along the input, so the first step still faces the input.
-    if (speed() > 1e-3) {
-      yaw = lerpAngle(yaw, Math.atan2(velocity.x, velocity.z), 1 - Math.exp(-tuning.turnSpeed * delta))
+    const turnAlpha = 1 - Math.exp(-tuning.turnSpeed * delta)
+    const lookTarget = faceTarget()
+    if (lookTarget) {
+      const dx = lookTarget[0] - feet.x
+      const dz = lookTarget[2] - feet.z
+      if (dx * dx + dz * dz > 1e-4) yaw = lerpAngle(yaw, Math.atan2(dx, dz), turnAlpha)
+    }
+    else if (speed() > 1e-3) {
+      yaw = lerpAngle(yaw, Math.atan2(velocity.x, velocity.z), turnAlpha)
     }
 
     if (swimming) {

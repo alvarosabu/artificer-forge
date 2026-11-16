@@ -60,6 +60,7 @@ const phoneModel = computed(() => heldItemsState.value?.scene?.getObjectByName('
 const heldItems = useHeldItems(scene)
 const phone = usePhone()
 const prompts = useProximityPrompts()
+const dialog = useDialog()
 
 const {
   playerWalkSpeed,
@@ -278,11 +279,13 @@ const controller = usePlayerController(root, body, actions, {
   },
   onPhoneRelease: () => heldItems.release('offHand'),
   onInteract: () => prompts.interact(),
+  locked: () => dialog.inputLocked.value,
+  faceTarget: () => dialog.speakerPosition.value,
 })
 
 watchEffect(() => {
   const state = controller.state.value
-  phone.available.value = !!phoneModel.value && (canTakeOutPhone(state) || isUsingPhone(state))
+  phone.available.value = !!phoneModel.value && !dialog.inputLocked.value && (canTakeOutPhone(state) || isUsingPhone(state))
   // A swim or fall cuts the phone short. Clear the request, or Chamo takes the phone out again on landing.
   if (!canTakeOutPhone(state) && !isUsingPhone(state)) phone.open.value = false
 })

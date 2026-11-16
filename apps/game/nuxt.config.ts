@@ -6,6 +6,7 @@ export default defineNuxtConfig({
     '@tresjs/nuxt',
     '@nuxt/devtools',
     '@nuxt/ui',
+    '@nuxt/content',
     '@artificer-forge/assets/nuxt',
   ],
   css: ['~/assets/css/main.css'],

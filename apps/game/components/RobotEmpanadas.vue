@@ -34,11 +34,12 @@ const PROMPT_HEIGHT = 2.9
 const grading = useGrading()
 
 const device = useInputDevice()
+const dialog = useDialog()
 const { stage, presses } = useProximityPrompt({
   position: () => props.position,
   noticeRadius: 8,
   interactRadius: 4,
-  onInteract: () => console.info('[RobotEmpanadas] talk'),
+  onInteract: () => dialog.open('robot_empanadas_hello', { position: props.position }),
 })
 
 const { state } = useGLTF('/models/robot-empanadas/Robot-empanadas.glb', { draco: true })
