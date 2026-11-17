@@ -1,0 +1,18 @@
+dialogId: robot_empanadas_hello
+startNode: greeting
+nodes:
+  greeting:
+    speaker: robot_empanadas
+    text: "Welcome to Empanadas Margarita! I'm afraid I ran out of *wheat flour*. If you find me some, I will make you the best empanadas of your life."
+    choices:
+      - text: "I'll find some!"
+        next: accept
+      - text: "What's inside?"
+        next: fillings
+      - text: "See ya!"
+  accept:
+    speaker: robot_empanadas
+    text: "Gracias! Bring me a bag of *flour* and I will heat up the frying pan. The oil is ready... it has been for a week."
+  fillings:
+    speaker: robot_empanadas
+    text: "Beef, chicken, ham and cheese... and a *secret recipe* that only robots can taste."

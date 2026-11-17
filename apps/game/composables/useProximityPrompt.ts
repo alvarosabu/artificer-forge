@@ -36,6 +36,7 @@ const hysteresis = (limit: number, margin: number, shown: boolean) => shown ? li
 
 function createPromptRegistry() {
   const prompts = shallowReactive(new Set<PromptEntry>())
+  const suspended = ref(false)
 
   // Only the nearest prompt in interact reach shows the badge and takes the press.
   const active = computed(() => {
@@ -48,13 +49,14 @@ function createPromptRegistry() {
   })
 
   function interact() {
+    if (suspended.value) return
     const prompt = active.value
     if (!prompt) return
     prompt.presses.value++
     prompt.onInteract?.()
   }
 
-  return { prompts, active, interact }
+  return { prompts, active, suspended, interact }
 }
 
 type PromptRegistry = ReturnType<typeof createPromptRegistry>
@@ -108,9 +110,10 @@ export function useProximityPrompt(options: ProximityPromptOptions) {
   onScopeDispose(() => registry.prompts.delete(entry))
 
   // A prompt in interact reach that lost to a nearer one keeps its marker.
-  const stage = computed<PromptStage>(() =>
-    reach.value === 'interact' && registry.active.value !== entry ? 'notice' : reach.value,
-  )
+  const stage = computed<PromptStage>(() => {
+    if (registry.suspended.value) return 'hidden'
+    return reach.value === 'interact' && registry.active.value !== entry ? 'notice' : reach.value
+  })
 
   return { stage, presses: readonly(entry.presses) }
 }

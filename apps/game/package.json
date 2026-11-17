@@ -18,6 +18,7 @@
     "@artificer-forge/post-processing": "workspace:*",
     "@artificer-forge/vfx": "workspace:*",
     "@iconify-json/lucide": "catalog:nuxt",
+    "@nuxt/content": "catalog:nuxt",
     "@nuxt/eslint": "catalog:nuxt",
     "@nuxt/ui": "catalog:nuxt",
     "@tresjs/cientos": "catalog:three",

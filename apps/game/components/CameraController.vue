@@ -54,7 +54,7 @@ const {
   framing: { value: 0.33, min: 0.1, max: 0.9, step: 0.01, type: 'range' },
 }, { uuid })
 
-// The phone shot frames Chamo from the front, like a handheld selfie, with Chamo right of center so the phone panel fits on the left.
+// The phone pose frames Chamo from the front, like a handheld selfie, with Chamo right of center so the phone panel fits on the left.
 const {
   phoneDistance,
   phonePhi,
@@ -127,24 +127,42 @@ function smoothHeight(current: number, target: number, smoothTime: number, delta
 }
 
 const phone = usePhone()
+const dialog = useDialog()
 const player = usePlayer()
 
-// The pose the camera would take without the phone shot. The shot blends from it and back to it.
+// The dialog pose frames Chamo and the speaker from behind Chamo, turned `side` degrees off the line between them, high enough on screen for the dialog UI to fit below.
+const {
+  dialogSide,
+  dialogDistance,
+  dialogPhi,
+  dialogLookHeight,
+  dialogFraming,
+  dialogDuration,
+} = useControls('💬 dialog', {
+  side: { value: 20, min: -90, max: 90, step: 1, type: 'range' },
+  distance: { value: 17, min: 3, max: 40, step: 0.5, type: 'range' },
+  phi: { value: 73, min: 20, max: 95, step: 0.5, type: 'range' },
+  lookHeight: { value: 1.3, min: 0, max: 3, step: 0.05, type: 'range' },
+  framing: { value: 0.68, min: 0.1, max: 0.9, step: 0.01, type: 'range' },
+  duration: { value: 0.9, min: 0.1, max: 3, step: 0.05, type: 'range' },
+}, { uuid })
+
+// The pose the camera would take without a directed pose. A directed pose blends from it and back to it.
 const basePosition = new Vector3()
 const baseLook = new Vector3()
-const shotLook = new Vector3()
 const blendLook = new Vector3()
 const baseSpherical = new Spherical()
-const shotSpherical = new Spherical()
 const screenRight = new Vector3()
-let shotWeight = 0
-// Turns input off and disables OrbitControls, which would otherwise fight the shot for the camera.
-const shotActive = ref(false)
+// The last wanted directed pose. It stays after the phone or dialog closes, so the blend back does not jump.
+const directedPose = { look: new Vector3(), spherical: new Spherical(), framing: 0.33, duration: 0.8 }
+let directedWeight = 0
+// Turns input off and disables OrbitControls, which would otherwise fight the directed pose for the camera.
+const directing = ref(false)
 // Disabled, not unmounted: v-if and template refs on OrbitControls both throw in Vue's patch inside the Tres renderer.
 const { controls, renderer } = useTresContext()
 watchEffect(() => {
   const orbit = controls.value as { enabled?: boolean } | null
-  if (orbit && 'enabled' in orbit) orbit.enabled = !shotActive.value
+  if (orbit && 'enabled' in orbit) orbit.enabled = !directing.value
 })
 
 function lerpAngle(from: number, to: number, alpha: number) {
@@ -152,29 +170,69 @@ function lerpAngle(from: number, to: number, alpha: number) {
   return from + delta * alpha
 }
 
-// Returns false when the shot is idle, so the caller places the camera itself.
-function applyPhoneShot(cam: PerspectiveCamera, delta: number) {
-  const goal = phone.open.value ? 1 : 0
-  shotWeight = MathUtils.clamp(shotWeight + Math.sign(goal - shotWeight) * delta / (phoneDuration?.value ?? 0.8), 0, 1)
-  const active = shotWeight > 0 || goal > 0
-  if (shotActive.value !== active) shotActive.value = active
-  if (shotWeight === 0) return false
+// Shifts the projection window, not the camera, so the angle, the zoom and the
+// free-mode orbit stay the same. Sizes are in screen heights, so they do not depend
+// on the canvas pixels. setViewOffset overwrites aspect with fullWidth / fullHeight,
+// so fullWidth must be the current aspect or the image stretches.
+function setFraming(cam: PerspectiveCamera, framing: number) {
+  const offsetY = framing - 0.5
+  if (cam.view?.offsetY !== offsetY || cam.view.fullWidth !== cam.aspect) {
+    cam.setViewOffset(cam.aspect, 1, 0, offsetY, cam.aspect, 1)
+  }
+}
 
-  const yaw = player.yaw
-  // Screen right while looking at Chamo's front.
-  screenRight.set(Math.cos(yaw), 0, -Math.sin(yaw))
-  shotLook.set(...props.target).addScaledVector(screenRight, -(phoneShift?.value ?? 1.3))
-  shotLook.y += phoneLookHeight?.value ?? 1.1
-  shotSpherical.set(phoneDistance?.value ?? 13, MathUtils.degToRad(phonePhi?.value ?? 76), yaw)
+// Writes the wanted pose into `directedPose`. False when no pose is wanted.
+function aimDirectedPose(baseFraming: number) {
+  if (phone.open.value) {
+    const yaw = player.yaw
+    // Screen right while looking at Chamo's front.
+    screenRight.set(Math.cos(yaw), 0, -Math.sin(yaw))
+    directedPose.look.set(...props.target).addScaledVector(screenRight, -(phoneShift?.value ?? 1.3))
+    directedPose.look.y += phoneLookHeight?.value ?? 1.1
+    directedPose.spherical.set(phoneDistance?.value ?? 13, MathUtils.degToRad(phonePhi?.value ?? 76), yaw)
+    directedPose.framing = baseFraming
+    directedPose.duration = phoneDuration?.value ?? 0.8
+    return true
+  }
+
+  const speakerPosition = dialog.speakerPosition.value
+  if (speakerPosition) {
+    const [px, py, pz] = props.target
+    const [sx, sy, sz] = speakerPosition
+    // Chamo can stop anywhere in the prompt's facing cone, so the angle follows the line between the two, not the speaker's facing.
+    const behindChamo = Math.atan2(px - sx, pz - sz)
+    directedPose.look.set((px + sx) / 2, (py + sy) / 2 + (dialogLookHeight?.value ?? 1.3), (pz + sz) / 2)
+    directedPose.spherical.set(
+      dialogDistance?.value ?? 17,
+      MathUtils.degToRad(dialogPhi?.value ?? 73),
+      behindChamo + MathUtils.degToRad(dialogSide?.value ?? 20),
+    )
+    directedPose.framing = dialogFraming?.value ?? 0.68
+    directedPose.duration = dialogDuration?.value ?? 0.9
+    return true
+  }
+  return false
+}
+
+// Returns false when no directed pose is in progress, so the caller places the camera itself.
+function applyDirectedPose(cam: PerspectiveCamera, delta: number, baseFraming: number) {
+  const wanted = aimDirectedPose(baseFraming)
+  const goal = wanted ? 1 : 0
+  directedWeight = MathUtils.clamp(directedWeight + Math.sign(goal - directedWeight) * delta / directedPose.duration, 0, 1)
+  const active = directedWeight > 0 || wanted
+  if (directing.value !== active) directing.value = active
+  if (directedWeight === 0) return false
+
   baseSpherical.setFromVector3(offset.subVectors(basePosition, baseLook))
 
-  // Orbits around Chamo instead of cutting straight across, so a camera behind Chamo does not pass through them.
-  const t = shotWeight * shotWeight * (3 - 2 * shotWeight)
-  blendLook.lerpVectors(baseLook, shotLook, t)
+  // Orbits around the look point instead of cutting straight across, so a camera behind Chamo does not pass through them.
+  const t = directedWeight * directedWeight * (3 - 2 * directedWeight)
+  setFraming(cam, MathUtils.lerp(baseFraming, directedPose.framing, t))
+  blendLook.lerpVectors(baseLook, directedPose.look, t)
   offset.setFromSphericalCoords(
-    MathUtils.lerp(baseSpherical.radius, shotSpherical.radius, t),
-    MathUtils.lerp(baseSpherical.phi, shotSpherical.phi, t),
-    lerpAngle(baseSpherical.theta, shotSpherical.theta, t),
+    MathUtils.lerp(baseSpherical.radius, directedPose.spherical.radius, t),
+    MathUtils.lerp(baseSpherical.phi, directedPose.spherical.phi, t),
+    lerpAngle(baseSpherical.theta, directedPose.spherical.theta, t),
   )
   cam.position.copy(blendLook).add(offset)
   cam.lookAt(blendLook)
@@ -187,24 +245,18 @@ onBeforeRender(({ delta, camera }) => {
   const cam = toValue(camera) as PerspectiveCamera | undefined
   if (!cam) return
 
-  // Shifts the projection window, not the camera, so the angle, the zoom and the
-  // free-mode orbit stay the same. Sizes are in screen heights, so they do not depend
-  // on the canvas pixels. setViewOffset overwrites aspect with fullWidth / fullHeight,
-  // so fullWidth must be the current aspect or the image stretches.
-  const framingOffset = (cameraFraming?.value ?? 0.33) - 0.5
-  if (cam.view?.offsetY !== framingOffset || cam.view.fullWidth !== cam.aspect) {
-    cam.setViewOffset(cam.aspect, 1, 0, framingOffset, cam.aspect, 1)
-  }
+  const baseFraming = cameraFraming?.value ?? 0.33
+  setFraming(cam, baseFraming)
 
   tracked.set(...props.target)
   const heightTime = cameraHeightSmoothing?.value ?? 0.35
   if (cameraFree?.value && freePlaced) {
-    // OrbitControls owns the free camera, so the base pose is wherever it left the camera when the shot began.
-    if (shotWeight === 0) {
+    // OrbitControls owns the free camera, so the base pose is wherever it left the camera when the directed pose began.
+    if (directedWeight === 0) {
       basePosition.copy(cam.position)
       baseLook.copy(smoothFocus)
     }
-    if (applyPhoneShot(cam, delta)) return
+    if (applyDirectedPose(cam, delta, baseFraming)) return
     step.set(
       tracked.x - smoothFocus.x,
       smoothHeight(smoothFocus.y, tracked.y, heightTime, delta) - smoothFocus.y,
@@ -217,7 +269,7 @@ onBeforeRender(({ delta, camera }) => {
     return
   }
   // Non-inverted: stick right turns the view right, stick up lowers the camera to look up.
-  const look = shotActive.value ? null : readLookStick()
+  const look = directing.value ? null : readLookStick()
   if (look) {
     const speed = (cameraStickOrbit?.value ?? 120) * delta
     theta -= look.x * speed
@@ -261,7 +313,7 @@ onBeforeRender(({ delta, camera }) => {
 
   basePosition.copy(smoothFocus).add(offset)
   baseLook.copy(smoothFocus)
-  if (!applyPhoneShot(cam, delta)) {
+  if (!applyDirectedPose(cam, delta, baseFraming)) {
     cam.position.copy(basePosition)
     cam.lookAt(baseLook)
   }
@@ -276,7 +328,7 @@ let dragging = false
 function onWheel(event: WheelEvent) {
   if (cameraFree?.value) return
   event.preventDefault()
-  if (shotActive.value) return
+  if (directing.value) return
   // One wheel notch is about 100px of deltaY; Bruno's normalized spin is about 1.
   const step = (event.deltaY / 100) * (cameraZoomSensitivity?.value ?? 0.05)
   zoomRatio.value = MathUtils.clamp(zoomRatio.value - step, 0, 1)
@@ -288,7 +340,7 @@ function onPointerDown(event: PointerEvent) {
 }
 
 function onPointerMove(event: PointerEvent) {
-  if (!dragging || cameraFree?.value || !cameraPan?.value || shotActive.value || !canvas) return
+  if (!dragging || cameraFree?.value || !cameraPan?.value || directing.value || !canvas) return
   isTracking = false
 
   // Rotate screen movement by the azimuth so the map follows the cursor on screen.

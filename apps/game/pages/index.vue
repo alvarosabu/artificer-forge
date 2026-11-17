@@ -20,8 +20,15 @@ useOutlinePassProvider()
 useDofFocusProvider()
 
 const player = providePlayer()
-provideProximityPrompts()
+const prompts = provideProximityPrompts()
 providePhone()
+
+// Loaded up front so the trees come in the SSR payload; querying on the first press would fetch a WASM SQLite in the browser.
+const { data: dialogTrees } = useAsyncData('dialogs', () => queryCollection('dialogs').all())
+const dialog = provideDialog(dialogTrees)
+watchEffect(() => {
+  prompts.suspended.value = dialog.inputLocked.value
+})
 
 useAchievementCommands()
 
@@ -99,4 +106,5 @@ const { physicsDebug } = useControls('⚛️ physics', {
     </EnvironmentController>
   </TresCanvas>
   <PhoneMenu />
+  <DialogBubble />
 </template>
