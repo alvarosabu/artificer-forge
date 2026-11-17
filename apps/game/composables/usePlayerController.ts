@@ -449,6 +449,11 @@ export function usePlayerController(
       // The interaction can open a dialog, which must also swallow a jump pressed in the same step.
       if (inputLocked()) clearInput()
     }
+    // A run carries about 2 m of braking, which would slide Chamo in the idle clip.
+    if (locked()) {
+      velocity.x = 0
+      velocity.z = 0
+    }
 
     const strength = Math.hypot(input.x, input.y)
     moving = strength > 0
