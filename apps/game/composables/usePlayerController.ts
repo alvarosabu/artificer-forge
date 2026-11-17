@@ -403,6 +403,15 @@ export function usePlayerController(
     if (!restore) definition.enter?.(from)
   }
 
+  function clearInput() {
+    input.x = 0
+    input.y = 0
+    input.run = false
+    input.jump = false
+    input.jumpHeld = false
+    input.interact = false
+  }
+
   function updateCameraBasis(camera: Camera | undefined) {
     if (camera) {
       camera.getWorldDirection(forward)
@@ -433,15 +442,13 @@ export function usePlayerController(
     }
 
     input = read()
-    if (states[state.value].locksInput || locked()) {
-      input.x = 0
-      input.y = 0
-      input.run = false
-      input.jump = false
-      input.jumpHeld = false
-      input.interact = false
+    const inputLocked = () => states[state.value].locksInput || locked()
+    if (inputLocked()) clearInput()
+    if (input.interact) {
+      options.onInteract?.()
+      // The interaction can open a dialog, which must also swallow a jump pressed in the same step.
+      if (inputLocked()) clearInput()
     }
-    if (input.interact) options.onInteract?.()
 
     const strength = Math.hypot(input.x, input.y)
     moving = strength > 0

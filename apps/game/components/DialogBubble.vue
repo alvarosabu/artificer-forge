@@ -122,7 +122,7 @@ function hoverChoice(event: PointerEvent, index: number) {
 
             <svg
               v-if="showContinue"
-              class="absolute right-[7%] bottom-6 size-6 animate-bounce fill-continue sm:bottom-8 sm:size-7"
+              class="absolute right-[7%] bottom-6 size-6 motion-safe:animate-bounce fill-continue sm:bottom-8 sm:size-7"
               viewBox="0 0 24 24"
               aria-hidden="true"
             >

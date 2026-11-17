@@ -34,7 +34,7 @@ function firstGamepad() {
 export function useDialogInput(dialog: Dialog) {
   const heldKeys = new Set<string>()
 
-  useEventListener(window, 'keydown', (event: KeyboardEvent) => {
+  useEventListener('keydown', (event: KeyboardEvent) => {
     if (!dialog.isOpen.value || isEditableTarget(event) || !isDialogKey(event.code)) return
     heldKeys.add(event.code)
     event.preventDefault()
@@ -46,8 +46,8 @@ export function useDialogInput(dialog: Dialog) {
     else if (event.code === CLOSE_KEY) dialog.close()
     else dialog.choose(choiceDigit(event.code))
   })
-  useEventListener(window, 'keyup', (event: KeyboardEvent) => heldKeys.delete(event.code))
-  useEventListener(window, 'blur', () => heldKeys.clear())
+  useEventListener('keyup', (event: KeyboardEvent) => heldKeys.delete(event.code))
+  useEventListener('blur', () => heldKeys.clear())
 
   // A button acts only after it was seen up while the dialog is open, so the Y press that opened the dialog does not also confirm.
   const armed = new Set<number>()
